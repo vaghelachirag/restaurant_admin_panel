@@ -1,0 +1,45 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "restaurant-menu-system-fc074",
+          "appId": "1:1561871725:android:a54020474518710ea8c664",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "restaurant-menu-system-fc074",
+          "configurations": {
+            "android": "1:1561871725:android:a54020474518710ea8c664",
+            "ios": "1:1561871725:ios:a4838fb88ce0ebcaa8c664",
+            "macos": "1:1561871725:ios:a4838fb88ce0ebcaa8c664",
+            "web": "1:1561871725:web:dff9453c56f11b81a8c664",
+            "windows": "1:1561871725:web:8d37086942cc1bdfa8c664"
+          }
+        }
+      }
+    }
+  },
+  "hosting": {
+    "public": "build/web",
+    "headers": [
+      {
+        "source": "/index.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      }
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}
