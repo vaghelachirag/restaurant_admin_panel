@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -23,18 +24,18 @@ class _CategoryPageState extends State<CategoryPage> {
         final colorScheme = theme.colorScheme;
 
         return Dialog(
-          insetPadding:  EdgeInsets.symmetric(horizontal: 24.w, vertical: 24.h),
+          insetPadding:  EdgeInsets.symmetric(horizontal: kIsWeb ? 4 : 4.w, vertical: kIsWeb ? 6 : 6.h),
           backgroundColor: Colors.transparent,
           child: ConstrainedBox(
             constraints:  BoxConstraints(maxWidth: 420.w),
             child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(kIsWeb ? 24 : 24.sp),
                 color: theme.cardColor,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.12),
-                    blurRadius: 24,
+                    blurRadius: kIsWeb ? 24 : 24.sp,
                     offset: const Offset(0, 12),
                   ),
                 ],
@@ -46,7 +47,7 @@ class _CategoryPageState extends State<CategoryPage> {
                   Container(
                     padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
                     decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(kIsWeb ? 24 : 24.sp)),
                       gradient: LinearGradient(
                         colors: [
                           colorScheme.primary.withOpacity(0.12),
@@ -59,23 +60,23 @@ class _CategoryPageState extends State<CategoryPage> {
                     child: Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(8),
+                          padding: EdgeInsets.all(kIsWeb ? 8 : 8.sp),
                           decoration: BoxDecoration(
                             color: colorScheme.primary.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(kIsWeb ? 14 : 14.sp),
                           ),
                           child: Icon(
                             Icons.category_outlined,
                             color: colorScheme.primary,
-                            size: 20.sp,
+                            size: kIsWeb ? 20 : 20.sp,
                           ),
                         ),
-                         SizedBox(width: 12.w),
+                         SizedBox(width: kIsWeb ? 12 : 12.w),
                          Expanded(
                           child: Text(
                             "Add Category",
                             style: TextStyle(
-                              fontSize: 18.sp,
+                              fontSize: kIsWeb ? 18 : 18.sp,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -95,7 +96,7 @@ class _CategoryPageState extends State<CategoryPage> {
                             color: Colors.grey.shade600,
                           ),
                         ),
-                         SizedBox(height: 16.h),
+                         SizedBox(height: kIsWeb ? 16 : 16.h),
                         TextField(
                           controller: controller,
                           autofocus: true,
@@ -104,7 +105,7 @@ class _CategoryPageState extends State<CategoryPage> {
                             hintText: "e.g. Starters, Desserts",
                             prefixIcon: const Icon(Icons.label_outline),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14.sp),
+                              borderRadius: BorderRadius.circular(kIsWeb ? 14 : 14.sp),
                             ),
                             filled: true,
                             fillColor: Colors.grey.shade50,
@@ -154,9 +155,9 @@ class _CategoryPageState extends State<CategoryPage> {
                           ),
                           child: const Text("Cancel"),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: kIsWeb ? 8 : 8),
                         ElevatedButton.icon(
-                          icon: const Icon(Icons.check_rounded, size: 18),
+                          icon: Icon(Icons.check_rounded, size: kIsWeb ? 18 : 18),
                           onPressed: () async {
                             if (controller.text.trim().isEmpty) return;
 
@@ -184,9 +185,9 @@ class _CategoryPageState extends State<CategoryPage> {
                             Navigator.pop(context);
                           },
                           style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                            padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 18 : 18.w, vertical: kIsWeb ? 10 : 10.h),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(kIsWeb ? 14 : 14),
                             ),
                           ),
                           label: const Text("Save"),
@@ -216,18 +217,18 @@ class _CategoryPageState extends State<CategoryPage> {
         final colorScheme = theme.colorScheme;
 
         return Dialog(
-          insetPadding:  EdgeInsets.symmetric(horizontal: 24.w, vertical: 24.h),
+          insetPadding:  EdgeInsets.symmetric(horizontal: kIsWeb ? 4 : 4.w, vertical: kIsWeb ? 6 : 6.h),
           backgroundColor: Colors.transparent,
           child: ConstrainedBox(
             constraints:  BoxConstraints(maxWidth: 420.w),
             child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24.sp),
+                borderRadius: BorderRadius.circular(kIsWeb ? 24 : 24.sp),
                 color: theme.cardColor,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.12),
-                    blurRadius: 24.sp,
+                    blurRadius: kIsWeb ? 24 : 24.sp,
                     offset: const Offset(0, 12),
                   ),
                 ],
@@ -239,7 +240,7 @@ class _CategoryPageState extends State<CategoryPage> {
                   Container(
                     padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
                     decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(kIsWeb ? 24 : 24.sp)),
                       gradient: LinearGradient(
                         colors: [
                           colorScheme.secondary.withOpacity(0.14),
@@ -252,23 +253,23 @@ class _CategoryPageState extends State<CategoryPage> {
                     child: Row(
                       children: [
                         Container(
-                          padding:  EdgeInsets.all(8.sp),
+                          padding:  EdgeInsets.all(kIsWeb ? 8 : 8.sp),
                           decoration: BoxDecoration(
                             color: colorScheme.secondary.withOpacity(0.16),
-                            borderRadius: BorderRadius.circular(14.sp),
+                            borderRadius: BorderRadius.circular(kIsWeb ? 14 : 14.sp),
                           ),
                           child: Icon(
                             Icons.edit_outlined,
                             color: colorScheme.secondary,
-                            size: 20.sp,
+                            size: kIsWeb ? 20 : 20.sp,
                           ),
                         ),
-                         SizedBox(width: 12.w),
+                         SizedBox(width: kIsWeb ? 12 : 12.w),
                          Expanded(
                           child: Text(
                             "Edit Category",
                             style: TextStyle(
-                              fontSize: 18.sp,
+                              fontSize: kIsWeb ? 18 : 18.sp,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -288,7 +289,7 @@ class _CategoryPageState extends State<CategoryPage> {
                             color: Colors.grey.shade600,
                           ),
                         ),
-                        SizedBox(height: 16.h),
+                        SizedBox(height: kIsWeb ? 16 : 16.h),
                         TextField(
                           controller: controller,
                           autofocus: true,
@@ -296,7 +297,7 @@ class _CategoryPageState extends State<CategoryPage> {
                             labelText: "Category name",
                             prefixIcon: const Icon(Icons.label_important_outline),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14.sp),
+                              borderRadius: BorderRadius.circular(kIsWeb ? 14 : 14.sp),
                             ),
                             filled: true,
                             fillColor: Colors.grey.shade50,
@@ -328,9 +329,9 @@ class _CategoryPageState extends State<CategoryPage> {
                           ),
                           child: const Text("Cancel"),
                         ),
-                        SizedBox(width: 8.w),
+                        SizedBox(width: kIsWeb ? 8 : 8.w),
                         ElevatedButton.icon(
-                          icon:  Icon(Icons.check_circle_rounded, size: 18.sp),
+                          icon:  Icon(Icons.check_circle_rounded, size: kIsWeb ? 18 : 18.sp),
                           onPressed: () async {
                             await FirebaseFirestore.instance
                                 .collection("categories")
@@ -340,9 +341,9 @@ class _CategoryPageState extends State<CategoryPage> {
                             Navigator.pop(context);
                           },
                           style: ElevatedButton.styleFrom(
-                            padding:  EdgeInsets.symmetric(horizontal: 18.w, vertical: 10.h),
+                            padding:  EdgeInsets.symmetric(horizontal: kIsWeb ? 18 : 18.w, vertical: kIsWeb ? 10 : 10.h),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(kIsWeb ? 14 : 14),
                             ),
                           ),
                           label: const Text("Update"),
@@ -367,18 +368,18 @@ class _CategoryPageState extends State<CategoryPage> {
         final theme = Theme.of(context);
 
         return Dialog(
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          insetPadding: EdgeInsets.symmetric(horizontal: kIsWeb ? 4 : 4.w, vertical: kIsWeb ? 6 : 6.h),
           backgroundColor: Colors.transparent,
           child: ConstrainedBox(
             constraints:  BoxConstraints(maxWidth: 420.w),
             child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(kIsWeb ? 24 : 24.sp),
                 color: theme.cardColor,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.14),
-                    blurRadius: 26,
+                    blurRadius: kIsWeb ? 26 : 26.sp,
                     offset: const Offset(0, 14),
                   ),
                 ],
@@ -390,7 +391,7 @@ class _CategoryPageState extends State<CategoryPage> {
                   Container(
                     padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
                     decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(kIsWeb ? 24 : 24.sp)),
                       gradient: LinearGradient(
                         colors: [
                           Colors.red.shade50,
@@ -403,7 +404,7 @@ class _CategoryPageState extends State<CategoryPage> {
                     child: Row(
                       children: [
                         Container(
-                          padding:  EdgeInsets.all(8.sp),
+                          padding:  EdgeInsets.all(kIsWeb ? 8 : 8.sp),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.9),
                             shape: BoxShape.circle,
@@ -411,7 +412,7 @@ class _CategoryPageState extends State<CategoryPage> {
                           child: Icon(
                             Icons.warning_amber_rounded,
                             color: Colors.red.shade600,
-                            size: 22.sp,
+                            size: kIsWeb ? 22 : 22.sp,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -419,7 +420,7 @@ class _CategoryPageState extends State<CategoryPage> {
                           child: Text(
                             "Delete Category",
                             style: TextStyle(
-                              fontSize: 18.sp,
+                              fontSize: kIsWeb ? 18 : 18.sp,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -463,16 +464,16 @@ class _CategoryPageState extends State<CategoryPage> {
                           ),
                           child: const Text("Cancel"),
                         ),
-                         SizedBox(width: 8.w),
+                         SizedBox(width: kIsWeb ? 8 : 8.w),
                         ElevatedButton.icon(
-                          icon:  Icon(Icons.delete_outline_rounded, size: 18.sp),
+                          icon:  Icon(Icons.delete_outline_rounded, size: kIsWeb ? 18 : 18.sp),
                           onPressed: () => Navigator.pop(context, true),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.red.shade600,
                             foregroundColor: Colors.white,
-                            padding:  EdgeInsets.symmetric(horizontal: 18.w, vertical: 10.h),
+                            padding:  EdgeInsets.symmetric(horizontal: kIsWeb ? 18 : 18.w, vertical: kIsWeb ? 10 : 10.h),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14.sp),
+                              borderRadius: BorderRadius.circular(kIsWeb ? 14 : 14.sp),
                             ),
                           ),
                           label: const Text("Delete"),
@@ -532,13 +533,13 @@ class _CategoryPageState extends State<CategoryPage> {
             children: [
               Container(
                 width: double.infinity,
-                padding:  EdgeInsets.all(24.sp),
+                padding:  EdgeInsets.all(kIsWeb ? 24 : 24.sp),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.1),
-                      blurRadius: 10,
+                      blurRadius: kIsWeb ? 10 : 10.sp,
                       offset: const Offset(0, 2),
                     ),
                   ],
@@ -546,7 +547,7 @@ class _CategoryPageState extends State<CategoryPage> {
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(12),
+                      padding: EdgeInsets.all(kIsWeb ? 12 : 12.sp),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
@@ -556,15 +557,15 @@ class _CategoryPageState extends State<CategoryPage> {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(kIsWeb ? 16 : 16.sp),
                       ),
                       child:  Icon(
                         Icons.category,
                         color: Colors.white,
-                        size: 28.sp,
+                        size: kIsWeb ? 28 : 28.sp,
                       ),
                     ),
-                     SizedBox(width: 16.w),
+                     SizedBox(width: kIsWeb ? 16 : 16.w),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -572,16 +573,16 @@ class _CategoryPageState extends State<CategoryPage> {
                           Text(
                             "Categories",
                             style: TextStyle(
-                              fontSize: 24.sp,
+                              fontSize: kIsWeb ? 24 : 24.sp,
                               fontWeight: FontWeight.bold,
                               color: Colors.grey.shade800,
                             ),
                           ),
-                           SizedBox(height: 4.h),
+                           SizedBox(height: kIsWeb ? 4 : 4.h),
                           Text(
                             "Organize and prioritize your menu sections",
                             style: TextStyle(
-                              fontSize: 14.sp,
+                              fontSize: kIsWeb ? 14 : 14.sp,
                               color: Colors.grey.shade600,
                             ),
                           ),
@@ -631,14 +632,14 @@ class _CategoryPageState extends State<CategoryPage> {
                                 children: [
                                   Icon(
                                     Icons.category_outlined,
-                                    size: 48.sp,
+                                    size: kIsWeb ? 48 : 48.sp,
                                     color: Colors.grey.shade400,
                                   ),
-                                   SizedBox(height: 12.h),
+                                   SizedBox(height: kIsWeb ? 12 : 12.h),
                                   Text(
                                     "No categories yet",
                                     style: TextStyle(
-                                      fontSize: 16.sp,
+                                      fontSize: kIsWeb ? 16 : 16.sp,
                                       fontWeight: FontWeight.w600,
                                       color: Colors.grey.shade700,
                                     ),
@@ -647,7 +648,7 @@ class _CategoryPageState extends State<CategoryPage> {
                                   Text(
                                     "Tap \"Add Category\" to create your first one.",
                                     style: TextStyle(
-                                      fontSize: 13.sp,
+                                      fontSize: kIsWeb ? 13 : 13.sp,
                                       color: Colors.grey.shade500,
                                     ),
                                   ),
@@ -681,11 +682,11 @@ class _CategoryPageState extends State<CategoryPage> {
                                 ),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(kIsWeb ? 16 : 16.sp),
                                   boxShadow: [
                                     BoxShadow(
                                       color: Colors.black.withOpacity(0.04),
-                                      blurRadius: 8.sp,
+                                      blurRadius: kIsWeb ? 8 : 8.sp,
                                       offset: const Offset(0, 3),
                                     ),
                                   ],
@@ -701,11 +702,11 @@ class _CategoryPageState extends State<CategoryPage> {
                                   leading: ReorderableDragStartListener(
                                     index: index,
                                     child: Container(
-                                      padding:  EdgeInsets.all(8.sp),
+                                      padding:  EdgeInsets.all(kIsWeb ? 8 : 8.sp),
                                       decoration: BoxDecoration(
                                         color: Colors.orange.shade50,
                                         borderRadius:
-                                            BorderRadius.circular(12),
+                                            BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                                       ),
                                       child: Icon(
                                         Icons.drag_handle,
@@ -716,7 +717,7 @@ class _CategoryPageState extends State<CategoryPage> {
                                   title: Text(
                                     data['name'] ?? '',
                                     style: TextStyle(
-                                      fontSize: 16.sp,
+                                      fontSize: kIsWeb ? 16 : 16.sp,
                                       fontWeight: FontWeight.w600,
                                       color: Colors.grey.shade800,
                                     ),
@@ -724,7 +725,7 @@ class _CategoryPageState extends State<CategoryPage> {
                                   subtitle: Text(
                                     "Position: ${position + 1}",
                                     style: TextStyle(
-                                      fontSize: 12.sp,
+                                      fontSize: kIsWeb ? 12 : 12.sp,
                                       color: Colors.grey.shade600,
                                     ),
                                   ),

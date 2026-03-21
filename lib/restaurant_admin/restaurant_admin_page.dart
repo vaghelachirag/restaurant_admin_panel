@@ -17,6 +17,7 @@ import 'category_page.dart';
 import 'customer_menu.dart';
 import 'menu_page.dart';
 import 'qr_download_io.dart' if (dart.library.html) 'qr_download_web.dart' as qr_download;
+import 'settings_page.dart';
 
 class RestaurantAdminPanel extends StatefulWidget {
   final String restaurantId;
@@ -742,6 +743,24 @@ class _RestaurantAdminPanelState extends State<RestaurantAdminPanel> {
                                     ),
                                   );
                                 },
+                              );
+                            },
+                          ),
+
+                          /// SETTINGS
+                          _modernMenuCard(
+                            icon: Icons.settings,
+                            title: "Settings",
+                            subtitle: "App preferences",
+                            color: Colors.grey,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      SettingsPage(
+                                          restaurantId: widget.restaurantId),
+                                ),
                               );
                             },
                           ),

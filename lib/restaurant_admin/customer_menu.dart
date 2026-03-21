@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -66,21 +67,21 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
   }) {
     return Card(
       color: cardColor,
-      margin: const EdgeInsets.symmetric(vertical: 4),
+      margin: EdgeInsets.symmetric(vertical: kIsWeb ? 4 : 4.sp),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14.sp),
+        borderRadius: BorderRadius.circular(kIsWeb ? 14 : 14.sp),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(10),
+        padding: EdgeInsets.all(kIsWeb ? 10 : 10.sp),
         child: Row(
           children: [
             if (item['image'] != null)
               ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                 child: Image.network(
                   item['image'],
-                  width: 80.w,
-                  height: 80.h,
+                  width: kIsWeb ? 80 : 80.w,
+                  height: kIsWeb ? 80 : 80.h,
                   fit: BoxFit.cover,
                 ),
               ),
@@ -93,7 +94,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                     item['name'],
                     style: GoogleFonts.poppins(
                       fontWeight: FontWeight.w600,
-                      fontSize: 16.sp,
+                      fontSize: kIsWeb ? 16 : 16.sp,
                       color: textColor,
                     ),
                   ),
@@ -112,11 +113,11 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                         primaryColor,
                       ),
                       child: Container(
-                        padding:  EdgeInsets.symmetric(
-                            horizontal: 12.w, vertical: 8.h),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: kIsWeb ? 12 : 12.w, vertical: kIsWeb ? 8 : 8.h),
                         decoration: BoxDecoration(
                           color: cardInfoColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
                           border: Border.all(
                             color: cardInfoColor.withOpacity(0.3),
                           ),
@@ -127,15 +128,15 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                             Text(
                               variants[selectedIndex]['name'],
                               style: GoogleFonts.poppins(
-                                fontSize: 13.sp,
+                                fontSize: kIsWeb ? 13 : 13.sp,
                                 color: cardInfoColor,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                             SizedBox(width: 6.w),
+                            SizedBox(width: 6.w),
                             Icon(
                               Icons.keyboard_arrow_down,
-                              size: 16,
+                              size: kIsWeb ? 16 : 16.sp,
                               color: cardInfoColor,
                             ),
                           ],
@@ -146,7 +147,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                     Text(
                       variants[0]['name'],
                       style: GoogleFonts.poppins(
-                        fontSize: 13.sp,
+                        fontSize: kIsWeb ? 13 : 13.sp,
                         fontWeight: FontWeight.bold,
                         color: cardInfoColor,
                       ),
@@ -160,10 +161,10 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                   "₹ $price",
                   style: GoogleFonts.poppins(
                     fontWeight: FontWeight.w600,
-                    fontSize: 16.sp,
+                    fontSize: kIsWeb ? 16 : 16.sp,
                   ),
                 ),
-                 SizedBox(height: 6.h),
+                SizedBox(height: 6.h),
                 _buildAddOrCounterWidget(
                   context,
                   item,
@@ -184,18 +185,18 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
   }
 
   Widget _buildAddOrCounterWidget(
-    BuildContext context,
-    QueryDocumentSnapshot item,
-    String itemId,
-    String variant,
-    int price,
-    Color cardColor,
-    Color textColor,
-    Color cardInfoColor,
-    Color primaryColor,
-  ) {
+      BuildContext context,
+      QueryDocumentSnapshot item,
+      String itemId,
+      String variant,
+      int price,
+      Color cardColor,
+      Color textColor,
+      Color cardInfoColor,
+      Color primaryColor,
+      ) {
     final itemQuantity = getItemQuantity(itemId, variant);
-    
+
     if (itemQuantity > 0) {
       // Show counter widget
       return Container(
@@ -213,16 +214,16 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
             GestureDetector(
               onTap: () {
                 _updateItemQuantity(
-                  itemId, 
-                  variant, 
+                  itemId,
+                  variant,
                   -1,
                   itemName: item['name'],
                   price: price,
                 );
               },
               child: Container(
-                width: 32.w,
-                height: 32.h,
+                width: kIsWeb ? 32 : 32.w,
+                height: kIsWeb ? 32 : 32.h,
                 decoration: BoxDecoration(
                   color: primaryColor.withOpacity(0.2),
                   borderRadius: const BorderRadius.only(
@@ -233,19 +234,19 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                 child: Icon(
                   Icons.remove,
                   color: primaryColor,
-                  size: 16.sp,
+                  size: kIsWeb ? 16 : 16.sp,
                 ),
               ),
             ),
             // Quantity display
             Container(
-              width: 40.w,
-              height: 32.h,
+              width: kIsWeb ? 40 : 40.w,
+              height: kIsWeb ? 32 : 32.h,
               alignment: Alignment.center,
               child: Text(
                 "$itemQuantity",
                 style: GoogleFonts.poppins(
-                  fontSize: 14.sp,
+                  fontSize: kIsWeb ? 14 : 14.sp,
                   fontWeight: FontWeight.w600,
                   color: primaryColor,
                 ),
@@ -255,16 +256,16 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
             GestureDetector(
               onTap: () {
                 _updateItemQuantity(
-                  itemId, 
-                  variant, 
+                  itemId,
+                  variant,
                   1,
                   itemName: item['name'],
                   price: price,
                 );
               },
               child: Container(
-                width: 32.w,
-                height: 32.h,
+                width: kIsWeb ? 32 : 32.w,
+                height: kIsWeb ? 32 : 32.h,
                 decoration: BoxDecoration(
                   color: primaryColor.withOpacity(0.2),
                   borderRadius: const BorderRadius.only(
@@ -275,7 +276,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                 child: Icon(
                   Icons.add,
                   color: primaryColor,
-                  size: 16.sp,
+                  size: kIsWeb ? 16 : 16.sp,
                 ),
               ),
             ),
@@ -305,7 +306,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
           child: Text(
             "Add",
             style: GoogleFonts.poppins(
-              fontSize: 12.sp,
+              fontSize: kIsWeb ? 12 : 12.sp,
               color: Colors.white,
               fontWeight: FontWeight.w500,
             ),
@@ -316,17 +317,17 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
   }
 
   void _updateItemQuantity(
-    String itemId, 
-    String variant, 
-    int change, {
-    String? itemName,
-    int? price,
-  }) {
+      String itemId,
+      String variant,
+      int change, {
+        String? itemName,
+        int? price,
+      }) {
     setState(() {
       // Find the cart item
       CartItem? existingItem;
       int itemIndex = -1;
-      
+
       for (int i = 0; i < cart.length; i++) {
         if (cart[i].itemId == itemId && cart[i].variant == variant) {
           existingItem = cart[i];
@@ -334,11 +335,11 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
           break;
         }
       }
-      
+
       if (existingItem != null) {
         // Update existing item quantity
         existingItem.qty += change;
-        
+
         if (existingItem.qty <= 0) {
           // Remove item if quantity is 0 or less
           cart.removeAt(itemIndex);
@@ -360,16 +361,16 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
   }
 
   void _showVariantPopup(
-    BuildContext context,
-    String itemName,
-    List variants,
-    int currentIndex,
-    String itemId,
-    Color cardColor,
-    Color textColor,
-    Color cardInfoColor,
-    Color primaryColor,
-  ) {
+      BuildContext context,
+      String itemName,
+      List variants,
+      int currentIndex,
+      String itemId,
+      Color cardColor,
+      Color textColor,
+      Color cardInfoColor,
+      Color primaryColor,
+      ) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -394,23 +395,23 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
             children: [
               /// Header with drag indicator
               Container(
-                margin: const EdgeInsets.only(top: 12),
+                margin: EdgeInsets.only(top: kIsWeb ? 12 : 12.sp),
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
                   color: cardInfoColor.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(kIsWeb ? 2 : 2.sp),
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.all(20),
+                padding: EdgeInsets.all(kIsWeb ? 20 : 20.sp),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       "Choose Variant",
                       style: GoogleFonts.poppins(
-                        fontSize: 20,
+                        fontSize: kIsWeb ? 20 : 20.sp,
                         fontWeight: FontWeight.w600,
                         color: textColor,
                       ),
@@ -419,18 +420,18 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                     Text(
                       itemName,
                       style: GoogleFonts.poppins(
-                        fontSize: 14,
+                        fontSize: kIsWeb ? 14 : 14.sp,
                         color: cardInfoColor,
                       ),
                     ),
                     const SizedBox(height: 20),
-                    
+
                     /// Variants list
                     ...variants.asMap().entries.map((entry) {
                       final index = entry.key;
                       final variant = entry.value;
                       final isSelected = index == currentIndex;
-                      
+
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: GestureDetector(
@@ -447,12 +448,12 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                             duration: const Duration(milliseconds: 200),
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: isSelected 
+                              color: isSelected
                                   ? primaryColor.withOpacity(0.1)
                                   : cardInfoColor.withOpacity(0.05),
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                               border: Border.all(
-                                color: isSelected 
+                                color: isSelected
                                     ? primaryColor
                                     : cardInfoColor.withOpacity(0.2),
                                 width: isSelected ? 2 : 1,
@@ -473,15 +474,15 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                                     color: isSelected ? primaryColor : Colors.transparent,
                                   ),
                                   child: isSelected
-                                      ? const Icon(
-                                          Icons.check,
-                                          size: 14,
-                                          color: Colors.white,
-                                        )
+                                      ? Icon(
+                                    Icons.check,
+                                    size: kIsWeb ? 32 : 32.sp,
+                                    color: Colors.white,
+                                  )
                                       : null,
                                 ),
                                 const SizedBox(width: 12),
-                                
+
                                 /// Variant info
                                 Expanded(
                                   child: Column(
@@ -490,7 +491,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                                       Text(
                                         variant['name'],
                                         style: GoogleFonts.poppins(
-                                          fontSize: 16,
+                                          fontSize: kIsWeb ? 16 : 16.sp,
                                           fontWeight: FontWeight.w500,
                                           color: isSelected ? primaryColor : textColor,
                                         ),
@@ -500,7 +501,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                                         Text(
                                           "₹${variant['price']}",
                                           style: GoogleFonts.poppins(
-                                            fontSize: 14,
+                                            fontSize: kIsWeb ? 14 : 14.sp,
                                             color: cardInfoColor,
                                             fontWeight: FontWeight.w500,
                                           ),
@@ -509,7 +510,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                                     ],
                                   ),
                                 ),
-                                
+
                                 /// Selected indicator
                                 if (isSelected)
                                   Container(
@@ -519,12 +520,12 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                                     ),
                                     decoration: BoxDecoration(
                                       color: primaryColor,
-                                      borderRadius: BorderRadius.circular(12),
+                                      borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                                     ),
                                     child: Text(
                                       "Selected",
                                       style: GoogleFonts.poppins(
-                                        fontSize: 10,
+                                        fontSize: kIsWeb ? 10 : 10.sp,
                                         color: Colors.white,
                                         fontWeight: FontWeight.w500,
                                       ),
@@ -548,16 +549,16 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
   }
 
   void _showCounterPopup(
-    BuildContext context,
-    QueryDocumentSnapshot item,
-    String itemId,
-    String variant,
-    int price,
-    Color cardColor,
-    Color textColor,
-    Color cardInfoColor,
-    Color primaryColor,
-  ) {
+      BuildContext context,
+      QueryDocumentSnapshot item,
+      String itemId,
+      String variant,
+      int price,
+      Color cardColor,
+      Color textColor,
+      Color cardInfoColor,
+      Color primaryColor,
+      ) {
     int quantity = 1;
     TextEditingController quantityController = TextEditingController(text: '1');
     showModalBottomSheet(
@@ -586,24 +587,24 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                 children: [
                   /// Drag indicator
                   Container(
-                    margin: const EdgeInsets.only(top: 12),
+                    margin: EdgeInsets.only(top: kIsWeb ? 12 : 12.sp),
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
                       color: cardInfoColor.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(2),
+                      borderRadius: BorderRadius.circular(kIsWeb ? 2 : 2.sp),
                     ),
                   ),
 
                   Padding(
-                    padding: const EdgeInsets.all(20),
+                    padding: EdgeInsets.all(kIsWeb ? 20 : 20.sp),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           "Select Quantity",
                           style: GoogleFonts.poppins(
-                            fontSize: 20,
+                            fontSize: kIsWeb ? 20 : 20.sp,
                             fontWeight: FontWeight.w600,
                             color: textColor,
                           ),
@@ -614,7 +615,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                         Text(
                           item['name'],
                           style: GoogleFonts.poppins(
-                            fontSize: 14,
+                            fontSize: kIsWeb ? 14 : 14.sp,
                             color: cardInfoColor,
                           ),
                         ),
@@ -624,7 +625,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                           Text(
                             variant,
                             style: GoogleFonts.poppins(
-                              fontSize: 12,
+                              fontSize: kIsWeb ? 12 : 12.sp,
                               color: cardInfoColor.withOpacity(0.8),
                             ),
                           ),
@@ -634,10 +635,10 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
 
                         /// Quantity Input
                         Container(
-                          padding: const EdgeInsets.all(20),
+                          padding: EdgeInsets.all(kIsWeb ? 20 : 20.sp),
                           decoration: BoxDecoration(
                             color: cardInfoColor.withOpacity(0.05),
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(kIsWeb ? 16 : 16.sp),
                             border: Border.all(
                               color: cardInfoColor.withOpacity(0.2),
                             ),
@@ -647,35 +648,35 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                             keyboardType: TextInputType.number,
                             textAlign: TextAlign.center,
                             style: GoogleFonts.poppins(
-                              fontSize: 24,
+                              fontSize: kIsWeb ? 24 : 24.sp,
                               fontWeight: FontWeight.w600,
                               color: textColor,
                             ),
                             decoration: InputDecoration(
                               hintText: "Enter quantity",
                               hintStyle: GoogleFonts.poppins(
-                                fontSize: 18,
+                                fontSize: kIsWeb ? 18 : 18.sp,
                                 color: cardInfoColor.withOpacity(0.5),
                               ),
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                               ),
                               enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                                 borderSide: BorderSide(
                                   color: cardInfoColor.withOpacity(0.3),
                                 ),
                               ),
                               focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                                 borderSide: BorderSide(
                                   color: primaryColor,
                                   width: 2,
                                 ),
                               ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 16,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: kIsWeb ? 16 : 16.sp,
+                                vertical: kIsWeb ? 16 : 16.sp,
                               ),
                             ),
                             onChanged: (value) {
@@ -694,10 +695,10 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                         /// Price display
                         Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 16 : 16.sp, vertical: kIsWeb ? 12 : 12.sp),
                           decoration: BoxDecoration(
                             color: primaryColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -705,7 +706,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                               Text(
                                 "Total Price:",
                                 style: GoogleFonts.poppins(
-                                  fontSize: 16,
+                                  fontSize: kIsWeb ? 16 : 16.sp,
                                   fontWeight: FontWeight.w500,
                                   color: textColor,
                                 ),
@@ -713,7 +714,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                               Text(
                                 "₹ ${price * quantity}",
                                 style: GoogleFonts.poppins(
-                                  fontSize: 18,
+                                  fontSize: kIsWeb ? 18 : 18.sp,
                                   fontWeight: FontWeight.w600,
                                   color: primaryColor,
                                 ),
@@ -727,7 +728,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                         /// Add to cart button
                         SizedBox(
                           width: double.infinity,
-                          height: 50.h,
+                          height: kIsWeb ? 50 : 50.h,
                           child: ElevatedButton(
                             onPressed: () {
                               // Validate quantity from input field
@@ -761,20 +762,20 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                                   duration: const Duration(seconds: 2),
                                 ),
                               );
-                              
+
                               setState(() {});
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: primaryColor,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                               ),
                               elevation: 0,
                             ),
                             child: Text(
                               "Add to Cart",
                               style: GoogleFonts.poppins(
-                                fontSize: 16,
+                                fontSize: kIsWeb ? 16 : 16.sp,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white,
                               ),
@@ -804,7 +805,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
 
             return AlertDialog(
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
               ),
               title: const Text("Exit Menu?"),
               content: const Text(
@@ -840,7 +841,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
             .snapshots(),
         builder: (context, restaurantSnapshot) {
           print('DEBUG: Fetching restaurant with ID: ${widget.restaurantId}');
-          
+
           if (restaurantSnapshot.hasError) {
             print('DEBUG: Restaurant snapshot error: ${restaurantSnapshot.error}');
             return Scaffold(
@@ -853,12 +854,12 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                     const SizedBox(height: 16),
                     Text(
                       'Error loading restaurant data',
-                      style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600),
+                      style: GoogleFonts.poppins(fontSize: kIsWeb ? 18 : 18.sp, fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Error: ${restaurantSnapshot.error}',
-                      style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey),
+                      style: GoogleFonts.poppins(fontSize: kIsWeb ? 14 : 14.sp, color: Colors.grey),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 16),
@@ -874,7 +875,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
             );
           }
 
-            if (!restaurantSnapshot.hasData) {
+          if (!restaurantSnapshot.hasData) {
             print('DEBUG: Restaurant snapshot has no data');
             return const Scaffold(
               body: Center(
@@ -896,7 +897,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
             print('DEBUG: Restaurant document data is null');
             return Scaffold(
               appBar: AppBar(title: const Text('Error')),
-              body: const Center(
+              body:  Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -904,12 +905,12 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                     SizedBox(height: 16),
                     Text(
                       'Restaurant not found',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                      style: TextStyle(fontSize: kIsWeb ? 18 : 18.sp, fontWeight: FontWeight.w600),
                     ),
                     SizedBox(height: 8),
                     Text(
                       'The restaurant document may have been deleted or you may not have permission to access it.',
-                      style: TextStyle(fontSize: 14, color: Colors.grey),
+                      style: TextStyle(fontSize: kIsWeb ? 14 : 14.sp, color: Colors.grey),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -921,391 +922,391 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
           print('DEBUG: Restaurant data loaded successfully');
           final data = rawData as Map<String, dynamic>;
 
-            final theme = data['theme'] ?? {};
+          final theme = data['theme'] ?? {};
 
-            final bgColor = hexToColor(theme['backgroundColor'] ?? "#FAF5EF");
-            final textColor = hexToColor(theme['textColor'] ?? "#000000");
-            final cardColor = hexToColor(theme['cardColor'] ?? "#FFFFFF");
-            final categoryBgColor =
-            hexToColor(theme['categoryBackgroundColor'] ?? "#6D4C41");
-            final categoryTextColor =
-            hexToColor(theme['categoryTextColor'] ?? "#FFFFFF");
-            final cardInfoColor =
-            hexToColor(theme['cardInfoColor'] ?? "#757575");
-            final primaryColor =
-            hexToColor(theme['primaryColor'] ?? "#4CAF50");
+          final bgColor = hexToColor(theme['backgroundColor'] ?? "#FAF5EF");
+          final textColor = hexToColor(theme['textColor'] ?? "#000000");
+          final cardColor = hexToColor(theme['cardColor'] ?? "#FFFFFF");
+          final categoryBgColor =
+          hexToColor(theme['categoryBackgroundColor'] ?? "#6D4C41");
+          final categoryTextColor =
+          hexToColor(theme['categoryTextColor'] ?? "#FFFFFF");
+          final cardInfoColor =
+          hexToColor(theme['cardInfoColor'] ?? "#757575");
+          final primaryColor =
+          hexToColor(theme['primaryColor'] ?? "#4CAF50");
 
-            final logo = data['logo'];
-            return Scaffold(
-              backgroundColor: const Color(0xFFF8F9FA),
-              floatingActionButton: cart.isEmpty
-                  ? null
-                  : FloatingActionButton.extended(
-                backgroundColor: primaryColor,
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => CartPage(
-                        cart: cart,
-                        restaurantId: widget.restaurantId,
-                      ),
+          final logo = data['logo'];
+          return Scaffold(
+            backgroundColor: const Color(0xFFF8F9FA),
+            floatingActionButton: cart.isEmpty
+                ? null
+                : FloatingActionButton.extended(
+              backgroundColor: primaryColor,
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CartPage(
+                      cart: cart,
+                      restaurantId: widget.restaurantId,
                     ),
-                  );
-                },
-                icon: const Icon(
-                  Icons.shopping_cart,
-                  color: Colors.white,
-                ),
-                label: Text(
-                  "Cart (${getTotalCartQuantity()})",
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
                   ),
+                );
+              },
+              icon: const Icon(
+                Icons.shopping_cart,
+                color: Colors.white,
+              ),
+              label: Text(
+                "Cart (${getTotalCartQuantity()})",
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontSize: kIsWeb ? 16 : 16.sp,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
+            ),
 
-              /// Custom Header with Gradient Background
-              body: CustomScrollView(
-                slivers: [
-                  SliverAppBar(
-                    automaticallyImplyLeading: false,
-                    expandedHeight: 80.sp,
-                    pinned: false,
-                    floating: false,
-                    elevation: 0,
-                    backgroundColor: Colors.transparent,
-                    flexibleSpace: FlexibleSpaceBar(
-                      background: Container(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Color(0xFF7C3AED),
-                              Color(0xFFA855F7),
-                              Color(0xFFC084FC),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
+            /// Custom Header with Gradient Background
+            body: CustomScrollView(
+              slivers: [
+                SliverAppBar(
+                  automaticallyImplyLeading: false,
+                  expandedHeight:  kIsWeb ? 120 : 80.sp,
+                  pinned: false,
+                  floating: false,
+                  elevation: 0,
+                  backgroundColor: Colors.transparent,
+                  flexibleSpace: FlexibleSpaceBar(
+                    background: Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Color(0xFF7C3AED),
+                            Color(0xFFA855F7),
+                            Color(0xFFC084FC),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                        child: SafeArea(
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16.sp, vertical: 10.sp),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
+                      ),
+                      child: SafeArea(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal:  kIsWeb ? 15 : 15.sp, vertical:  kIsWeb ? 10 : 10.sp),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
 
-                                /// Top Row
-                                Row(
-                                  children: [
+                              /// Top Row
+                              Row(
+                                children: [
 
-                                    /// Logo
-                                    if (logo != null && logo != "")
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: Image.network(
-                                          logo,
-                                          width: 50.sp,
-                                          height: 50.sp,
-                                          fit: BoxFit.cover,
-                                        ),
-                                      ),
-
-                                    SizedBox(width: 8.sp),
-
-                                    /// Restaurant Name
-                                    Expanded(
-                                      child: Text(
-                                        data['name'] ?? "Restaurant",
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 18.sp,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
+                                  /// Logo
+                                  if (logo != null && logo != "")
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
+                                      child: Image.network(
+                                        logo,
+                                        width: kIsWeb ? 50 : 50.sp,
+                                        height: kIsWeb ? 50 : 50.sp,
+                                        fit: BoxFit.cover,
                                       ),
                                     ),
 
-                                    /// Grid / List Toggle and Track Order
-                                    Row(
-                                      children: [
-                                        /// Track Order Button
-                                        GestureDetector(
-                                          onTap: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) => TrackOrderPage(
-                                                  restaurantId: widget.restaurantId,
-                                                ),
+                                  SizedBox(width: 8.sp),
+
+                                  /// Restaurant Name
+                                  Expanded(
+                                    child: Text(
+                                      data['name'] ?? "Restaurant",
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: kIsWeb ? 18 : 18.sp,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+
+                                  /// Grid / List Toggle and Track Order
+                                  Row(
+                                    children: [
+                                      /// Track Order Button
+                                      GestureDetector(
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => TrackOrderPage(
+                                                restaurantId: widget.restaurantId,
                                               ),
-                                            );
-                                          },
-                                          child: Container(
-                                            width: 36.sp,
-                                            height: 36.sp,
-                                            decoration: BoxDecoration(
-                                              color: Colors.white.withOpacity(0.2),
-                                              borderRadius: BorderRadius.circular(18.sp),
                                             ),
-                                            child: Icon(
-                                              Icons.search_rounded,
-                                              size: 18.sp,
-                                              color: Colors.white,
-                                            ),
+                                          );
+                                        },
+                                        child: Container(
+                                          width: kIsWeb ? 36 : 36.sp,
+                                          height: kIsWeb ? 36 : 36.sp,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withOpacity(0.2),
+                                            borderRadius: BorderRadius.circular(18.sp),
+                                          ),
+                                          child: Icon(
+                                            Icons.search_rounded,
+                                            size: kIsWeb ? 18 : 18.sp,
+                                            color: Colors.white,
                                           ),
                                         ),
+                                      ),
 
-                                        SizedBox(width: 8.sp),
+                                      SizedBox(width: 8.sp),
 
-                                        GestureDetector(
-                                          onTap: () {
-                                            setState(() {
-                                              _unifiedCategoryListView = false;
-                                            });
-                                          },
-                                          child: Container(
-                                            width: 36.sp,
-                                            height: 36.sp,
-                                            decoration: BoxDecoration(
-                                              color: !_unifiedCategoryListView
-                                                  ? Colors.white
-                                                  : Colors.white.withOpacity(0.2),
-                                              borderRadius: BorderRadius.circular(18.sp),
-                                            ),
-                                            child: Icon(
-                                              Icons.grid_view_rounded,
-                                              size: 18.sp,
-                                              color: !_unifiedCategoryListView
-                                                  ? const Color(0xFF7C3AED)
-                                                  : Colors.white,
-                                            ),
+                                      GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            _unifiedCategoryListView = false;
+                                          });
+                                        },
+                                        child: Container(
+                                          width: kIsWeb ? 36 : 36.sp,
+                                          height: kIsWeb ? 36 : 36.sp,
+                                          decoration: BoxDecoration(
+                                            color: !_unifiedCategoryListView
+                                                ? Colors.white
+                                                : Colors.white.withOpacity(0.2),
+                                            borderRadius: BorderRadius.circular(18.sp),
+                                          ),
+                                          child: Icon(
+                                            Icons.grid_view_rounded,
+                                            size: kIsWeb ? 18 : 18.sp,
+                                            color: !_unifiedCategoryListView
+                                                ? const Color(0xFF7C3AED)
+                                                : Colors.white,
                                           ),
                                         ),
+                                      ),
 
-                                        SizedBox(width: 8.sp),
+                                      SizedBox(width: 8.sp),
 
-                                        GestureDetector(
-                                          onTap: () {
-                                            setState(() {
-                                              _unifiedCategoryListView = true;
-                                            });
-                                          },
-                                          child: Container(
-                                            width: 36.sp,
-                                            height: 36.sp,
-                                            decoration: BoxDecoration(
-                                              color: _unifiedCategoryListView
-                                                  ? Colors.white
-                                                  : Colors.white.withOpacity(0.2),
-                                              borderRadius: BorderRadius.circular(18.sp),
-                                            ),
-                                            child: Icon(
-                                              Icons.view_agenda_rounded,
-                                              size: 18.sp,
-                                              color: _unifiedCategoryListView
-                                                  ? const Color(0xFF7C3AED)
-                                                  : Colors.white,
-                                            ),
+                                      GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            _unifiedCategoryListView = true;
+                                          });
+                                        },
+                                        child: Container(
+                                          width: kIsWeb ? 36 : 36.sp,
+                                          height: kIsWeb ? 36 : 36.sp,
+                                          decoration: BoxDecoration(
+                                            color: _unifiedCategoryListView
+                                                ? Colors.white
+                                                : Colors.white.withOpacity(0.2),
+                                            borderRadius: BorderRadius.circular(18.sp),
+                                          ),
+                                          child: Icon(
+                                            Icons.view_agenda_rounded,
+                                            size: kIsWeb ? 18 : 18.sp,
+                                            color: _unifiedCategoryListView
+                                                ? const Color(0xFF7C3AED)
+                                                : Colors.white,
                                           ),
                                         ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
                       ),
                     ),
                   ),
-                  /// Category Filter Section (only show in separate view)
-                  if (!_unifiedCategoryListView)
-                    SliverToBoxAdapter(
-                      child: StreamBuilder<QuerySnapshot>(
-                        stream: FirebaseFirestore.instance
-                            .collection("categories")
-                            .where("restaurantId", isEqualTo: widget.restaurantId)
-                            .orderBy("position")
-                            .snapshots(),
-                        builder: (context, categorySnapshot) {
-                          print('DEBUG: Fetching categories for restaurant: ${widget.restaurantId}');
-                          
-                          if (categorySnapshot.hasError) {
-                            print('DEBUG: Categories snapshot error: ${categorySnapshot.error}');
-                            return Padding(
-                              padding: EdgeInsets.all(16.sp),
-                              child: Container(
-                                padding: EdgeInsets.all(16.sp),
-                                decoration: BoxDecoration(
-                                  color: Colors.red.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.red.withOpacity(0.3)),
-                                ),
-                                child: Column(
-                                  children: [
-                                    Icon(Icons.error_outline, color: Colors.red, size: 32),
-                                    SizedBox(height: 8),
-                                    Text(
-                                      'Error loading categories',
-                                      style: GoogleFonts.poppins(
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.red,
-                                      ),
-                                    ),
-                                    SizedBox(height: 4),
-                                    Text(
-                                      '${categorySnapshot.error}',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 12,
-                                        color: Colors.red.withOpacity(0.7),
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ],
-                                ),
+                ),
+                /// Category Filter Section (only show in separate view)
+                if (!_unifiedCategoryListView)
+                  SliverToBoxAdapter(
+                    child: StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection("categories")
+                          .where("restaurantId", isEqualTo: widget.restaurantId)
+                          .orderBy("position")
+                          .snapshots(),
+                      builder: (context, categorySnapshot) {
+                        print('DEBUG: Fetching categories for restaurant: ${widget.restaurantId}');
+
+                        if (categorySnapshot.hasError) {
+                          print('DEBUG: Categories snapshot error: ${categorySnapshot.error}');
+                          return Padding(
+                            padding: EdgeInsets.all(kIsWeb ? 16 : 16.sp),
+                            child: Container(
+                              padding: EdgeInsets.all(kIsWeb ? 16 : 16.sp),
+                              decoration: BoxDecoration(
+                                color: Colors.red.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
+                                border: Border.all(color: Colors.red.withOpacity(0.3)),
                               ),
-                            );
-                          }
-
-                          if (!categorySnapshot.hasData) {
-                            print('DEBUG: Categories snapshot has no data');
-                            return Padding(
-                              padding: EdgeInsets.all(16.sp),
-                              child: const Center(
-                                child: Column(
-                                  children: [
-                                    CircularProgressIndicator(),
-                                    SizedBox(height: 8),
-                                    Text('Loading categories...'),
-                                  ],
-                                ),
-                              ),
-                            );
-                          }
-
-                          final categories = categorySnapshot.data!.docs;
-                          print('DEBUG: Found ${categories.length} categories');
-
-                          // Auto-select first category if none is selected
-                          if (_selectedCategoryId == null && categories.isNotEmpty) {
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              setState(() {
-                                _selectedCategoryId = categories.first.id;
-                                print('DEBUG: Auto-selected first category: ${categories.first.id}');
-                              });
-                            });
-                          }
-
-                          if (categories.isEmpty) {
-                            print('DEBUG: No categories found for restaurant');
-                            return Padding(
-                              padding: EdgeInsets.all(16.sp),
-                              child: Container(
-                                padding: EdgeInsets.all(16.sp),
-                                decoration: BoxDecoration(
-                                  color: Colors.orange.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.orange.withOpacity(0.3)),
-                                ),
-                                child: Column(
-                                  children: [
-                                    Icon(Icons.category, color: Colors.orange, size: 32),
-                                    SizedBox(height: 8),
-                                    Text(
-                                      'No Categories Found',
-                                      style: GoogleFonts.poppins(
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.orange,
-                                      ),
+                              child: Column(
+                                children: [
+                                  Icon(Icons.error_outline, color: Colors.red, size: 32),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'Error loading categories',
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.red,
                                     ),
-                                    SizedBox(height: 4),
-                                    Text(
-                                      'This restaurant hasn\'t created any categories yet.',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 12,
-                                        color: Colors.orange.withOpacity(0.7),
-                                      ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    '${categorySnapshot.error}',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: kIsWeb ? 12 : 12.sp,
+                                      color: Colors.red.withOpacity(0.7),
                                     ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          }
-                          return Container(
-                            margin: EdgeInsets.all(8.sp),
-                            child: ConstrainedBox(
-                              constraints: BoxConstraints(
-                                minHeight: 40.sp,
-                                maxHeight: 40.sp
-                              ),
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: categories.length,
-                                itemBuilder: (context, index) {
-                                  final cat = categories[index];
-                                  final bool isSelected = cat.id == _selectedCategoryId;
-
-                                  return Padding(
-                                    padding: EdgeInsets.only(right: 8.sp),
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        setState(() {
-                                          _selectedCategoryId = cat.id;
-                                        });
-                                      },
-                                      child: Container(
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: 16.sp,
-                                          vertical: 8.sp,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: isSelected ? const Color(0xFF7C3AED) : Colors.white,
-                                          borderRadius: BorderRadius.circular(20.sp),
-                                          border: Border.all(color: const Color(0xFFE5E7EB)),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            if (isSelected)
-                                              Padding(
-                                                padding: EdgeInsets.only(right: 6.sp),
-                                                child: Icon(Icons.check, size: 16.sp, color: Colors.white),
-                                              ),
-                                            Text(
-                                              cat['name'],
-                                              style: TextStyle(
-                                                fontSize: 14.sp,
-                                                fontWeight: FontWeight.w900,
-                                                color: isSelected
-                                                    ? Colors.white
-                                                    : const Color(0xFF1F2937),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
                               ),
                             ),
                           );
-                        },
-                      ),
-                    ),
+                        }
 
-                  SliverFillRemaining(
-                    child: _unifiedCategoryListView
-                        ? _buildUnifiedListView()
-                        : _buildSeparateView(),
+                        if (!categorySnapshot.hasData) {
+                          print('DEBUG: Categories snapshot has no data');
+                          return Padding(
+                            padding: EdgeInsets.all(kIsWeb ? 16 : 16.sp),
+                            child: const Center(
+                              child: Column(
+                                children: [
+                                  CircularProgressIndicator(),
+                                  SizedBox(height: 8),
+                                  Text('Loading categories...'),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+
+                        final categories = categorySnapshot.data!.docs;
+                        print('DEBUG: Found ${categories.length} categories');
+
+                        // Auto-select first category if none is selected
+                        if (_selectedCategoryId == null && categories.isNotEmpty) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            setState(() {
+                              _selectedCategoryId = categories.first.id;
+                              print('DEBUG: Auto-selected first category: ${categories.first.id}');
+                            });
+                          });
+                        }
+
+                        if (categories.isEmpty) {
+                          print('DEBUG: No categories found for restaurant');
+                          return Padding(
+                            padding: EdgeInsets.all(kIsWeb ? 16 : 16.sp),
+                            child: Container(
+                              padding: EdgeInsets.all(kIsWeb ? 16 : 16.sp),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
+                                border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                              ),
+                              child: Column(
+                                children: [
+                                  Icon(Icons.category, color: Colors.orange, size: 32),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'No Categories Found',
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.orange,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    'This restaurant hasn\'t created any categories yet.',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: kIsWeb ? 12 : 12.sp,
+                                      color: Colors.orange.withOpacity(0.7),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+                        return Container(
+                          margin: EdgeInsets.all(kIsWeb ? 8 : 8.sp),
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                                minHeight: 40.sp,
+                                maxHeight: 40.sp
+                            ),
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: categories.length,
+                              itemBuilder: (context, index) {
+                                final cat = categories[index];
+                                final bool isSelected = cat.id == _selectedCategoryId;
+
+                                return Padding(
+                                  padding: EdgeInsets.only(right: 8.sp),
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedCategoryId = cat.id;
+                                      });
+                                    },
+                                    child: Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 16.sp,
+                                        vertical: 8.sp,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isSelected ? const Color(0xFF7C3AED) : Colors.white,
+                                        borderRadius: BorderRadius.circular(kIsWeb ? 20 : 20.sp),
+                                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (isSelected)
+                                            Padding(
+                                              padding: EdgeInsets.only(right: 6.sp),
+                                              child: Icon(Icons.check, size: kIsWeb ? 16 : 16.sp, color: Colors.white),
+                                            ),
+                                          Text(
+                                            cat['name'],
+                                            style: TextStyle(
+                                              fontSize: kIsWeb ? 14 : 14.sp,
+                                              fontWeight: FontWeight.w900,
+                                              color: isSelected
+                                                  ? Colors.white
+                                                  : const Color(0xFF1F2937),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                ],
-              ),
-            );
+
+                SliverFillRemaining(
+                  child: _unifiedCategoryListView
+                      ? _buildUnifiedListView()
+                      : _buildSeparateView(),
+                ),
+              ],
+            ),
+          );
         },
       ),
     );
@@ -1321,15 +1322,15 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
           .snapshots(),
       builder: (context, categorySnapshot) {
         print('DEBUG: Unified view - Fetching categories for restaurant: ${widget.restaurantId}');
-        
+
         if (categorySnapshot.hasError) {
           print('DEBUG: Unified view - Categories snapshot error: ${categorySnapshot.error}');
           return Center(
             child: Container(
-              padding: EdgeInsets.all(24),
+              padding: EdgeInsets.all(kIsWeb ? 24 : 24.sp),
               decoration: BoxDecoration(
                 color: Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(kIsWeb ? 16 : 16.sp),
                 border: Border.all(color: Colors.red.withOpacity(0.3)),
               ),
               child: Column(
@@ -1340,7 +1341,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                   Text(
                     'Error loading categories',
                     style: GoogleFonts.poppins(
-                      fontSize: 18,
+                      fontSize: kIsWeb ? 18 : 18.sp,
                       fontWeight: FontWeight.w600,
                       color: Colors.red,
                     ),
@@ -1349,7 +1350,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                   Text(
                     '${categorySnapshot.error}',
                     style: GoogleFonts.poppins(
-                      fontSize: 14,
+                      fontSize: kIsWeb ? 14 : 14.sp,
                       color: Colors.red.withOpacity(0.7),
                     ),
                     textAlign: TextAlign.center,
@@ -1391,10 +1392,10 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
           print('DEBUG: Unified view - No categories found');
           return Center(
             child: Container(
-              padding: EdgeInsets.all(32),
+              padding: EdgeInsets.all(kIsWeb ? 32 : 32.sp),
               decoration: BoxDecoration(
                 color: Colors.orange.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(kIsWeb ? 16 : 16.sp),
                 border: Border.all(color: Colors.orange.withOpacity(0.3)),
               ),
               child: Column(
@@ -1405,7 +1406,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                   Text(
                     'No Categories Found',
                     style: GoogleFonts.poppins(
-                      fontSize: 20,
+                      fontSize: kIsWeb ? 20 : 20.sp,
                       fontWeight: FontWeight.w600,
                       color: Colors.orange,
                     ),
@@ -1414,7 +1415,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                   Text(
                     'This restaurant hasn\'t created any categories yet.',
                     style: GoogleFonts.poppins(
-                      fontSize: 14,
+                      fontSize: kIsWeb ? 14 : 14.sp,
                       color: Colors.orange.withOpacity(0.7),
                     ),
                     textAlign: TextAlign.center,
@@ -1426,7 +1427,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
         }
 
         return ListView.builder(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+          padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 16 : 16.w, vertical: kIsWeb ? 8 : 8.h),
           itemCount: categories.length,
           itemBuilder: (context, catIndex) {
             final cat = categories[catIndex];
@@ -1444,7 +1445,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                       }
                     });
                   },
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                   child: Padding(
                     padding: const EdgeInsets.only(top: 12, bottom: 4, right: 8),
                     child: Row(
@@ -1453,18 +1454,18 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                           child: Text(
                             cat['name'],
                             style: GoogleFonts.poppins(
-                              fontSize: 18.sp,
+                              fontSize: kIsWeb ? 18 : 18.sp,
                               fontWeight: FontWeight.w600,
                               color: Colors.black87,
                             ),
                           ),
                         ),
                         Icon(
-                          isExpanded 
+                          isExpanded
                               ? Icons.keyboard_arrow_up
                               : Icons.keyboard_arrow_down,
                           color: Colors.black.withOpacity(0.6),
-                          size: 25.sp,
+                          size: kIsWeb ? 25 : 25.sp,
                         ),
                       ],
                     ),
@@ -1481,16 +1482,16 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                         .snapshots(),
                     builder: (context, menuSnapshot) {
                       print('DEBUG: Unified view - Fetching menu items for category: ${cat.id}');
-                      
+
                       if (menuSnapshot.hasError) {
                         print('DEBUG: Unified view - Menu items snapshot error: ${menuSnapshot.error}');
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 8),
                           child: Container(
-                            padding: EdgeInsets.all(12),
+                            padding: EdgeInsets.all(kIsWeb ? 12 : 12.sp),
                             decoration: BoxDecoration(
                               color: Colors.red.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
                               border: Border.all(color: Colors.red.withOpacity(0.3)),
                             ),
                             child: Row(
@@ -1501,7 +1502,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                                   child: Text(
                                     'Error loading menu items',
                                     style: GoogleFonts.poppins(
-                                      fontSize: 12,
+                                      fontSize: kIsWeb ? 12 : 12.sp,
                                       color: Colors.red,
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -1529,16 +1530,16 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
 
                       final items = menuSnapshot.data!.docs;
                       print('DEBUG: Unified view - Found ${items.length} menu items for category: ${cat.id}');
-                      
+
                       if (items.isEmpty) {
                         print('DEBUG: Unified view - No menu items found for category: ${cat.id}');
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 8),
                           child: Container(
-                            padding: EdgeInsets.all(8),
+                            padding: EdgeInsets.all(kIsWeb ? 8 : 8.sp),
                             decoration: BoxDecoration(
                               color: Colors.grey.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(6),
+                              borderRadius: BorderRadius.circular(kIsWeb ? 6 : 6.sp),
                             ),
                             child: Row(
                               children: [
@@ -1547,7 +1548,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                                 Text(
                                   "No available items in this category",
                                   style: GoogleFonts.poppins(
-                                    fontSize: 12.sp,
+                                    fontSize: kIsWeb ? 12 : 12.sp,
                                     color: Colors.grey,
                                   ),
                                 ),
@@ -1592,12 +1593,12 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
 
   Widget _buildSeparateView() {
     print('DEBUG: Building separate view for restaurant: ${widget.restaurantId}, category: ${_selectedCategoryId}');
-    
+
     if (_selectedCategoryId == null) {
       print('DEBUG: No category selected in separate view');
       return Center(
         child: Container(
-          padding: EdgeInsets.all(32),
+          padding: EdgeInsets.all(kIsWeb ? 32 : 32.sp),
           decoration: BoxDecoration(
             color: Colors.blue.withOpacity(0.1),
             borderRadius: BorderRadius.circular(16),
@@ -1611,7 +1612,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
               Text(
                 'Select a Category',
                 style: GoogleFonts.poppins(
-                  fontSize: 20,
+                  fontSize: kIsWeb ? 20 : 20.sp,
                   fontWeight: FontWeight.w600,
                   color: Colors.blue,
                 ),
@@ -1620,7 +1621,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
               Text(
                 'Please select a category from the options above to view menu items.',
                 style: GoogleFonts.poppins(
-                  fontSize: 14,
+                  fontSize: kIsWeb ? 14 : 14.sp,
                   color: Colors.blue.withOpacity(0.7),
                 ),
                 textAlign: TextAlign.center,
@@ -1630,7 +1631,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
         ),
       );
     }
-    
+
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection("menu_items")
@@ -1641,15 +1642,15 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
           .snapshots(),
       builder: (context, menuSnapshot) {
         print('DEBUG: Separate view - Fetching menu items for category: ${_selectedCategoryId}');
-        
+
         if (menuSnapshot.hasError) {
           print('DEBUG: Separate view - Menu items snapshot error: ${menuSnapshot.error}');
           return Center(
             child: Container(
-              padding: EdgeInsets.all(24),
+              padding: EdgeInsets.all(kIsWeb ? 24 : 24.sp),
               decoration: BoxDecoration(
                 color: Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(kIsWeb ? 16 : 16.sp),
                 border: Border.all(color: Colors.red.withOpacity(0.3)),
               ),
               child: Column(
@@ -1660,7 +1661,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                   Text(
                     'Error loading menu items',
                     style: GoogleFonts.poppins(
-                      fontSize: 18,
+                      fontSize: kIsWeb ? 18 : 18.sp,
                       fontWeight: FontWeight.w600,
                       color: Colors.red,
                     ),
@@ -1669,7 +1670,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                   Text(
                     '${menuSnapshot.error}',
                     style: GoogleFonts.poppins(
-                      fontSize: 14,
+                      fontSize: kIsWeb ? 14 : 14.sp,
                       color: Colors.red.withOpacity(0.7),
                     ),
                     textAlign: TextAlign.center,
@@ -1701,10 +1702,10 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
           print('DEBUG: Separate view - No menu items found for category: ${_selectedCategoryId}');
           return Center(
             child: Container(
-              padding: EdgeInsets.all(32),
+              padding: EdgeInsets.all(kIsWeb ? 32 : 32.sp),
               decoration: BoxDecoration(
                 color: Colors.orange.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(kIsWeb ? 16 : 16.sp),
                 border: Border.all(color: Colors.orange.withOpacity(0.3)),
               ),
               child: Column(
@@ -1715,7 +1716,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                   Text(
                     'No Menu Items Available',
                     style: GoogleFonts.poppins(
-                      fontSize: 20,
+                      fontSize: kIsWeb ? 20 : 20.sp,
                       fontWeight: FontWeight.w600,
                       color: Colors.orange,
                     ),
@@ -1724,7 +1725,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                   Text(
                     'No available menu items in this category.\nTry selecting a different category or check back later.',
                     style: GoogleFonts.poppins(
-                      fontSize: 14,
+                      fontSize: kIsWeb ? 14 : 14.sp,
                       color: Colors.orange.withOpacity(0.7),
                     ),
                     textAlign: TextAlign.center,
@@ -1736,7 +1737,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
         }
 
         return ListView.builder(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(kIsWeb ? 16 : 16.sp),
           itemCount: items.length,
           itemBuilder: (context, i) {
             final item = items[i];
@@ -1784,14 +1785,14 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
               elevation: 0,
               insetPadding: const EdgeInsets.symmetric(horizontal: 24),
               child: Material(
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(kIsWeb ? 24 : 24.sp),
                 elevation: 24,
                 shadowColor: Colors.black26,
                 child: Container(
                   constraints: const BoxConstraints(maxWidth: 400),
                   decoration: BoxDecoration(
                     color: colorScheme.surface,
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(kIsWeb ? 24 : 24.sp),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.08),
@@ -1801,7 +1802,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                     ],
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(kIsWeb ? 24 : 24.sp),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -1822,7 +1823,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                                 ),
                                 child: Icon(
                                   Icons.delivery_dining_rounded,
-                                  size: 28.sp,
+                                  size: kIsWeb ? 28 : 28.sp,
                                   color: colorScheme.primary,
                                 ),
                               ),
@@ -1831,7 +1832,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                                 child: Text(
                                   "Track your order",
                                   style: GoogleFonts.poppins(
-                                    fontSize: 20.sp,
+                                    fontSize: kIsWeb ? 20 : 20.sp,
                                     fontWeight: FontWeight.w600,
                                     color: colorScheme.onSurface,
                                     letterSpacing: -0.3,
@@ -1843,7 +1844,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                                 icon: Icon(
                                   Icons.close_rounded,
                                   color: colorScheme.onSurfaceVariant,
-                                  size: 22.sp,
+                                  size: kIsWeb ? 22 : 22.sp,
                                 ),
                                 style: IconButton.styleFrom(
                                   backgroundColor: colorScheme.surfaceContainerHighest.withOpacity(0.5),
@@ -1861,7 +1862,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                               Text(
                                 "Enter your order token to see status and details.",
                                 style: GoogleFonts.poppins(
-                                  fontSize: 14.sp,
+                                  fontSize: kIsWeb ? 14 : 14.sp,
                                   color: colorScheme.onSurfaceVariant,
                                   height: 1.4.h,
                                 ),
@@ -1871,7 +1872,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                                 controller: tokenController,
                                 keyboardType: TextInputType.number,
                                 style: GoogleFonts.poppins(
-                                  fontSize: 16.sp,
+                                  fontSize: kIsWeb ? 16 : 16.sp,
                                   fontWeight: FontWeight.w500,
                                 ),
                                 decoration: InputDecoration(
@@ -1879,23 +1880,23 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                                   hintText: "e.g. 4521",
                                   prefixIcon: Icon(
                                     Icons.tag_rounded,
-                                    size: 22.sp,
+                                    size: kIsWeb ? 22 : 22.sp,
                                     color: colorScheme.primary,
                                   ),
                                   filled: true,
                                   fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.4.sp),
                                   border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(14.sp),
+                                    borderRadius: BorderRadius.circular(kIsWeb ? 14 : 14.sp),
                                     borderSide: BorderSide.none,
                                   ),
                                   enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(14.sp),
+                                    borderRadius: BorderRadius.circular(kIsWeb ? 14 : 14.sp),
                                     borderSide: BorderSide(
                                       color: colorScheme.outline.withOpacity(0.3.sp),
                                     ),
                                   ),
                                   focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(14.sp),
+                                    borderRadius: BorderRadius.circular(kIsWeb ? 14 : 14.sp),
                                     borderSide: BorderSide(
                                       color: colorScheme.primary,
                                       width: 1.5,
@@ -1916,14 +1917,14 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                                 style: FilledButton.styleFrom(
                                   padding: EdgeInsets.symmetric(vertical: 16.h),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14.sp),
+                                    borderRadius: BorderRadius.circular(kIsWeb ? 14 : 14.sp),
                                   ),
                                   elevation: 0,
                                 ),
                                 child: Text(
                                   "Track order",
                                   style: GoogleFonts.poppins(
-                                    fontSize: 16.sp,
+                                    fontSize: kIsWeb ? 16 : 16.sp,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -1943,8 +1944,8 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                                         padding:  EdgeInsets.symmetric(vertical: 24.h),
                                         child: Center(
                                           child: SizedBox(
-                                            width: 32.sp,
-                                            height: 32.sp,
+                                            width: kIsWeb ? 32 : 32.sp,
+                                            height: kIsWeb ? 32 : 32.sp,
                                             child: CircularProgressIndicator(
                                               strokeWidth: 2.5,
                                               color: colorScheme.primary,
@@ -1955,24 +1956,24 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                                     }
                                     if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                                       return Container(
-                                        padding: const EdgeInsets.all(20),
+                                        padding: EdgeInsets.all(kIsWeb ? 20 : 20.sp),
                                         decoration: BoxDecoration(
                                           color: colorScheme.errorContainer.withOpacity(0.4),
-                                          borderRadius: BorderRadius.circular(14.sp),
+                                          borderRadius: BorderRadius.circular(kIsWeb ? 14 : 14.sp),
                                         ),
                                         child: Row(
                                           children: [
                                             Icon(
                                               Icons.search_off_rounded,
                                               color: colorScheme.error,
-                                              size: 24.sp,
+                                              size: kIsWeb ? 24 : 24.sp,
                                             ),
-                                             SizedBox(width: 12.w),
+                                            SizedBox(width: 12.w),
                                             Expanded(
                                               child: Text(
                                                 "No order found for this token.",
                                                 style: GoogleFonts.poppins(
-                                                  fontSize: 14.sp,
+                                                  fontSize: kIsWeb ? 14 : 14.sp,
                                                   color: colorScheme.onErrorContainer,
                                                   fontWeight: FontWeight.w500,
                                                 ),
@@ -1987,8 +1988,8 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                                     final statusColor = status == 'delivered'
                                         ? colorScheme.primary
                                         : status == 'cancelled'
-                                            ? colorScheme.error
-                                            : colorScheme.tertiary;
+                                        ? colorScheme.error
+                                        : colorScheme.tertiary;
                                     return Container(
                                       padding:  EdgeInsets.all(20.sp),
                                       decoration: BoxDecoration(
@@ -2012,7 +2013,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                                                 child: Text(
                                                   "Token #${order['tokenNumber']}",
                                                   style: GoogleFonts.poppins(
-                                                    fontSize: 15.sp,
+                                                    fontSize: kIsWeb ? 15 : 15.sp,
                                                     fontWeight: FontWeight.w700,
                                                     color: colorScheme.primary,
                                                   ),
@@ -2023,12 +2024,12 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                                                 padding:  EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
                                                 decoration: BoxDecoration(
                                                   color: statusColor.withOpacity(0.2),
-                                                  borderRadius: BorderRadius.circular(8),
+                                                  borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
                                                 ),
                                                 child: Text(
                                                   (order['status'] ?? 'Pending').toString(),
                                                   style: GoogleFonts.poppins(
-                                                    fontSize: 13.sp,
+                                                    fontSize: kIsWeb ? 13 : 13.sp,
                                                     fontWeight: FontWeight.w600,
                                                     color: statusColor,
                                                   ),
@@ -2036,21 +2037,21 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                                               ),
                                             ],
                                           ),
-                                           SizedBox(height: 16.h),
+                                          SizedBox(height: 16.h),
                                           Row(
                                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                             children: [
                                               Text(
                                                 "Total amount",
                                                 style: GoogleFonts.poppins(
-                                                  fontSize: 13.sp,
+                                                  fontSize: kIsWeb ? 13 : 13.sp,
                                                   color: colorScheme.onSurfaceVariant,
                                                 ),
                                               ),
                                               Text(
                                                 "₹${order['totalAmount'] ?? '—'}",
                                                 style: GoogleFonts.poppins(
-                                                  fontSize: 18.sp,
+                                                  fontSize: kIsWeb ? 18 : 18.sp,
                                                   fontWeight: FontWeight.w700,
                                                   color: colorScheme.onSurface,
                                                 ),

@@ -123,7 +123,7 @@ class _MenuPageState extends State<MenuPage> {
 
             return Dialog(
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(isMobile ? 16.sp : 20.sp),
+                borderRadius: BorderRadius.circular(kIsWeb ? 16 : 16.sp),
               ),
               backgroundColor: colorScheme.surface,
               child: Container(
@@ -137,7 +137,7 @@ class _MenuPageState extends State<MenuPage> {
                     Expanded(
                       child: SingleChildScrollView(
                         physics: const ClampingScrollPhysics(),
-                        padding: EdgeInsets.all(isMobile ? 16.sp : 24.sp),
+                        padding: EdgeInsets.all(kIsWeb ? 16 : 16.sp),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -147,7 +147,7 @@ class _MenuPageState extends State<MenuPage> {
                               setStateDialog(() {});
                             }),
 
-                            SizedBox(height: isMobile ? 20.sp : 24.sp),
+                            SizedBox(height: kIsWeb ? 20 : 20.sp),
 
                             /// CATEGORY
                             categoryDropdown(
@@ -160,12 +160,12 @@ class _MenuPageState extends State<MenuPage> {
                               },
                             ),
 
-                            SizedBox(height: isMobile ? 16 : 20),
+                            SizedBox(height: kIsWeb ? 16 : 16.sp),
 
                             /// ITEM NAME
                             itemNameField(nameController),
 
-                            SizedBox(height: isMobile ? 20 : 24),
+                            SizedBox(height: kIsWeb ? 24 : 24.sp),
 
                             variantsWidget(
                               variants,
@@ -217,7 +217,7 @@ class _MenuPageState extends State<MenuPage> {
     final isMobile = Responsive.isMobile(context);
     
     return Container(
-      padding: EdgeInsets.all(isMobile ? 16 : 20),
+      padding: EdgeInsets.all(kIsWeb ? 16 : 16),
       decoration: BoxDecoration(
         color: colorScheme.surfaceVariant.withOpacity(0.3),
         borderRadius: BorderRadius.vertical(
@@ -232,10 +232,10 @@ class _MenuPageState extends State<MenuPage> {
             child: OutlinedButton(
               onPressed: () => Navigator.pop(context),
               style: OutlinedButton.styleFrom(
-                padding: EdgeInsets.symmetric(vertical: isMobile ? 12 : 14),
+                padding: EdgeInsets.symmetric(vertical: kIsWeb ? 12 : 12),
                 side: BorderSide(color: colorScheme.outline),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(isMobile ? 10 : 12),
+                  borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10),
                 ),
               ),
               child: Text(
@@ -243,13 +243,13 @@ class _MenuPageState extends State<MenuPage> {
                 style: TextStyle(
                   color: colorScheme.onSurface.withOpacity(0.7),
                   fontWeight: FontWeight.w500,
-                  fontSize: isMobile ? 14 : null,
+                  fontSize: kIsWeb ? 14 : 14.sp,
                 ),
               ),
             ),
           ),
 
-          SizedBox(width: isMobile ? 10 : 12),
+          SizedBox(width: kIsWeb ? 10 : 10),
           Expanded(
             flex: 2,
             child: ElevatedButton(
@@ -336,9 +336,9 @@ class _MenuPageState extends State<MenuPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: colorScheme.primary,
                 foregroundColor: colorScheme.onPrimary,
-                padding: EdgeInsets.symmetric(vertical: isMobile ? 12 : 14),
+                padding: EdgeInsets.symmetric(vertical: kIsWeb ? 12 : 12),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(isMobile ? 10 : 12),
+                  borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10),
                 ),
               ),
 
@@ -347,8 +347,8 @@ class _MenuPageState extends State<MenuPage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         SizedBox(
-                          width: isMobile ? 16 : 18,
-                          height: isMobile ? 16 : 18,
+                          width: kIsWeb ? 16 : 16,
+                          height: kIsWeb ? 16 : 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             valueColor: AlwaysStoppedAnimation<Color>(
@@ -356,12 +356,12 @@ class _MenuPageState extends State<MenuPage> {
                             ),
                           ),
                         ),
-                        SizedBox(width: isMobile ? 8 : 10),
+                        SizedBox(width: kIsWeb ? 8 : 8),
                         Text(
                           "Adding...",
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
-                            fontSize: isMobile ? 14 : null,
+                            fontSize: kIsWeb ? 14 : 14.sp,
                           ),
                         ),
                       ],
@@ -370,7 +370,7 @@ class _MenuPageState extends State<MenuPage> {
                       "Save Menu Item",
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        fontSize: isMobile ? 14 : null,
+                        fontSize: kIsWeb ? 14 : 14.sp,
                       ),
                     ),
             ),
@@ -398,13 +398,13 @@ class _MenuPageState extends State<MenuPage> {
             Icon(
               Icons.list_alt,
               color: colorScheme.onSurface.withOpacity(0.7),
-              size: isMobile ? 18.sp : 20.sp,
+              size: kIsWeb ? 18 : 18.sp,
             ),
-            SizedBox(width: isMobile ? 6 : 8),
+            SizedBox(width: kIsWeb ? 6 : 6.sp),
             Text(
               "Variants",
               style: TextStyle(
-                fontSize: isMobile ? 14.sp : 16.sp,
+                fontSize: kIsWeb ? 14 : 14.sp,
                 fontWeight: FontWeight.w600,
                 color: colorScheme.onSurface,
               ),
@@ -412,7 +412,7 @@ class _MenuPageState extends State<MenuPage> {
           ],
         ),
 
-        SizedBox(height: isMobile ? 10.sp : 12.sp),
+        SizedBox(height: kIsWeb ? 10 : 10.sp),
 
         /// Variant List
         ...variants.asMap().entries.map((entry) {
@@ -421,10 +421,10 @@ class _MenuPageState extends State<MenuPage> {
 
           return Container(
             margin:  EdgeInsets.only(bottom: 12.sp),
-            padding: EdgeInsets.all(isMobile ? 12.sp : 16.sp),
+            padding: EdgeInsets.all(kIsWeb ? 12 : 12.sp),
             decoration: BoxDecoration(
               color: colorScheme.surfaceVariant.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(isMobile ? 10 : 12),
+              borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10),
               border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
             ),
             child: Row(
@@ -450,11 +450,11 @@ class _MenuPageState extends State<MenuPage> {
                   ),
                 ),
 
-                SizedBox(width: 12.sp),
+                SizedBox(width: kIsWeb ? 12 : 12.sp),
 
                 /// Price
                 SizedBox(
-                  width: isMobile ? 80.sp : 100.sp,
+                  width: kIsWeb ? 80 : 80.sp,
                   child: TextField(
                     controller: variants[index]["price"],
                     keyboardType: TextInputType.number,
@@ -464,7 +464,7 @@ class _MenuPageState extends State<MenuPage> {
                       filled: true,
                       fillColor: Colors.white,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.sp),
+                        borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
                         borderSide: BorderSide.none,
                       ),
                       contentPadding: EdgeInsets.symmetric(
@@ -475,7 +475,7 @@ class _MenuPageState extends State<MenuPage> {
                   ),
                 ),
 
-                SizedBox(width: isMobile ? 6.sp : 8.sp),
+                SizedBox(width: kIsWeb ? 6 : 6.sp),
 
                 /// Remove Button
                 if (variants.length > 1)
@@ -494,7 +494,7 @@ class _MenuPageState extends State<MenuPage> {
           );
         }),
 
-        SizedBox(height: isMobile ? 10.sp : 12.sp),
+        SizedBox(height: kIsWeb ? 10 : 10.sp),
 
         /// Add Variant Button
         SizedBox(
@@ -510,20 +510,20 @@ class _MenuPageState extends State<MenuPage> {
             icon: Icon(
               Icons.add_circle_outline,
               color: colorScheme.primary,
-              size: isMobile ? 18.sp : 20.sp,
+              size: kIsWeb ? 18 : 18.sp,
             ),
             label: Text(
               "Add Another Variant",
               style: TextStyle(
                 color: colorScheme.primary,
-                fontSize: isMobile ? 12.sp : null,
+                fontSize: kIsWeb ? 12 : 12.sp,
               ),
             ),
             style: OutlinedButton.styleFrom(
-              padding: EdgeInsets.symmetric(vertical: isMobile ? 10.sp : 12.sp),
+              padding: EdgeInsets.symmetric(vertical: isMobile ? 10.sp : 12.sp, horizontal: kIsWeb ? 10 : 10.sp),
               side: BorderSide(color: colorScheme.primary.withOpacity(0.5)),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(isMobile ? 10.sp : 12.sp),
+                borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
               ),
             ),
           ),
@@ -543,7 +543,7 @@ class _MenuPageState extends State<MenuPage> {
         Text(
           "Item Name",
           style: TextStyle(
-            fontSize: isMobile ? 14.sp : 16.sp,
+            fontSize: kIsWeb ? 14 : 14.sp,
             fontWeight: FontWeight.w600,
             color: colorScheme.onSurface,
           ),
@@ -558,17 +558,17 @@ class _MenuPageState extends State<MenuPage> {
             fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
 
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(isMobile ? 10.sp : 12.sp),
+              borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
               borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.2)),
             ),
 
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(isMobile ? 10.sp : 12.sp),
+              borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
               borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.2)),
             ),
 
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(isMobile ? 10.sp : 12.sp),
+              borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
               borderSide: BorderSide(color: colorScheme.primary),
             ),
 
@@ -602,7 +602,7 @@ class _MenuPageState extends State<MenuPage> {
         Text(
           "Category",
           style: TextStyle(
-            fontSize: isMobile ? 14.sp : 16.sp,
+            fontSize: kIsWeb ? 14 : 14.sp,
             fontWeight: FontWeight.w600,
             color: colorScheme.onSurface,
           ),
@@ -621,10 +621,10 @@ class _MenuPageState extends State<MenuPage> {
                 height: 50,
                 decoration: BoxDecoration(
                   color: colorScheme.surfaceVariant.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(isMobile ? 10.sp : 12.sp),
+                  borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
                 ),
                 child: Center(
-                  child: CircularProgressIndicator(strokeWidth: 2.sp),
+                  child: CircularProgressIndicator(strokeWidth: kIsWeb ? 2 : 2.sp),
                 ),
               );
             }
@@ -634,28 +634,28 @@ class _MenuPageState extends State<MenuPage> {
             return Container(
               decoration: BoxDecoration(
                 color: colorScheme.surfaceVariant.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(isMobile ? 10.sp : 12.sp),
+                borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
                 border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
                   value: selectedCategoryId,
                   hint: Padding(
-                    padding:  EdgeInsets.symmetric(horizontal: 16.sp),
+                    padding:  EdgeInsets.symmetric(horizontal: kIsWeb ? 12 : 12.sp, vertical: kIsWeb ? 8 : 8.sp),
                     child: Text(
                       "Select Category",
                       style: TextStyle(color: colorScheme.onSurface.withOpacity(0.5)),
                     ),
                   ),
                   isExpanded: true,
-                  padding:  EdgeInsets.symmetric(horizontal: 16.sp),
+                  padding:  EdgeInsets.symmetric(horizontal: kIsWeb ? 12 : 12.sp, vertical: kIsWeb ? 8 : 8.sp),
 
                   items: categories.map((cat) {
                     return DropdownMenuItem<String>(
                       value: cat.id,
                       child: Text(
                         cat['name'],
-                        style:  TextStyle(fontSize: 15.sp),
+                        style:  TextStyle(fontSize: kIsWeb ? 15 : 15.sp),
                       ),
                     );
                   }).toList(),
@@ -681,12 +681,12 @@ class _MenuPageState extends State<MenuPage> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           width: isMobile ? 120.sp : 140.sp,
-          height: isMobile ? 120.sp : 140.sp,
+          height: kIsWeb ? 80 : 80.sp,
           decoration: BoxDecoration(
             color: pickedImage == null
                 ? colorScheme.surfaceVariant.withOpacity(0.5)
                 : Colors.transparent,
-            borderRadius: BorderRadius.circular(isMobile ? 12.sp : 16.sp),
+            borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
             border: Border.all(
               color: pickedImage == null
                   ? colorScheme.outline.withOpacity(0.3)
@@ -741,7 +741,7 @@ class _MenuPageState extends State<MenuPage> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(isMobile ? 16.sp : 20.sp),
+          borderRadius: BorderRadius.circular(kIsWeb ? 16 : 16.sp),
         ),
         title: Row(
           children: [
@@ -749,12 +749,12 @@ class _MenuPageState extends State<MenuPage> {
               padding: EdgeInsets.all(isMobile ? 8.sp : 10.sp),
               decoration: BoxDecoration(
                 color: colorScheme.errorContainer,
-                borderRadius: BorderRadius.circular(isMobile ? 10.sp : 12.sp),
+                borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
               ),
               child: Icon(
                 Icons.delete_outline,
                 color: colorScheme.error,
-                size: isMobile ? 20.sp : 24.sp,
+                size: kIsWeb ? 20 : 20.sp,
               ),
             ),
             SizedBox(width: isMobile ? 10.sp : 12.sp),
@@ -777,17 +777,17 @@ class _MenuPageState extends State<MenuPage> {
             Text(
               "Are you sure you want to delete this menu item?",
               style: TextStyle(
-                fontSize: isMobile ? 14.sp : 16.sp,
+                fontSize: kIsWeb ? 14 : 14.sp,
                 color: colorScheme.onSurface,
               ),
             ),
             if (itemName.isNotEmpty) ...[
               SizedBox(height: isMobile ? 8.sp : 12.sp),
               Container(
-                padding: EdgeInsets.all(isMobile ? 12.sp : 16.sp),
+                padding: EdgeInsets.all(kIsWeb ? 12 : 12.sp),
                 decoration: BoxDecoration(
                   color: colorScheme.surfaceVariant.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(isMobile ? 10.sp : 12.sp),
+                  borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
                   border: Border.all(
                     color: colorScheme.outline.withOpacity(0.2),
                   ),
@@ -797,7 +797,7 @@ class _MenuPageState extends State<MenuPage> {
                     Icon(
                       Icons.restaurant,
                       color: colorScheme.onSurface.withOpacity(0.6),
-                      size: isMobile ? 16.sp : 18.sp,
+                      size: kIsWeb ? 16 : 16.sp,
                     ),
                     SizedBox(width: isMobile ? 8.sp : 10.sp),
                     Expanded(
@@ -819,7 +819,7 @@ class _MenuPageState extends State<MenuPage> {
             Text(
               "This action cannot be undone.",
               style: TextStyle(
-                fontSize: isMobile ? 12.sp : 13.sp,
+                fontSize: kIsWeb ? 12 : 12.sp,
                 color: colorScheme.error,
                 fontWeight: FontWeight.w500,
               ),
@@ -835,7 +835,7 @@ class _MenuPageState extends State<MenuPage> {
                 vertical: isMobile ? 10.sp : 12.sp,
               ),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(isMobile ? 10.sp : 12.sp),
+                borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
               ),
             ),
             child: Text(
@@ -892,7 +892,7 @@ class _MenuPageState extends State<MenuPage> {
                 vertical: isMobile ? 10.sp : 12.sp,
               ),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(isMobile ? 10.sp : 12.sp),
+                borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
               ),
             ),
             child: Text(
@@ -964,7 +964,7 @@ class _MenuPageState extends State<MenuPage> {
 
             return Dialog(
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(isMobile ? 16.sp : 20.sp),
+                borderRadius: BorderRadius.circular(kIsWeb ? 16 : 16.sp),
               ),
               backgroundColor: colorScheme.surface,
               child: Container(
@@ -998,12 +998,12 @@ class _MenuPageState extends State<MenuPage> {
                             padding: EdgeInsets.all(isMobile ? 8.sp : 10.sp),
                             decoration: BoxDecoration(
                               color: colorScheme.onPrimary.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(isMobile ? 10.sp : 12.sp),
+                              borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
                             ),
                             child: Icon(
                               Icons.edit,
                               color: colorScheme.onPrimary,
-                              size: isMobile ? 20.sp : 24.sp,
+                              size: kIsWeb ? 20 : 20.sp,
                             ),
                           ),
                           SizedBox(width: isMobile ? 10.sp : 12.sp),
@@ -1012,7 +1012,7 @@ class _MenuPageState extends State<MenuPage> {
                               "Edit Menu Item",
                               style: TextStyle(
                                 color: colorScheme.onPrimary,
-                                fontSize: isMobile ? 18.sp : 20.sp,
+                                fontSize: kIsWeb ? 18 : 18.sp,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -1032,34 +1032,34 @@ class _MenuPageState extends State<MenuPage> {
                     Expanded(
                       child: SingleChildScrollView(
                         physics: const ClampingScrollPhysics(),
-                        padding: EdgeInsets.all(isMobile ? 16.sp : 24.sp),
+                        padding: EdgeInsets.all(kIsWeb ? 16 : 16.sp),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               "Item Image",
                               style: TextStyle(
-                                fontSize: isMobile ? 14.sp : 16.sp,
+                                fontSize: kIsWeb ? 14 : 14.sp,
                                 fontWeight: FontWeight.w600,
                                 color: colorScheme.onSurface,
                               ),
                             ),
-                            SizedBox(height: isMobile ? 10.sp : 12.sp),
+                            SizedBox(height: kIsWeb ? 10 : 10.sp),
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Container(
-                                  width: isMobile ? 100.sp : 120.sp,
-                                  height: isMobile ? 100.sp : 120.sp,
+                                  width: kIsWeb ? 120 : 120.sp,
+                                  height: kIsWeb ? 120 : 120.sp,
                                   decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(isMobile ? 12.sp : 16.sp),
+                                    borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                                     color: colorScheme.surfaceVariant.withOpacity(0.5),
                                     border: Border.all(
                                       color: colorScheme.outline.withOpacity(0.3),
                                     ),
                                   ),
                                   child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(isMobile ? 12.sp : 16.sp),
+                                    borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                                     child: newImageBytes != null
                                         ? Image.memory(
                                             newImageBytes!,
@@ -1114,7 +1114,7 @@ class _MenuPageState extends State<MenuPage> {
                                                     child: Icon(
                                                       Icons.broken_image,
                                                       color: colorScheme.onSurface.withOpacity(0.4),
-                                                      size: isMobile ? 30.sp : 36.sp,
+                                                      size: kIsWeb ? 30 : 30.sp,
                                                     ),
                                                   );
                                                 },
@@ -1133,7 +1133,7 @@ class _MenuPageState extends State<MenuPage> {
                                                 child: Icon(
                                                   Icons.restaurant,
                                                   color: colorScheme.onSurface.withOpacity(0.4),
-                                                  size: isMobile ? 30.sp : 36.sp,
+                                                  size: kIsWeb ? 30 : 30.sp,
                                                 ),
                                               )),
                                   ),
@@ -1146,11 +1146,11 @@ class _MenuPageState extends State<MenuPage> {
                                       Text(
                                         "Upload or change dish image. This image is shown in customer menu.",
                                         style: TextStyle(
-                                          fontSize: isMobile ? 12.sp : 13.sp,
+                                          fontSize: kIsWeb ? 12 : 12.sp,
                                           color: colorScheme.onSurface.withOpacity(0.6),
                                         ),
                                       ),
-                                      SizedBox(height: isMobile ? 10.sp : 12.sp),
+                                      SizedBox(height: kIsWeb ? 10 : 10.sp),
                                       OutlinedButton.icon(
                                         onPressed: () async {
                                           final picker = ImagePicker();
@@ -1165,7 +1165,7 @@ class _MenuPageState extends State<MenuPage> {
                                         icon: Icon(
                                           Icons.image_outlined,
                                           color: colorScheme.primary,
-                                          size: isMobile ? 18.sp : 20.sp,
+                                          size: kIsWeb ? 18 : 18.sp,
                                         ),
                                         label: Text(
                                           imageUrl != null && imageUrl.isNotEmpty
@@ -1174,7 +1174,7 @@ class _MenuPageState extends State<MenuPage> {
                                           style: TextStyle(
                                             color: colorScheme.primary,
                                             fontWeight: FontWeight.w500,
-                                            fontSize: isMobile ? 12.sp : null,
+                                            fontSize: kIsWeb ? 12 : 12.sp,
                                           ),
                                         ),
                                         style: OutlinedButton.styleFrom(
@@ -1186,7 +1186,7 @@ class _MenuPageState extends State<MenuPage> {
                                             color: colorScheme.primary.withOpacity(0.5),
                                           ),
                                           shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(isMobile ? 10.sp : 12.sp),
+                                            borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
                                           ),
                                         ),
                                       ),
@@ -1196,7 +1196,7 @@ class _MenuPageState extends State<MenuPage> {
                               ],
                             ),
 
-                            SizedBox(height: isMobile ? 20.sp : 24.sp),
+                            SizedBox(height: kIsWeb ? 20 : 20.sp),
                             /// CATEGORY SELECTION
                             StreamBuilder<QuerySnapshot>(
                               stream: FirebaseFirestore.instance
@@ -1205,13 +1205,13 @@ class _MenuPageState extends State<MenuPage> {
                               builder: (context, snapshot) {
                                 if (!snapshot.hasData) {
                                   return Container(
-                                    height: 50.sp,
+                                    height: kIsWeb ? 50 : 50.sp,
                                     decoration: BoxDecoration(
                                       color: colorScheme.surfaceVariant.withOpacity(0.5),
-                                      borderRadius: BorderRadius.circular(12.sp),
+                                      borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                                     ),
                                     child:  Center(
-                                      child: CircularProgressIndicator(strokeWidth: 2.sp),
+                                      child: CircularProgressIndicator(strokeWidth: kIsWeb ? 2 : 2.sp),
                                     ),
                                   );
                                 }
@@ -1221,27 +1221,28 @@ class _MenuPageState extends State<MenuPage> {
                                 return Container(
                                   decoration: BoxDecoration(
                                     color: colorScheme.surfaceVariant.withOpacity(0.3),
-                                    borderRadius: BorderRadius.circular(12.sp),
+                                    borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                                     border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
                                   ),
                                   child: DropdownButtonHideUnderline(
                                     child: DropdownButton<String>(
                                       value: selectedCategoryId,
                                       hint: Padding(
-                                        padding:   EdgeInsets.symmetric(horizontal: 16.sp),
+                                        padding:  EdgeInsets.symmetric(horizontal: kIsWeb ? 12 : 12.sp, vertical: kIsWeb ? 8 : 8.sp),
                                         child: Text(
                                           "Select Category",
                                           style: TextStyle(color: colorScheme.onSurface.withOpacity(0.5)),
                                         ),
                                       ),
                                       isExpanded: true,
-                                      padding:  EdgeInsets.symmetric(horizontal: 16.sp),
+                                      padding:  EdgeInsets.symmetric(horizontal: kIsWeb ? 12 : 12.sp, vertical: kIsWeb ? 8 : 8.sp),
+
                                       items: categories.map((cat) {
                                         return DropdownMenuItem<String>(
                                           value: cat.id,
                                           child: Text(
                                             cat['name'],
-                                            style:  TextStyle(fontSize: 15.sp),
+                                            style:  TextStyle(fontSize: kIsWeb ? 15 : 15.sp)
                                           ),
                                         );
                                       }).toList(),
@@ -1261,12 +1262,12 @@ class _MenuPageState extends State<MenuPage> {
                             Text(
                               "Item Name",
                               style: TextStyle(
-                                fontSize: 16.sp,
+                                fontSize: kIsWeb ? 16 : 16.sp,
                                 fontWeight: FontWeight.w600,
                                 color: colorScheme.onSurface,
                               ),
                             ),
-                            SizedBox(height: 8.sp),
+                            SizedBox(height: kIsWeb ? 8 : 8.sp),
                             TextField(
                               controller: nameController,
                               decoration: InputDecoration(
@@ -1274,15 +1275,15 @@ class _MenuPageState extends State<MenuPage> {
                                 filled: true,
                                 fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
                                 border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12.sp),
+                                  borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                                   borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.2)),
                                 ),
                                 enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12),
                                   borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.2)),
                                 ),
                                 focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12.sp),
+                                  borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                                   borderSide: BorderSide(color: colorScheme.primary),
                                 ),
                                 prefixIcon: Icon(
@@ -1306,14 +1307,14 @@ class _MenuPageState extends State<MenuPage> {
                                 Text(
                                   "Variants",
                                   style: TextStyle(
-                                    fontSize: 12.sp,
+                                    fontSize: kIsWeb ? 12 : 12.sp,
                                     fontWeight: FontWeight.w600,
                                     color: colorScheme.onSurface,
                                   ),
                                 ),
                               ],
                             ),
-                            SizedBox(height: 12.sp),
+                            SizedBox(height: kIsWeb ? 12 : 12.sp),
 
                             /// VARIANTS LIST
                             ...variantsControllers.asMap().entries.map((entry) {
@@ -1323,7 +1324,7 @@ class _MenuPageState extends State<MenuPage> {
                                 padding:  EdgeInsets.all(16.sp),
                                 decoration: BoxDecoration(
                                   color: colorScheme.surfaceVariant.withOpacity(0.3),
-                                  borderRadius: BorderRadius.circular(12.sp),
+                                  borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                                   border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
                                 ),
                                 child: Row(
@@ -1337,7 +1338,7 @@ class _MenuPageState extends State<MenuPage> {
                                           filled: true,
                                           fillColor: Colors.white,
                                           border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(8.sp),
+                                            borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
                                             borderSide: BorderSide.none,
                                           ),
                                           contentPadding:  EdgeInsets.symmetric(
@@ -1347,9 +1348,9 @@ class _MenuPageState extends State<MenuPage> {
                                         ),
                                       ),
                                     ),
-                                     SizedBox(width: 12.sp),
+                                     SizedBox(width: kIsWeb ? 12 : 12.sp),
                                     SizedBox(
-                                      width: 100.sp,
+                                      width: kIsWeb ? 100 : 100.sp,
                                       child: TextField(
                                         controller:
                                         variantsControllers[index]["price"],
@@ -1386,7 +1387,7 @@ class _MenuPageState extends State<MenuPage> {
                                 ),
                               );
                             }),
-                            SizedBox(height: 12.sp),
+                            SizedBox(height: kIsWeb ? 12 : 12.sp),
                             /// ADD VARIANT BUTTON
                             SizedBox(
                               width: double.infinity,
@@ -1407,7 +1408,7 @@ class _MenuPageState extends State<MenuPage> {
                                   padding:  EdgeInsets.symmetric(vertical: 12.sp),
                                   side: BorderSide(color: colorScheme.primary.withOpacity(0.5)),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12.sp),
+                                    borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                                   ),
                                 ),
                               ),
@@ -1435,7 +1436,7 @@ class _MenuPageState extends State<MenuPage> {
                                 padding:  EdgeInsets.symmetric(vertical: 14.sp),
                                 side: BorderSide(color: colorScheme.outline),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12),
                                 ),
                               ),
                               child: Text(
@@ -1447,7 +1448,7 @@ class _MenuPageState extends State<MenuPage> {
                               ),
                             ),
                           ),
-                          SizedBox(width: 12.sp),
+                          SizedBox(width: kIsWeb ? 12 : 12.sp),
                           Expanded(
                             flex: 2,
                             child: ElevatedButton(
@@ -1593,7 +1594,7 @@ class _MenuPageState extends State<MenuPage> {
                                 foregroundColor: colorScheme.onPrimary,
                                 padding: const EdgeInsets.symmetric(vertical: 14),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12),
                                 ),
                               ),
                               child: isEditing
@@ -1668,7 +1669,7 @@ class _MenuPageState extends State<MenuPage> {
         slivers: [
           SliverAppBar(
             automaticallyImplyLeading: false,
-            expandedHeight: isMobile ? 110.sp : 140.sp,
+            expandedHeight: kIsWeb ? 110 : 110.sp,
             pinned: false,
             floating: false,
             elevation: 0,
@@ -1688,7 +1689,7 @@ class _MenuPageState extends State<MenuPage> {
                 ),
                 child: SafeArea(
                   child: Padding(
-                    padding: EdgeInsets.all(isMobile ? 16.sp : 24.sp),
+                    padding: EdgeInsets.all(kIsWeb ? 16 : 16.sp),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1698,17 +1699,17 @@ class _MenuPageState extends State<MenuPage> {
                           children: [
                             /// Back Arrow
                             Container(
-                              width: isMobile ? 40.sp : 48.sp,
-                              height: isMobile ? 40.sp : 48.sp,
+                              width: kIsWeb ? 40 : 40.sp,
+                              height: kIsWeb ? 40 : 40.sp,
                               decoration: BoxDecoration(
                                 color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(isMobile ? 12.sp : 16.sp),
+                                borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                               ),
                               child: IconButton(
                                 icon: Icon(
                                   Icons.arrow_back_ios_new,
                                   color: Colors.white,
-                                  size: isMobile ? 20.sp : 24.sp,
+                                  size: kIsWeb ? 20 : 20.sp,
                                 ),
                                 onPressed: () {
                                   Navigator.pop(context);
@@ -1717,27 +1718,27 @@ class _MenuPageState extends State<MenuPage> {
                             ),
                             /// Menu Icon
                             Container(
-                              width: isMobile ? 40.sp : 48.sp,
-                              height: isMobile ? 40.sp : 48.sp,
+                              width: kIsWeb ? 40 : 40.sp,
+                              height: kIsWeb ? 40 : 40.sp,
                               decoration: BoxDecoration(
                                 color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(isMobile ? 12.sp : 16.sp),
+                                borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                               ),
                               child: Icon(
                                 Icons.restaurant,
                                 color: Colors.white,
-                                size: isMobile ? 20.sp : 24.sp,
+                                size: kIsWeb ? 20 : 20.sp,
                               ),
                             ),
                           ],
                         ),
-                        SizedBox(height: isMobile ? 10.sp : 20.sp),
+                        SizedBox(height: kIsWeb ? 10 : 10.sp),
                         /// Title and Subtitle
                         Text(
                           "Menu Items",
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: isMobile ? 16.sp : 25.sp,
+                            fontSize: kIsWeb ? 16 : 16.sp,
                             fontWeight: FontWeight.bold,
                           ),
                         )
@@ -1758,7 +1759,7 @@ class _MenuPageState extends State<MenuPage> {
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return Padding(
-                    padding: EdgeInsets.all(isMobile ? 16.sp : 24.sp),
+                    padding: EdgeInsets.all(kIsWeb ? 16 : 16.sp),
                     child: Text(
                       'Error: ${snapshot.error}',
                       style: const TextStyle(color: Colors.red),
@@ -1767,18 +1768,18 @@ class _MenuPageState extends State<MenuPage> {
                 }
                 if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
                   return Padding(
-                    padding: EdgeInsets.all(isMobile ? 16.sp : 24.sp),
+                    padding: EdgeInsets.all(kIsWeb ? 16 : 16.sp),
                     child: const LinearProgressIndicator(),
                   );
                 }
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return Padding(
-                    padding: EdgeInsets.all(isMobile ? 16.sp : 24.sp),
+                    padding: EdgeInsets.all(kIsWeb ? 16 : 16.sp),
                     child: Text(
                       snapshot.hasData && snapshot.data!.docs.isEmpty
                           ? "No Categories"
                           : "Loading...",
-                      style: TextStyle(fontSize: isMobile ? 14.sp : 16.sp),
+                      style: TextStyle(fontSize: kIsWeb ? 14 : 14.sp),
                     ),
                   );
                 }
@@ -1808,7 +1809,7 @@ class _MenuPageState extends State<MenuPage> {
                     isMobile ? 8.sp : 12.sp
                   ),
                   child: SizedBox(
-                    height: 50.sp,
+                    height: kIsWeb ? 50 : 50.sp,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       itemCount: categories.length + 1, // +1 for ellipsis
@@ -1824,7 +1825,7 @@ class _MenuPageState extends State<MenuPage> {
                               ),
                               decoration: BoxDecoration(
                                 color: Colors.white,
-                                borderRadius: BorderRadius.circular(isMobile ? 20.sp : 24.sp),
+                                borderRadius: BorderRadius.circular(kIsWeb ? 20 : 20.sp),
                                 border: Border.all(
                                   color: const Color(0xFFE5E7EB),
                                   width: 1,
@@ -1833,7 +1834,7 @@ class _MenuPageState extends State<MenuPage> {
                               child: Icon(
                                 Icons.more_horiz,
                                 color: const Color(0xFF6B7280),
-                                size: isMobile ? 20.sp : 24.sp,
+                                size: kIsWeb ? 20 : 20.sp,
                               ),
                             ),
                           );
@@ -1857,7 +1858,7 @@ class _MenuPageState extends State<MenuPage> {
                               ),
                               decoration: BoxDecoration(
                                 color: isSelected ?  Color(0xFF7C3AED) : Colors.white,
-                                borderRadius: BorderRadius.circular(isMobile ? 20.sp : 24.sp),
+                                borderRadius: BorderRadius.circular(kIsWeb ? 20 : 20.sp),
                                 border: Border.all(
                                   color: const Color(0xFFE5E7EB),
                                   width: 1,
@@ -1871,14 +1872,14 @@ class _MenuPageState extends State<MenuPage> {
                                       padding: EdgeInsets.only(right: isMobile ? 6 : 8),
                                       child: Icon(
                                         Icons.check,
-                                        size: isMobile ? 16.sp : 18.sp,
+                                        size: kIsWeb ? 16 : 16.sp,
                                         color: Colors.white,
                                       ),
                                     ),
                                   Text(
                                     cat['name'],
                                     style: TextStyle(
-                                      fontSize: isMobile ? 14.sp : 16.sp,
+                                      fontSize: kIsWeb ? 14 : 14.sp,
                                       fontWeight: FontWeight.w500,
                                       color: isSelected ? Colors.white : const Color(0xFF1F2937),
                                     ),
@@ -1906,14 +1907,14 @@ class _MenuPageState extends State<MenuPage> {
                     child: Center(
                       child: Container(
                         padding: EdgeInsets.all(isMobile ? 32.sp : 48),
-                        margin: EdgeInsets.all(isMobile ? 24 : 32),
+                        margin: EdgeInsets.all(kIsWeb ? 24 : 24),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(isMobile ? 20 : 24),
+                          borderRadius: BorderRadius.circular(kIsWeb ? 20 : 20),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.05),
-                              blurRadius: 20,
+                              blurRadius: kIsWeb ? 20 : 20,
                               offset: const Offset(0, 10),
                             ),
                           ],
@@ -1922,18 +1923,18 @@ class _MenuPageState extends State<MenuPage> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Container(
-                              padding: EdgeInsets.all(isMobile ? 24 : 32),
+                              padding: EdgeInsets.all(kIsWeb ? 24 : 24),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFF3F4F6),
-                                borderRadius: BorderRadius.circular(isMobile ? 20 : 24),
+                                borderRadius: BorderRadius.circular(kIsWeb ? 20 : 20),
                               ),
                               child: Icon(
                                 Icons.category,
-                                size: isMobile ? 48 : 64,
+                                size: kIsWeb ? 48 : 48.sp,
                                 color: const Color(0xFF9CA3AF),
                               ),
                             ),
-                            SizedBox(height: isMobile ? 16 : 24),
+                            SizedBox(height: kIsWeb ? 16 : 16.sp),
                             Text(
                               "Select a Category",
                               style: TextStyle(
@@ -1942,11 +1943,11 @@ class _MenuPageState extends State<MenuPage> {
                                 color: const Color(0xFF1F2937),
                               ),
                             ),
-                            SizedBox(height: isMobile ? 8 : 12),
+                            SizedBox(height: kIsWeb ? 8 : 8.sp),
                             Text(
                               "Choose a category to view menu items",
                               style: TextStyle(
-                                fontSize: isMobile ? 14 : 16,
+                                fontSize: kIsWeb ? 14 : 14.sp,
                                 color: const Color(0xFF6B7280),
                               ),
                             ),
@@ -1966,7 +1967,7 @@ class _MenuPageState extends State<MenuPage> {
                     if (snapshot.hasError) {
                       return Center(
                         child: Padding(
-                          padding: EdgeInsets.all(isMobile ? 16 : 24),
+                          padding: EdgeInsets.all(kIsWeb ? 16 : 16),
                           child: Text(
                             "Failed to load menu: ${snapshot.error}",
                             style: const TextStyle(color: Colors.red),
@@ -1994,15 +1995,15 @@ class _MenuPageState extends State<MenuPage> {
                     if (items.isEmpty) {
                       return Center(
                         child: Container(
-                          padding: EdgeInsets.all(isMobile ? 32 : 48),
-                          margin: EdgeInsets.all(isMobile ? 24 : 32),
+                          padding: EdgeInsets.all(kIsWeb ? 32 : 32.sp),
+                          margin: EdgeInsets.all(kIsWeb ? 24 : 24),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(isMobile ? 20 : 24),
+                            borderRadius: BorderRadius.circular(kIsWeb ? 20 : 20),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.05),
-                                blurRadius: 20,
+                                blurRadius: kIsWeb ? 20 : 20,
                                 offset: const Offset(0, 10),
                               ),
                             ],
@@ -2011,18 +2012,18 @@ class _MenuPageState extends State<MenuPage> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Container(
-                                padding: EdgeInsets.all(isMobile ? 24 : 32),
+                                padding: EdgeInsets.all(kIsWeb ? 24 : 24),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFF3F4F6),
-                                  borderRadius: BorderRadius.circular(isMobile ? 20 : 24),
+                                  borderRadius: BorderRadius.circular(kIsWeb ? 20 : 20),
                                 ),
                                 child: Icon(
                                   Icons.restaurant_menu,
-                                  size: isMobile ? 48 : 64,
+                                  size: kIsWeb ? 48 : 48.sp,
                                   color: const Color(0xFF9CA3AF),
                                 ),
                               ),
-                              SizedBox(height: isMobile ? 16 : 24),
+                              SizedBox(height: kIsWeb ? 16 : 16.sp),
                               Text(
                                 "No Menu Items",
                                 style: TextStyle(
@@ -2031,11 +2032,11 @@ class _MenuPageState extends State<MenuPage> {
                                   color: const Color(0xFF1F2937),
                                 ),
                               ),
-                              SizedBox(height: isMobile ? 8 : 12),
+                              SizedBox(height: kIsWeb ? 8 : 8.sp),
                               Text(
                                 "Add menu items to this category",
                                 style: TextStyle(
-                                  fontSize: isMobile ? 14 : 16,
+                                  fontSize: kIsWeb ? 14 : 14.sp,
                                   color: const Color(0xFF6B7280),
                                 ),
                               ),
@@ -2068,7 +2069,7 @@ class _MenuPageState extends State<MenuPage> {
                           margin: EdgeInsets.only(bottom: isMobile ? 12 : 16),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(isMobile ? 16 : 20),
+                            borderRadius: BorderRadius.circular(kIsWeb ? 16 : 16.sp),
                             border: Border.all(
                               color: const Color(0xFFE5E7EB),
                               width: 1,
@@ -2076,30 +2077,30 @@ class _MenuPageState extends State<MenuPage> {
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.03),
-                                blurRadius: isMobile ? 10 : 14,
+                                blurRadius: kIsWeb ? 10 : 10.sp,
                                 offset: const Offset(0, 6),
                               ),
                             ],
                           ),
                           child: Padding(
-                            padding: EdgeInsets.all(isMobile ? 16 : 20),
+                            padding: EdgeInsets.all(kIsWeb ? 16 : 16),
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 /// Item Image
                                 ClipRRect(
-                                  borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
+                                  borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                                   child: imageUrl != null && imageUrl.isNotEmpty
                                       ? Image.network(
                                           imageUrl,
-                                          width: isMobile ? 80 : 100,
-                                          height: isMobile ? 80 : 100,
+                                          width: kIsWeb ? 80 : 80.sp,
+                                          height: kIsWeb ? 80 : 80.sp,
                                           fit: BoxFit.cover,
                                           loadingBuilder: (context, child, loadingProgress) {
                                             if (loadingProgress == null) return child;
                                             return Container(
-                                              width: isMobile ? 80 : 100,
-                                              height: isMobile ? 80 : 100,
+                                              width: kIsWeb ? 80 : 80.sp,
+                                              height: kIsWeb ? 80 : 80.sp,
                                               decoration: BoxDecoration(
                                                 gradient: const LinearGradient(
                                                   colors: [
@@ -2125,8 +2126,8 @@ class _MenuPageState extends State<MenuPage> {
                                           },
                                           errorBuilder: (context, error, stackTrace) {
                                             return Container(
-                                              width: isMobile ? 80 : 100,
-                                              height: isMobile ? 80 : 100,
+                                              width: kIsWeb ? 80 : 80.sp,
+                                              height: kIsWeb ? 80 : 80.sp,
                                               decoration: BoxDecoration(
                                                 gradient: const LinearGradient(
                                                   colors: [
@@ -2140,14 +2141,14 @@ class _MenuPageState extends State<MenuPage> {
                                               child: Icon(
                                                 Icons.broken_image,
                                                 color: const Color(0xFF7C3AED).withOpacity(0.6),
-                                                size: isMobile ? 32 : 40,
+                                                size: kIsWeb ? 32 : 32.sp,
                                               ),
                                             );
                                           },
                                         )
                                       : Container(
-                                          width: isMobile ? 80 : 100,
-                                          height: isMobile ? 80 : 100,
+                                          width: kIsWeb ? 80 : 80.sp,
+                                          height: kIsWeb ? 80 : 80.sp,
                                           decoration: BoxDecoration(
                                             gradient: const LinearGradient(
                                               colors: [
@@ -2161,11 +2162,11 @@ class _MenuPageState extends State<MenuPage> {
                                           child: Icon(
                                             Icons.fastfood_rounded,
                                             color: const Color(0xFF7C3AED),
-                                            size: isMobile ? 32 : 40,
+                                            size: kIsWeb ? 32 : 32.sp,
                                           ),
                                         ),
                                 ),
-                                SizedBox(width: isMobile ? 16 : 20),
+                                SizedBox(width: kIsWeb ? 16 : 16.sp),
                                 
                                 /// Item Details
                                 Expanded(
@@ -2179,7 +2180,7 @@ class _MenuPageState extends State<MenuPage> {
                                             child: Text(
                                               name,
                                               style: TextStyle(
-                                                fontSize: isMobile ? 16 : 18,
+                                                fontSize: kIsWeb ? 16 : 16.sp,
                                                 fontWeight: FontWeight.bold,
                                                 color: const Color(0xFF1F2937),
                                               ),
@@ -2187,7 +2188,7 @@ class _MenuPageState extends State<MenuPage> {
                                           ),
                                         ],
                                       ),
-                                      SizedBox(height: isMobile ? 4 : 6),
+                                      SizedBox(height: kIsWeb ? 4 : 4.sp),
                                       
                                       /// Availability Status
                                       Container(
@@ -2204,14 +2205,14 @@ class _MenuPageState extends State<MenuPage> {
                                         child: Text(
                                           isAvailable ? "Available" : "Not available",
                                           style: TextStyle(
-                                            fontSize: isMobile ? 12 : 13,
+                                            fontSize: kIsWeb ? 12 : 12.sp,
                                             color: isAvailable ? const Color(0xFF10B981) : const Color(0xFFEF4444),
                                             fontWeight: FontWeight.w500,
                                           ),
                                         ),
                                       ),
                                       
-                                      SizedBox(height: isMobile ? 8 : 12),
+                                      SizedBox(height: kIsWeb ? 8 : 8.sp),
                                       
                                       /// Variants Section
                                       Column(
@@ -2220,12 +2221,12 @@ class _MenuPageState extends State<MenuPage> {
                                           Text(
                                             "Variants:",
                                             style: TextStyle(
-                                              fontSize: isMobile ? 12 : 13,
+                                              fontSize: kIsWeb ? 12 : 12.sp,
                                               fontWeight: FontWeight.w600,
                                               color: const Color(0xFF6B7280),
                                             ),
                                           ),
-                                          SizedBox(height: isMobile ? 6 : 8),
+                                          SizedBox(height: kIsWeb ? 6 : 6.sp),
                                           Wrap(
                                             spacing: isMobile ? 6 : 8,
                                             runSpacing: isMobile ? 4 : 6,
@@ -2242,7 +2243,7 @@ class _MenuPageState extends State<MenuPage> {
                                                 child: Text(
                                                   "${v['name']} ₹${v['price']}",
                                                   style: TextStyle(
-                                                    fontSize: isMobile ? 11 : 12,
+                                                    fontSize: kIsWeb ? 11 : 11.sp,
                                                     fontWeight: FontWeight.w500,
                                                     color: const Color(0xFF7C3AED),
                                                   ),
@@ -2272,40 +2273,40 @@ class _MenuPageState extends State<MenuPage> {
                                       ),
                                     ),
                                     
-                                    SizedBox(height: isMobile ? 8 : 12),
+                                    SizedBox(height: kIsWeb ? 8 : 8.sp),
                                     
                                     /// Edit Icon
                                     GestureDetector(
                                       onTap: () => editMenuItem(doc),
                                       child: Container(
-                                        padding: EdgeInsets.all(isMobile ? 8 : 10),
+                                        padding: EdgeInsets.all(kIsWeb ? 8 : 8.sp),
                                         decoration: BoxDecoration(
                                           color: const Color(0xFF7C3AED).withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(isMobile ? 8 : 10),
+                                          borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
                                         ),
                                         child: Icon(
                                           Icons.edit,
                                           color: const Color(0xFF7C3AED),
-                                          size: isMobile ? 16 : 18,
+                                          size: kIsWeb ? 16 : 16.sp,
                                         ),
                                       ),
                                     ),
                                     
-                                    SizedBox(height: isMobile ? 6 : 8),
+                                    SizedBox(height: kIsWeb ? 6 : 6.sp),
                                     
                                     /// Delete Icon
                                     GestureDetector(
                                       onTap: () => deleteMenuItem(doc.id, name),
                                       child: Container(
-                                        padding: EdgeInsets.all(isMobile ? 8 : 10),
+                                        padding: EdgeInsets.all(kIsWeb ? 8 : 8.sp),
                                         decoration: BoxDecoration(
                                           color: const Color(0xFFEF4444).withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(isMobile ? 8 : 10),
+                                          borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
                                         ),
                                         child: Icon(
                                           Icons.delete,
                                           color: const Color(0xFFEF4444),
-                                          size: isMobile ? 16 : 18,
+                                          size: kIsWeb ? 16 : 16.sp,
                                         ),
                                       ),
                                     ),
@@ -2337,11 +2338,11 @@ class _MenuPageState extends State<MenuPage> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(isMobile ? 16 : 20),
+          borderRadius: BorderRadius.circular(kIsWeb ? 16 : 16.sp),
           boxShadow: [
             BoxShadow(
               color: const Color(0xFF7C3AED).withOpacity(0.3),
-              blurRadius: isMobile ? 12 : 20,
+              blurRadius: kIsWeb ? 12 : 12.sp,
               offset: const Offset(0, 8),
             ),
           ],
@@ -2353,13 +2354,13 @@ class _MenuPageState extends State<MenuPage> {
           icon: Icon(
             Icons.add,
             color: Colors.white,
-            size: isMobile ? 24 : 28,
+            size: kIsWeb ? 24 : 24.sp,
           ),
           label: Text(
             "Add Item",
             style: TextStyle(
               color: Colors.white,
-              fontSize: isMobile ? 14 : 16,
+              fontSize: kIsWeb ? 14 : 14.sp,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -2426,7 +2427,7 @@ Widget headerWidget(BuildContext context) {
   
   return Container(
     width: double.infinity,
-    padding: EdgeInsets.all(isMobile ? 16 : 20),
+    padding: EdgeInsets.all(kIsWeb ? 16 : 16),
     decoration: BoxDecoration(
       gradient: LinearGradient(
         colors: [
@@ -2436,17 +2437,15 @@ Widget headerWidget(BuildContext context) {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(isMobile ? 16 : 20),
-      ),
+      borderRadius: BorderRadius.vertical(bottom: Radius.circular(kIsWeb ? 16 : 16)),
     ),
     child: Row(
       children: [
         Container(
-          padding: EdgeInsets.all(isMobile ? 8 : 10),
+          padding: EdgeInsets.all(kIsWeb ? 8 : 8),
           decoration: BoxDecoration(
             color: colorScheme.onPrimary.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(isMobile ? 10 : 12),
+            borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10),
           ),
           child: Icon(
             Icons.restaurant_menu,
@@ -2455,14 +2454,14 @@ Widget headerWidget(BuildContext context) {
           ),
         ),
 
-        SizedBox(width: isMobile ? 10 : 12),
+        SizedBox(width: kIsWeb ? 10 : 10),
 
         Expanded(
           child: Text(
             "Add New Menu Item",
             style: TextStyle(
               color: colorScheme.onPrimary,
-              fontSize: isMobile ? 18 : 20,
+              fontSize: kIsWeb ? 18 : 18.sp,
               fontWeight: FontWeight.w600,
             ),
           ),
