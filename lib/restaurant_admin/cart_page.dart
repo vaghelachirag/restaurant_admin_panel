@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -58,6 +59,23 @@ class _CartPageState extends State<CartPage> {
     }
     return total;
   }
+
+  double getGST() {
+    return getTotal() * 0.025; // 2.5% GST
+  }
+
+  double getSGST() {
+    return getTotal() * 0.025; // 2.5% SGST
+  }
+
+  double getTax() {
+    return getGST() + getSGST();
+  }
+
+  double getFinalTotal() {
+    return getTotal() + getTax();
+  }
+
   Future<void> placeOrder() async {
     int tokenNumber = DateTime.now().millisecondsSinceEpoch % 10000;
 
@@ -70,7 +88,7 @@ class _CartPageState extends State<CartPage> {
       return;
     }
 
-    int totalAmount = getTotal();
+    int totalAmount = getFinalTotal().round();
 
     final orderRef =
     FirebaseFirestore.instance.collection("orders").doc();
@@ -177,7 +195,7 @@ class _CartPageState extends State<CartPage> {
               style: GoogleFonts.poppins(
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
-                fontSize: 18.sp,
+                fontSize:  kIsWeb ? 18 : 18.sp,
               ),
             ),
             centerTitle: false,
@@ -187,7 +205,7 @@ class _CartPageState extends State<CartPage> {
                   child: Text(
                     "Cart is empty",
                     style: GoogleFonts.poppins(
-                      fontSize: 18.sp,
+                      fontSize: kIsWeb ? 18 : 18.sp,
                       fontWeight: FontWeight.w500,
                       color: const Color(0xFF6B7280),
                     ),
@@ -200,7 +218,7 @@ class _CartPageState extends State<CartPage> {
                       ListView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        padding: EdgeInsets.fromLTRB(16.sp, 16.sp, 16.sp, 8.sp),
+                        padding: EdgeInsets.fromLTRB(kIsWeb ? 16 : 16.sp, kIsWeb ? 16 : 16.sp, kIsWeb ? 16 : 16.sp, kIsWeb ? 8 : 8.sp),
                         itemCount: widget.cart.length,
                         itemBuilder: (context, index) {
                           final item = widget.cart[index];
@@ -208,7 +226,7 @@ class _CartPageState extends State<CartPage> {
                             margin: EdgeInsets.symmetric(vertical: 6.w),
                             decoration: BoxDecoration(
                               color: cardColor,
-                              borderRadius: BorderRadius.circular(16.sp),
+                              borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                               border: Border.all(
                                 color: const Color(0xFFE5E7EB),
                                 width: 1,
@@ -216,130 +234,152 @@ class _CartPageState extends State<CartPage> {
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withOpacity(0.04),
-                                  blurRadius: 8.sp,
-                                  offset: Offset(0.sp, 2.sp),
+                                  blurRadius: kIsWeb ? 8 : 8.sp,
+                                  offset: Offset(0.sp, kIsWeb ? 2 : 2.sp),
                                 ),
                               ],
                             ),
                             child: Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 14.h,
-                                vertical: 10.w,
-                              ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
+                              padding: EdgeInsets.all(kIsWeb ? 12 : 12.sp),
+                              child: Column(
                                 children: [
-                                  /// Left accent bar (theme purple gradient)
-                                  Container(
-                                    width: 4.w,
-                                    height: 48.h,
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        colors: [
-                                          Color(0xFF7C3AED),
-                                          Color(0xFFA855F7),
-                                        ],
-                                        begin: Alignment.topCenter,
-                                        end: Alignment.bottomCenter,
+                                  Row(
+                                    children: [
+                                      // Item Image (placeholder)
+                                      Container(
+                                        width: kIsWeb ? 60 : 60.w,
+                                        height: kIsWeb ? 60 : 60.h,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFF3F4F6),
+                                          borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
+                                        ),
+                                        child: Icon(
+                                          Icons.restaurant_menu,
+                                          color: const Color(0xFF6B7280),
+                                          size: kIsWeb ? 24 : 24.sp,
+                                        ),
                                       ),
-                                      borderRadius: BorderRadius.circular(12.sp),
-                                    ),
+                                      SizedBox(width: kIsWeb ? 12 : 12.w),
+                                      // Item Details
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              item.name,
+                                              style: GoogleFonts.poppins(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: kIsWeb ? 16 : 16.sp,
+                                                color: textColor,
+                                              ),
+                                            ),
+                                            SizedBox(height: kIsWeb ? 4 : 4.h),
+                                            Text(
+                                              "${item.qty} ${item.variant}",
+                                              style: GoogleFonts.poppins(
+                                                fontSize: kIsWeb ? 14 : 14.sp,
+                                                color: const Color(0xFF6B7280),
+                                              ),
+                                            ),
+                                            SizedBox(height: kIsWeb ? 4 : 4.h),
+                                            Text(
+                                              "₹${item.price}",
+                                              style: GoogleFonts.poppins(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: kIsWeb ? 16 : 16.sp,
+                                                color: textColor,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      // Delete Icon
+                                      GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            widget.cart.removeAt(index);
+                                          });
+                                        },
+                                        child: Icon(
+                                          Icons.delete_outline,
+                                          color: Colors.red.shade400,
+                                          size: kIsWeb ? 24 : 24.sp,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                   SizedBox(width: 12.w),
-                                  /// ITEM INFO
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          item.name,
-                                          style: GoogleFonts.poppins(
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 16.sp,
-                                            color: textColor,
-                                          ),
-                                        ),
-                                         SizedBox(height: 2.h),
-                                        Text(
-                                          item.variant,
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 13.sp,
-                                            color: const Color(0xFF6B7280),
-                                          ),
-                                        ),
-                                        SizedBox(height: 4.h),
-                                        Text(
-                                          "₹ ${item.price}",
-                                          style: GoogleFonts.poppins(
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 16.sp,
-                                            color: const Color(0xFF7C3AED),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                   SizedBox(width: 8.w),
-                                  /// QTY CONTROL
+                                  SizedBox(height: kIsWeb ? 12 : 12.h),
+                                  // Quantity Selector
                                   Container(
+                                    height: kIsWeb ? 40 : 40.h,
                                     decoration: BoxDecoration(
                                       color: const Color(0xFFF3F4F6),
-                                      borderRadius: BorderRadius.circular(20.sp),
+                                      borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
                                       border: Border.all(
                                         color: const Color(0xFFE5E7EB),
                                       ),
                                     ),
                                     child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                       children: [
-                                        IconButton(
-                                          visualDensity: VisualDensity.compact,
-                                          icon: Icon(
-                                            Icons.remove_rounded,
-                                            size: 20.sp,
-                                            color: const Color(0xFF7C3AED),
-                                          ),
-                                          onPressed: () {
+                                        // Minus button
+                                        GestureDetector(
+                                          onTap: () {
                                             if (item.qty > 1) {
                                               setState(() {
                                                 item.qty--;
                                               });
                                             }
                                           },
+                                          child: Container(
+                                            width: kIsWeb ? 32 : 32.w,
+                                            height: kIsWeb ? 32 : 32.h,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius: BorderRadius.circular(kIsWeb ? 6 : 6.sp),
+                                              border: Border.all(
+                                                color: const Color(0xFFE5E7EB),
+                                              ),
+                                            ),
+                                            child: Icon(
+                                              Icons.remove,
+                                              color: const Color(0xFF6B7280),
+                                              size: kIsWeb ? 16 : 16.sp,
+                                            ),
+                                          ),
                                         ),
+                                        // Quantity display
                                         Text(
                                           item.qty.toString(),
                                           style: GoogleFonts.poppins(
-                                            fontSize: 14.sp,
-                                            fontWeight: FontWeight.w500,
+                                            fontSize: kIsWeb ? 16 : 16.sp,
+                                            fontWeight: FontWeight.w600,
                                             color: textColor,
                                           ),
                                         ),
-                                        IconButton(
-                                          visualDensity: VisualDensity.compact,
-                                          icon: Icon(
-                                            Icons.add_rounded,
-                                            size: 20.sp,
-                                            color: const Color(0xFF7C3AED),
-                                          ),
-                                          onPressed: () {
+                                        // Plus button
+                                        GestureDetector(
+                                          onTap: () {
                                             setState(() {
                                               item.qty++;
                                             });
                                           },
+                                          child: Container(
+                                            width: kIsWeb ? 32 : 32.w,
+                                            height: kIsWeb ? 32 : 32.h,
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF7C3AED),
+                                              borderRadius: BorderRadius.circular(kIsWeb ? 6 : 6.sp),
+                                            ),
+                                            child: Icon(
+                                              Icons.add,
+                                              color: Colors.white,
+                                              size: kIsWeb ? 16 : 16.sp,
+                                            ),
+                                          ),
                                         ),
                                       ],
                                     ),
-                                  ),
-                                  IconButton(
-                                    icon: Icon(
-                                      Icons.delete_outline,
-                                      color: Colors.red.shade400,
-                                    ),
-                                    onPressed: () {
-                                      setState(() {
-                                        widget.cart.removeAt(index);
-                                      });
-                                    },
                                   ),
                                 ],
                               ),
@@ -350,7 +390,7 @@ class _CartPageState extends State<CartPage> {
                       /// CUSTOMER INFO CARD (only show for parcel)
                       if (orderType == "Parcel")
                         Padding(
-                          padding: EdgeInsets.fromLTRB(16.sp, 8.sp, 16.sp, 8.sp),
+                          padding: EdgeInsets.fromLTRB(kIsWeb ? 16 : 16.sp, kIsWeb ? 8 : 8.sp, kIsWeb ? 16 : 16.sp, kIsWeb ? 8 : 8.sp),
                           child: Container(
                             decoration: BoxDecoration(
                               color: cardColor,
@@ -362,19 +402,19 @@ class _CartPageState extends State<CartPage> {
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 10.sp,
+                                  blurRadius: kIsWeb ? 10 : 10.sp,
                                   offset: const Offset(0, 2),
                                 ),
                               ],
                             ),
-                            padding: EdgeInsets.all(16.sp),
+                            padding: EdgeInsets.all(kIsWeb ? 16 : 16.sp),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   "Customer Details",
                                   style: GoogleFonts.poppins(
-                                    fontSize: 16.sp,
+                                    fontSize: kIsWeb ? 16 : 16.sp,
                                     fontWeight: FontWeight.w600,
                                     color: textColor,
                                   ),
@@ -387,27 +427,27 @@ class _CartPageState extends State<CartPage> {
                                     labelText: "Customer Name",
                                     labelStyle: GoogleFonts.poppins(
                                       color: const Color(0xFF6B7280),
-                                      fontSize: 14.sp,
+                                      fontSize: kIsWeb ? 14 : 14.sp,
                                     ),
                                     hintStyle: GoogleFonts.poppins(
                                       color: const Color(0xFF9CA3AF),
-                                      fontSize: 13.sp,
+                                      fontSize: kIsWeb ? 13 : 13.sp,
                                     ),
                                     prefixIcon: Icon(Icons.person_outline, color: const Color(0xFF6B7280)),
                                     border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
+                                      borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                                     ),
                                     enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
+                                      borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                                       borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
                                     ),
                                     focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
+                                      borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                                       borderSide: const BorderSide(color: Color(0xFF7C3AED), width: 2),
                                     ),
                                   ),
                                 ),
-                                SizedBox(height: 12.h),
+                                SizedBox(height: kIsWeb ? 12 : 12.h),
                                 TextField(
                                   controller: mobileController,
                                   keyboardType: TextInputType.phone,
@@ -416,18 +456,18 @@ class _CartPageState extends State<CartPage> {
                                     labelText: "Mobile Number",
                                     labelStyle: GoogleFonts.poppins(
                                       color: const Color(0xFF6B7280),
-                                      fontSize: 14.sp,
+                                      fontSize: kIsWeb ? 16 : 16.sp,
                                     ),
                                     hintStyle: GoogleFonts.poppins(
                                       color: const Color(0xFF9CA3AF),
-                                      fontSize: 13.sp,
+                                      fontSize: kIsWeb ? 13 : 16.sp,
                                     ),
                                     prefixIcon: Icon(Icons.phone_outlined, color: const Color(0xFF6B7280)),
                                     border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12.sp),
+                                      borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                                     ),
                                     enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12.sp),
+                                      borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                                       borderSide: BorderSide(color: cardInfoColor.withOpacity(0.3)),
                                     ),
                                   ),
@@ -442,18 +482,18 @@ class _CartPageState extends State<CartPage> {
                                     hintText: "Example: Less spicy, No onion",
                                     labelStyle: GoogleFonts.poppins(
                                       color: const Color(0xFF6B7280),
-                                      fontSize: 14.sp,
+                                      fontSize: kIsWeb ? 12 : 14.sp,
                                     ),
                                     hintStyle: GoogleFonts.poppins(
                                       color: const Color(0xFF9CA3AF),
-                                      fontSize: 13.sp,
+                                      fontSize: kIsWeb ? 12 : 12.sp,
                                     ),
                                     prefixIcon: Icon(Icons.note_alt_outlined, color: const Color(0xFF6B7280)),
                                     border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12.sp),
+                                      borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                                     ),
                                     enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12.sp),
+                                      borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                                       borderSide: BorderSide(color: cardInfoColor.withOpacity(0.3)),
                                     ),
                                   ),
@@ -464,7 +504,7 @@ class _CartPageState extends State<CartPage> {
                         ),
                       /// ORDER TYPE SELECTION
                       Padding(
-                        padding: EdgeInsets.fromLTRB(16.sp, 8.sp, 16.sp, 8.sp),
+                        padding: EdgeInsets.fromLTRB(kIsWeb ? 16 : 16.sp, kIsWeb ? 8 : 8.sp, kIsWeb ? 16 : 16.sp, kIsWeb ? 8 : 16.sp),
                         child: Container(
                           decoration: BoxDecoration(
                             color: cardColor,
@@ -476,31 +516,31 @@ class _CartPageState extends State<CartPage> {
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.05),
-                                blurRadius: 10.sp,
+                                blurRadius: kIsWeb ? 10 : 10.sp,
                                 offset: const Offset(0, 2),
                               ),
                             ],
                           ),
-                          padding: EdgeInsets.all(16.sp),
+                          padding: EdgeInsets.all(kIsWeb ? 16 : 16.sp),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 "Order Type",
                                 style: GoogleFonts.poppins(
-                                  fontSize: 16.sp,
+                                  fontSize: kIsWeb ? 16 : 16.sp,
                                   fontWeight: FontWeight.w600,
                                   color: textColor,
                                 ),
                               ),
-                               SizedBox(height: 12.h),
+                               SizedBox(height: kIsWeb ? 12 : 12.h),
                               Row(
                                 children: [
                                   ChoiceChip(
                                     label: Text(
                                       "Dine In",
                                       style: GoogleFonts.poppins(
-                                        fontSize: 13.sp,
+                                        fontSize: kIsWeb ? 12 : 12.sp,
                                         color: orderType == "Dine In"
                                             ? Colors.white
                                             : const Color(0xFF1F2937),
@@ -520,7 +560,7 @@ class _CartPageState extends State<CartPage> {
                                     label: Text(
                                       "Parcel",
                                       style: GoogleFonts.poppins(
-                                        fontSize: 13.sp,
+                                        fontSize: kIsWeb ? 14 : 12.sp,
                                         color: orderType == "Parcel"
                                             ? Colors.white
                                             : const Color(0xFF1F2937),
@@ -538,12 +578,12 @@ class _CartPageState extends State<CartPage> {
                                 ],
                               ),
                               if (orderType == "Dine In") ...[
-                                SizedBox(height: 12.h),
+                                SizedBox(height: kIsWeb ? 12 : 12.h),
                                 Container(
-                                  padding: EdgeInsets.all(12.sp),
+                                  padding: EdgeInsets.all(kIsWeb ? 12 : 12.sp),
                                   decoration: BoxDecoration(
                                     color: const Color(0xFF7C3AED).withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(12.sp),
+                                    borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                                     border: Border.all(
                                       color: const Color(0xFF7C3AED).withOpacity(0.3),
                                     ),
@@ -553,14 +593,14 @@ class _CartPageState extends State<CartPage> {
                                       Icon(
                                         Icons.info_outline,
                                         color: const Color(0xFF7C3AED),
-                                        size: 20.sp,
+                                        size: kIsWeb ? 20 : 20.sp,
                                       ),
-                                      SizedBox(width: 8.w),
+                                      SizedBox(width: kIsWeb ? 8 : 8.w),
                                       Expanded(
                                         child: Text(
                                           "For dine-in orders, customer details will be collected at the restaurant",
                                           style: GoogleFonts.poppins(
-                                            fontSize: 12.sp,
+                                            fontSize: kIsWeb ? 12 : 12.sp,
                                             color: const Color(0xFF7C3AED),
                                           ),
                                         ),
@@ -569,6 +609,114 @@ class _CartPageState extends State<CartPage> {
                                   ),
                                 ),
                               ],
+                            ],
+                          ),
+                        ),
+                      ),
+                      /// ORDER SUMMARY
+                      Padding(
+                        padding: EdgeInsets.fromLTRB(kIsWeb ? 16 : 16.sp, kIsWeb ? 8 : 8.sp, kIsWeb ? 16 : 16.sp, kIsWeb ? 8 : 8.sp),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: cardColor,
+                            borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
+                            border: Border.all(
+                              color: const Color(0xFFE5E7EB),
+                              width: 1,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.04),
+                                blurRadius: kIsWeb ? 8 : 8.sp,
+                                offset: Offset(0.sp, kIsWeb ? 2 : 2.sp),
+                              ),
+                            ],
+                          ),
+                          padding: EdgeInsets.all(kIsWeb ? 16 : 16.sp),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Order Summary",
+                                style: GoogleFonts.poppins(
+                                  fontSize: kIsWeb ? 16 : 16.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: textColor,
+                                ),
+                              ),
+                              SizedBox(height: kIsWeb ? 12 : 12.h),
+                              // Subtotal
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    "Subtotal",
+                                    style: GoogleFonts.poppins(
+                                      fontSize: kIsWeb ? 14 : 14.sp,
+                                      color: const Color(0xFF6B7280),
+                                    ),
+                                  ),
+                                  Text(
+                                    "₹${getTotal()}",
+                                    style: GoogleFonts.poppins(
+                                      fontSize: kIsWeb ? 14 : 14.sp,
+                                      color: textColor,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: kIsWeb ? 8 : 8.h),
+                              // Tax
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    "Tax",
+                                    style: GoogleFonts.poppins(
+                                      fontSize: kIsWeb ? 14 : 14.sp,
+                                      color: const Color(0xFF6B7280),
+                                    ),
+                                  ),
+                                  Text(
+                                    "₹${getTax().toStringAsFixed(2)}",
+                                    style: GoogleFonts.poppins(
+                                      fontSize: kIsWeb ? 14 : 14.sp,
+                                      color: textColor,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: kIsWeb ? 8 : 8.h),
+                              // Divider
+                              Divider(
+                                color: const Color(0xFFE5E7EB),
+                                thickness: 1,
+                              ),
+                              SizedBox(height: kIsWeb ? 8 : 8.h),
+                              // Total
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    "Total",
+                                    style: GoogleFonts.poppins(
+                                      fontSize: kIsWeb ? 16 : 16.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: textColor,
+                                    ),
+                                  ),
+                                  Text(
+                                    "₹${getFinalTotal().toStringAsFixed(2)}",
+                                    style: GoogleFonts.poppins(
+                                      fontSize: kIsWeb ? 16 : 16.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF7C3AED),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ],
                           ),
                         ),
@@ -590,12 +738,12 @@ class _CartPageState extends State<CartPage> {
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.08),
-                        blurRadius: 16.sp,
+                        blurRadius: kIsWeb ? 16 : 16.sp,
                         offset: const Offset(0, -4),
                       ),
                     ],
                   ),
-                  padding:  EdgeInsets.fromLTRB(16.sp, 10.sp, 16.sp, 16.sp),
+                  padding:  EdgeInsets.fromLTRB(kIsWeb ? 16 : 16.sp, kIsWeb ? 10 : 10.sp, kIsWeb ? 16 : 16.sp, kIsWeb ? 16 : 16.sp),
                   child: SafeArea(
                     top: false,
                     child: Row(
@@ -608,16 +756,16 @@ class _CartPageState extends State<CartPage> {
                               Text(
                                 "Total",
                                 style: GoogleFonts.poppins(
-                                  fontSize: 14.sp,
+                                  fontSize: kIsWeb ? 14 : 14.sp,
                                   color: const Color(0xFF6B7280),
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
                               SizedBox(height: 4.h),
                               Text(
-                                "₹${getTotal()}",
+                                "₹${getFinalTotal().toStringAsFixed(2)}",
                                 style: GoogleFonts.poppins(
-                                  fontSize: 20.sp,
+                                  fontSize: kIsWeb ? 20 : 20.sp,
                                   fontWeight: FontWeight.w700,
                                   color: const Color(0xFF7C3AED),
                                 ),
@@ -625,7 +773,7 @@ class _CartPageState extends State<CartPage> {
                             ],
                           ),
                         ),
-                        SizedBox(width: 12.w),
+                        SizedBox(width: kIsWeb ? 12 : 12.w),
                         Expanded(
                           flex: 2,
                           child: ElevatedButton(
@@ -633,7 +781,7 @@ class _CartPageState extends State<CartPage> {
                               backgroundColor: const Color(0xFF7C3AED),
                               foregroundColor: Colors.white,
                               padding:  EdgeInsets.symmetric(
-                                vertical: 16.h,
+                                vertical: kIsWeb ? 12 : 12.h,
                               ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
@@ -644,7 +792,7 @@ class _CartPageState extends State<CartPage> {
                             child: Text(
                               "Place Order",
                               style: GoogleFonts.poppins(
-                                fontSize: 16.sp,
+                                fontSize: kIsWeb ? 16 : 16.sp,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),

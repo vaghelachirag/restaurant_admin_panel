@@ -286,17 +286,22 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
     } else {
       // Show Add button
       return GestureDetector(
-        onTap: () => _showCounterPopup(
-          context,
-          item,
-          itemId,
-          variant,
-          price,
-          cardColor,
-          textColor,
-          cardInfoColor,
-          primaryColor,
-        ),
+        onTap: () {
+          _updateItemQuantity(
+            itemId,
+            variant,
+            1,
+            itemName: item['name'],
+            price: price,
+          );
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("${item['name']} added to cart"),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        },
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
           decoration: BoxDecoration(
@@ -973,7 +978,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
               slivers: [
                 SliverAppBar(
                   automaticallyImplyLeading: false,
-                  expandedHeight:  kIsWeb ? 120 : 80.sp,
+                  expandedHeight:  kIsWeb ? 80 : 80.sp,
                   pinned: false,
                   floating: false,
                   elevation: 0,
@@ -1240,8 +1245,8 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                           margin: EdgeInsets.all(kIsWeb ? 8 : 8.sp),
                           child: ConstrainedBox(
                             constraints: BoxConstraints(
-                                minHeight: 40.sp,
-                                maxHeight: 40.sp
+                                minHeight: kIsWeb ? 40 : 40.sp,
+                                maxHeight: kIsWeb ? 40 : 40.sp
                             ),
                             child: ListView.builder(
                               scrollDirection: Axis.horizontal,
@@ -1251,7 +1256,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                                 final bool isSelected = cat.id == _selectedCategoryId;
 
                                 return Padding(
-                                  padding: EdgeInsets.only(right: 8.sp),
+                                  padding: EdgeInsets.only(right: kIsWeb ? 8 : 8.sp),
                                   child: GestureDetector(
                                     onTap: () {
                                       setState(() {
@@ -1260,8 +1265,8 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                                     },
                                     child: Container(
                                       padding: EdgeInsets.symmetric(
-                                        horizontal: 16.sp,
-                                        vertical: 8.sp,
+                                        horizontal:  kIsWeb ? 16 : 16.sp,
+                                        vertical:  kIsWeb ? 8 : 8.sp,
                                       ),
                                       decoration: BoxDecoration(
                                         color: isSelected ? const Color(0xFF7C3AED) : Colors.white,

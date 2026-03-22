@@ -614,15 +614,15 @@ class _RestaurantAdminPanelState extends State<RestaurantAdminPanel> {
                                 Icon(
                                   Icons.logout,
                                   color: Colors.red.shade700,
-                                  size: 16,
+                                  size: kIsWeb ? 16 : 16.sp,
                                 ),
-                                const SizedBox(width: 8),
+                                SizedBox(width: kIsWeb ? 8 : 8.sp),
                                 Text(
                                   "Logout",
                                   style: TextStyle(
                                     color: Colors.red.shade700,
                                     fontWeight: FontWeight.w600,
-                                    fontSize: 12.sp,
+                                    fontSize:  kIsWeb ? 12 : 12.sp,
                                   ),
                                 ),
                               ],
@@ -884,9 +884,9 @@ class _RestaurantAdminPanelState extends State<RestaurantAdminPanel> {
       builder: (context, constraints) {
         double width = constraints.maxWidth;
 
-        double iconSize = width * 0.15;
-        double padding = width * 0.08;
-        double titleSize = width * 0.098;
+        double iconSize = kIsWeb ? 24 : 24.sp;
+        double padding = kIsWeb ? 20 : 20.sp;
+        double titleSize = kIsWeb ? 16 : 16.sp;
         double subtitleSize = width * 0.08;
         double arrowSize = width * 0.09;
 
@@ -973,32 +973,7 @@ class _RestaurantAdminPanelState extends State<RestaurantAdminPanel> {
                         ),
                       ],
                     ),
-                  ),
-                  if (count > 0)
-                    Positioned(
-                      right: width * 0.05,
-                      top: width * 0.05,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: width * 0.03,
-                          vertical: width * 0.015,
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Colors.red.shade400, Colors.red.shade600],
-                          ),
-                          borderRadius: BorderRadius.circular(width * 0.05),
-                        ),
-                        child: Text(
-                          count.toString(),
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: subtitleSize,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
+                  )
                 ],
               ),
             ),

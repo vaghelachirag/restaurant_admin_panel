@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class CategoryPage extends StatefulWidget {
   final String restaurantId;
@@ -155,9 +156,9 @@ class _CategoryPageState extends State<CategoryPage> {
                           ),
                           child: const Text("Cancel"),
                         ),
-                        const SizedBox(width: kIsWeb ? 8 : 8),
+                        SizedBox(width: kIsWeb ? 8 : 8.sp),
                         ElevatedButton.icon(
-                          icon: Icon(Icons.check_rounded, size: kIsWeb ? 18 : 18),
+                          icon: Icon(Icons.check_rounded, size: kIsWeb ? 18 : 18.sp),
                           onPressed: () async {
                             if (controller.text.trim().isEmpty) return;
 
@@ -187,7 +188,7 @@ class _CategoryPageState extends State<CategoryPage> {
                           style: ElevatedButton.styleFrom(
                             padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 18 : 18.w, vertical: kIsWeb ? 10 : 10.h),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(kIsWeb ? 14 : 14),
+                              borderRadius: BorderRadius.circular(kIsWeb ? 14 : 14.sp),
                             ),
                           ),
                           label: const Text("Save"),
@@ -343,7 +344,7 @@ class _CategoryPageState extends State<CategoryPage> {
                           style: ElevatedButton.styleFrom(
                             padding:  EdgeInsets.symmetric(horizontal: kIsWeb ? 18 : 18.w, vertical: kIsWeb ? 10 : 10.h),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(kIsWeb ? 14 : 14),
+                              borderRadius: BorderRadius.circular(kIsWeb ? 14 : 14.sp),
                             ),
                           ),
                           label: const Text("Update"),
@@ -501,6 +502,182 @@ class _CategoryPageState extends State<CategoryPage> {
       batch.update(col.doc(docs[i].id), {"position": i});
     }
     await batch.commit();
+  }
+
+  /// Cart Item Card Widget
+  Widget buildCartItemCard({
+    required String itemName,
+    required String variant,
+    required int quantity,
+    required int price,
+    required VoidCallback onDelete,
+    required VoidCallback onQuantityIncrease,
+    required VoidCallback onQuantityDecrease,
+  }) {
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: 6.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
+        border: Border.all(
+          color: const Color(0xFFE5E7EB),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: kIsWeb ? 8 : 8.sp,
+            offset: Offset(0.sp, kIsWeb ? 2 : 2.sp),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(kIsWeb ? 12 : 12.sp),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                // Item Image (placeholder)
+                Container(
+                  width: kIsWeb ? 60 : 60.w,
+                  height: kIsWeb ? 60 : 60.h,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
+                  ),
+                  child: Icon(
+                    Icons.restaurant_menu,
+                    color: const Color(0xFF6B7280),
+                    size: kIsWeb ? 24 : 24.sp,
+                  ),
+                ),
+                SizedBox(width: kIsWeb ? 12 : 12.w),
+                // Item Details
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        itemName,
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
+                          fontSize: kIsWeb ? 16 : 16.sp,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      SizedBox(height: kIsWeb ? 4 : 4.h),
+                      Text(
+                        "$quantity $variant",
+                        style: GoogleFonts.poppins(
+                          fontSize: kIsWeb ? 14 : 14.sp,
+                          color: const Color(0xFF6B7280),
+                        ),
+                      ),
+                      SizedBox(height: kIsWeb ? 4 : 4.h),
+                      Text(
+                        "₹ $price",
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
+                          fontSize: kIsWeb ? 16 : 16.sp,
+                          color: const Color(0xFF7C3AED),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Delete Icon
+                GestureDetector(
+                  onTap: onDelete,
+                  child: Icon(
+                    Icons.delete_outline,
+                    color: const Color(0xFF7C3AED),
+                    size: kIsWeb ? 24 : 24.sp,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: kIsWeb ? 12 : 12.h),
+            // Quantity Label and Selector
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Quantity",
+                  style: GoogleFonts.poppins(
+                    fontSize: kIsWeb ? 14 : 14.sp,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black87,
+                  ),
+                ),
+                SizedBox(height: kIsWeb ? 8 : 8.h),
+                // Quantity Selector
+                Container(
+                  height: kIsWeb ? 40 : 40.h,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
+                    border: Border.all(
+                      color: const Color(0xFFE5E7EB),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      // Minus button
+                      GestureDetector(
+                        onTap: onQuantityDecrease,
+                        child: Container(
+                          width: kIsWeb ? 32 : 32.w,
+                          height: kIsWeb ? 32 : 32.h,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(kIsWeb ? 6 : 6.sp),
+                            border: Border.all(
+                              color: const Color(0xFFE5E7EB),
+                            ),
+                          ),
+                          child: Icon(
+                            Icons.remove,
+                            color: const Color(0xFF6B7280),
+                            size: kIsWeb ? 16 : 16.sp,
+                          ),
+                        ),
+                      ),
+                      // Quantity display
+                      Text(
+                        quantity.toString(),
+                        style: GoogleFonts.poppins(
+                          fontSize: kIsWeb ? 16 : 16.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      // Plus button
+                      GestureDetector(
+                        onTap: onQuantityIncrease,
+                        child: Container(
+                          width: kIsWeb ? 32 : 32.w,
+                          height: kIsWeb ? 32 : 32.h,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF7C3AED),
+                            borderRadius: BorderRadius.circular(kIsWeb ? 6 : 6.sp),
+                          ),
+                          child: Icon(
+                            Icons.add,
+                            color: Colors.white,
+                            size: kIsWeb ? 16 : 16.sp,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
