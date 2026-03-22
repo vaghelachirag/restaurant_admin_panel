@@ -34,6 +34,10 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
   /// CART LIST
   final List<CartItem> cart = [];
 
+  /// Restaurant hours (default values - can be fetched from database)
+  String openingTime = "09:00 AM";
+  String closingTime = "12:00 PM";
+
   int getTotalCartQuantity() {
     int total = 0;
     for (var item in cart) {
@@ -50,6 +54,127 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
       }
     }
     return quantity;
+  }
+
+  /// Check if restaurant is currently open
+  bool _isRestaurantOpen() {
+    final now = DateTime.now();
+    final currentTime = TimeOfDay(hour: now.hour, minute: now.minute);
+    
+    // Parse opening time (e.g., "09:00 AM")
+    final openingParts = openingTime.split(' ');
+    final openingHourMin = openingParts[0].split(':');
+    int openingHour = int.parse(openingHourMin[0]);
+    if (openingParts[1] == 'PM' && openingHour != 12) openingHour += 12;
+    if (openingParts[1] == 'AM' && openingHour == 12) openingHour = 0;
+    final openingMinute = int.parse(openingHourMin[1]);
+    final openingTimeOfDay = TimeOfDay(hour: openingHour, minute: openingMinute);
+    
+    // Parse closing time (e.g., "12:00 PM")
+    final closingParts = closingTime.split(' ');
+    final closingHourMin = closingParts[0].split(':');
+    int closingHour = int.parse(closingHourMin[0]);
+    if (closingParts[1] == 'PM' && closingHour != 12) closingHour += 12;
+    if (closingParts[1] == 'AM' && closingHour == 12) closingHour = 0;
+    final closingMinute = int.parse(closingHourMin[1]);
+    final closingTimeOfDay = TimeOfDay(hour: closingHour, minute: closingMinute);
+    
+    // Compare current time with opening and closing times
+    final currentMinutes = currentTime.hour * 60 + currentTime.minute;
+    final openingMinutes = openingTimeOfDay.hour * 60 + openingTimeOfDay.minute;
+    final closingMinutes = closingTimeOfDay.hour * 60 + closingTimeOfDay.minute;
+    
+    return currentMinutes >= openingMinutes && currentMinutes <= closingMinutes;
+  }
+
+  /// Show restaurant closed popup
+  void _showRestaurantClosedPopup(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(kIsWeb ? 16 : 16.sp),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(kIsWeb ? 8 : 8.sp),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
+              ),
+              child: Icon(
+                Icons.access_time,
+                color: Colors.red,
+                size: kIsWeb ? 24 : 24.sp,
+              ),
+            ),
+            SizedBox(width: kIsWeb ? 12 : 12.sp),
+            Text(
+              "Restaurant Closed",
+              style: GoogleFonts.poppins(
+                fontSize: kIsWeb ? 18 : 18.sp,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Sorry, we're currently closed. Please come back during our operating hours.",
+              style: GoogleFonts.poppins(
+                fontSize: kIsWeb ? 14 : 14.sp,
+                color: Colors.black54,
+              ),
+            ),
+            SizedBox(height: kIsWeb ? 16 : 16.sp),
+            Container(
+              padding: EdgeInsets.all(kIsWeb ? 12 : 12.sp),
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.schedule,
+                    color: Colors.grey[600],
+                    size: kIsWeb ? 20 : 20.sp,
+                  ),
+                  SizedBox(width: kIsWeb ? 8 : 8.sp),
+                  Text(
+                    "Operating Hours: $openingTime - $closingTime",
+                    style: GoogleFonts.poppins(
+                      fontSize: kIsWeb ? 14 : 14.sp,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              "Got it",
+              style: GoogleFonts.poppins(
+                fontSize: kIsWeb ? 14 : 14.sp,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF7C3AED),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildMenuCard({
@@ -254,7 +379,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
             ),
             // Plus button
             GestureDetector(
-              onTap: () {
+              onTap: _isRestaurantOpen() ? () {
                 _updateItemQuantity(
                   itemId,
                   variant,
@@ -262,6 +387,8 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                   itemName: item['name'],
                   price: price,
                 );
+              } : () {
+                _showRestaurantClosedPopup(context);
               },
               child: Container(
                 width: kIsWeb ? 32 : 32.w,
@@ -284,9 +411,10 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
         ),
       );
     } else {
-      // Show Add button
+      // Show Add button (disabled if restaurant is closed)
+      final bool isRestaurantOpen = _isRestaurantOpen();
       return GestureDetector(
-        onTap: () {
+        onTap: isRestaurantOpen ? () {
           _updateItemQuantity(
             itemId,
             variant,
@@ -301,11 +429,13 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
               duration: const Duration(seconds: 2),
             ),
           );
+        } : () {
+          _showRestaurantClosedPopup(context);
         },
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
           decoration: BoxDecoration(
-            color: Colors.red,
+            color: isRestaurantOpen ? Colors.red : Colors.grey,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
@@ -735,7 +865,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                           width: double.infinity,
                           height: kIsWeb ? 50 : 50.h,
                           child: ElevatedButton(
-                            onPressed: () {
+                            onPressed: _isRestaurantOpen() ? () {
                               // Validate quantity from input field
                               final inputQuantity = int.tryParse(quantityController.text);
                               if (inputQuantity == null || inputQuantity < 1 || inputQuantity > 99) {
@@ -769,6 +899,9 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                               );
 
                               setState(() {});
+                            } : () {
+                              Navigator.pop(context);
+                              _showRestaurantClosedPopup(context);
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: primaryColor,
@@ -1006,6 +1139,39 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                               /// Top Row
                               Row(
                                 children: [
+
+                                  /// Restaurant Status
+                                  Container(
+                                    padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 8 : 8.sp, vertical: kIsWeb ? 4 : 4.sp),
+                                    decoration: BoxDecoration(
+                                      color: _isRestaurantOpen() ? Colors.green.withOpacity(0.2) : Colors.red.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Container(
+                                          width: kIsWeb ? 6 : 6.sp,
+                                          height: kIsWeb ? 6 : 6.sp,
+                                          decoration: BoxDecoration(
+                                            color: _isRestaurantOpen() ? Colors.green : Colors.red,
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                        SizedBox(width: kIsWeb ? 4 : 4.sp),
+                                        Text(
+                                          _isRestaurantOpen() ? "Open" : "Closed",
+                                          style: GoogleFonts.poppins(
+                                            fontSize: kIsWeb ? 10 : 10.sp,
+                                            fontWeight: FontWeight.w600,
+                                            color: _isRestaurantOpen() ? Colors.green : Colors.red,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+
+                                  SizedBox(width: 8.sp),
 
                                   /// Logo
                                   if (logo != null && logo != "")

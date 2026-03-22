@@ -245,7 +245,7 @@ class _CartPageState extends State<CartPage> {
                                 children: [
                                   Row(
                                     children: [
-                                      // Item Image (placeholder)
+                                      // Food Icon (burger + drink)
                                       Container(
                                         width: kIsWeb ? 60 : 60.w,
                                         height: kIsWeb ? 60 : 60.h,
@@ -253,10 +253,27 @@ class _CartPageState extends State<CartPage> {
                                           color: const Color(0xFFF3F4F6),
                                           borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
                                         ),
-                                        child: Icon(
-                                          Icons.restaurant_menu,
-                                          color: const Color(0xFF6B7280),
-                                          size: kIsWeb ? 24 : 24.sp,
+                                        child: Stack(
+                                          alignment: Alignment.center,
+                                          children: [
+                                            Positioned(
+                                              top: kIsWeb ? 8 : 8.h,
+                                              child: Icon(
+                                                Icons.fastfood,
+                                                color: const Color(0xFF6B7280),
+                                                size: kIsWeb ? 28 : 28.sp,
+                                              ),
+                                            ),
+                                            Positioned(
+                                              bottom: kIsWeb ? 6 : 6.h,
+                                              right: kIsWeb ? 8 : 8.w,
+                                              child: Icon(
+                                                Icons.local_drink,
+                                                color: const Color(0xFF6B7280),
+                                                size: kIsWeb ? 18 : 18.sp,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                       SizedBox(width: kIsWeb ? 12 : 12.w),
@@ -275,7 +292,7 @@ class _CartPageState extends State<CartPage> {
                                             ),
                                             SizedBox(height: kIsWeb ? 4 : 4.h),
                                             Text(
-                                              "${item.qty} ${item.variant}",
+                                              "${item.variant}",
                                               style: GoogleFonts.poppins(
                                                 fontSize: kIsWeb ? 14 : 14.sp,
                                                 color: const Color(0xFF6B7280),
@@ -283,7 +300,7 @@ class _CartPageState extends State<CartPage> {
                                             ),
                                             SizedBox(height: kIsWeb ? 4 : 4.h),
                                             Text(
-                                              "₹${item.price}",
+                                              "₹ ${item.price}",
                                               style: GoogleFonts.poppins(
                                                 fontWeight: FontWeight.w600,
                                                 fontSize: kIsWeb ? 16 : 16.sp,
@@ -301,85 +318,102 @@ class _CartPageState extends State<CartPage> {
                                           });
                                         },
                                         child: Icon(
-                                          Icons.delete_outline,
+                                          Icons.delete,
                                           color: Colors.red.shade400,
                                           size: kIsWeb ? 24 : 24.sp,
                                         ),
                                       ),
                                     ],
                                   ),
-                                  SizedBox(height: kIsWeb ? 12 : 12.h),
+                                  SizedBox(height: kIsWeb ? 16 : 16.h),
                                   // Quantity Selector
-                                  Container(
-                                    height: kIsWeb ? 40 : 40.h,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFF3F4F6),
-                                      borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
-                                      border: Border.all(
-                                        color: const Color(0xFFE5E7EB),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        "Quantity",
+                                        style: GoogleFonts.poppins(
+                                          fontSize: kIsWeb ? 14 : 14.sp,
+                                          fontWeight: FontWeight.w500,
+                                          color: const Color(0xFF6B7280),
+                                        ),
                                       ),
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                      children: [
-                                        // Minus button
-                                        GestureDetector(
-                                          onTap: () {
-                                            if (item.qty > 1) {
-                                              setState(() {
-                                                item.qty--;
-                                              });
-                                            }
-                                          },
-                                          child: Container(
-                                            width: kIsWeb ? 32 : 32.w,
-                                            height: kIsWeb ? 32 : 32.h,
-                                            decoration: BoxDecoration(
-                                              color: Colors.white,
-                                              borderRadius: BorderRadius.circular(kIsWeb ? 6 : 6.sp),
-                                              border: Border.all(
-                                                color: const Color(0xFFE5E7EB),
+                                      Spacer(),
+                                      Container(
+                                        height: kIsWeb ? 36 : 36.h,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFF3F4F6),
+                                          borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
+                                          border: Border.all(
+                                            color: const Color(0xFFE5E7EB),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            // Minus button
+                                            GestureDetector(
+                                              onTap: () {
+                                                if (item.qty > 1) {
+                                                  setState(() {
+                                                    item.qty--;
+                                                  });
+                                                }
+                                              },
+                                              child: Container(
+                                                width: kIsWeb ? 36 : 36.w,
+                                                height: kIsWeb ? 36 : 36.h,
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white,
+                                                  borderRadius: BorderRadius.circular(kIsWeb ? 6 : 6.sp),
+                                                  border: Border.all(
+                                                    color: const Color(0xFFE5E7EB),
+                                                  ),
+                                                ),
+                                                child: Icon(
+                                                  Icons.remove,
+                                                  color: const Color(0xFF6B7280),
+                                                  size: kIsWeb ? 18 : 18.sp,
+                                                ),
                                               ),
                                             ),
-                                            child: Icon(
-                                              Icons.remove,
-                                              color: const Color(0xFF6B7280),
-                                              size: kIsWeb ? 16 : 16.sp,
+                                            // Quantity display
+                                            Container(
+                                              width: kIsWeb ? 40 : 40.w,
+                                              alignment: Alignment.center,
+                                              child: Text(
+                                                item.qty.toString(),
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: kIsWeb ? 16 : 16.sp,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: textColor,
+                                                ),
+                                              ),
                                             ),
-                                          ),
-                                        ),
-                                        // Quantity display
-                                        Text(
-                                          item.qty.toString(),
-                                          style: GoogleFonts.poppins(
-                                            fontSize: kIsWeb ? 16 : 16.sp,
-                                            fontWeight: FontWeight.w600,
-                                            color: textColor,
-                                          ),
-                                        ),
-                                        // Plus button
-                                        GestureDetector(
-                                          onTap: () {
-                                            setState(() {
-                                              item.qty++;
-                                            });
-                                          },
-                                          child: Container(
-                                            width: kIsWeb ? 32 : 32.w,
-                                            height: kIsWeb ? 32 : 32.h,
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFF7C3AED),
-                                              borderRadius: BorderRadius.circular(kIsWeb ? 6 : 6.sp),
+                                            // Plus button
+                                            GestureDetector(
+                                              onTap: () {
+                                                setState(() {
+                                                  item.qty++;
+                                                });
+                                              },
+                                              child: Container(
+                                                width: kIsWeb ? 36 : 36.w,
+                                                height: kIsWeb ? 36 : 36.h,
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFF7C3AED),
+                                                  borderRadius: BorderRadius.circular(kIsWeb ? 6 : 6.sp),
+                                                ),
+                                                child: Icon(
+                                                  Icons.add,
+                                                  color: Colors.white,
+                                                  size: kIsWeb ? 18 : 18.sp,
+                                                ),
+                                              ),
                                             ),
-                                            child: Icon(
-                                              Icons.add,
-                                              color: Colors.white,
-                                              size: kIsWeb ? 16 : 16.sp,
-                                            ),
-                                          ),
+                                          ],
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
@@ -536,44 +570,74 @@ class _CartPageState extends State<CartPage> {
                                SizedBox(height: kIsWeb ? 12 : 12.h),
                               Row(
                                 children: [
-                                  ChoiceChip(
-                                    label: Text(
-                                      "Dine In",
-                                      style: GoogleFonts.poppins(
-                                        fontSize: kIsWeb ? 12 : 12.sp,
-                                        color: orderType == "Dine In"
-                                            ? Colors.white
-                                            : const Color(0xFF1F2937),
-                                      ),
-                                    ),
-                                    selected: orderType == "Dine In",
-                                    selectedColor: const Color(0xFF7C3AED),
-                                    backgroundColor: const Color(0xFFF3F4F6),
-                                    onSelected: (_) {
+                                  GestureDetector(
+                                    onTap: () {
                                       setState(() {
                                         orderType = "Dine In";
                                       });
                                     },
-                                  ),
-                                  SizedBox(width: 8.w),
-                                  ChoiceChip(
-                                    label: Text(
-                                      "Parcel",
-                                      style: GoogleFonts.poppins(
-                                        fontSize: kIsWeb ? 14 : 12.sp,
-                                        color: orderType == "Parcel"
-                                            ? Colors.white
-                                            : const Color(0xFF1F2937),
+                                    child: Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: kIsWeb ? 20 : 20.w,
+                                        vertical: kIsWeb ? 10 : 10.h,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: orderType == "Dine In" 
+                                            ? const Color(0xFF7C3AED) 
+                                            : const Color(0xFFF3F4F6),
+                                        borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
+                                        border: Border.all(
+                                          color: orderType == "Dine In"
+                                              ? const Color(0xFF7C3AED)
+                                              : const Color(0xFFE5E7EB),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        "Dine In",
+                                        style: GoogleFonts.poppins(
+                                          fontSize: kIsWeb ? 14 : 14.sp,
+                                          fontWeight: FontWeight.w500,
+                                          color: orderType == "Dine In"
+                                              ? Colors.white
+                                              : const Color(0xFF6B7280),
+                                        ),
                                       ),
                                     ),
-                                    selected: orderType == "Parcel",
-                                    selectedColor: const Color(0xFF7C3AED),
-                                    backgroundColor: const Color(0xFFF3F4F6),
-                                    onSelected: (_) {
+                                  ),
+                                  SizedBox(width: kIsWeb ? 12 : 12.w),
+                                  GestureDetector(
+                                    onTap: () {
                                       setState(() {
                                         orderType = "Parcel";
                                       });
                                     },
+                                    child: Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: kIsWeb ? 20 : 20.w,
+                                        vertical: kIsWeb ? 10 : 10.h,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: orderType == "Parcel" 
+                                            ? const Color(0xFF7C3AED) 
+                                            : const Color(0xFFF3F4F6),
+                                        borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
+                                        border: Border.all(
+                                          color: orderType == "Parcel"
+                                              ? const Color(0xFF7C3AED)
+                                              : const Color(0xFFE5E7EB),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        "Parcel",
+                                        style: GoogleFonts.poppins(
+                                          fontSize: kIsWeb ? 14 : 14.sp,
+                                          fontWeight: FontWeight.w500,
+                                          color: orderType == "Parcel"
+                                              ? Colors.white
+                                              : const Color(0xFF6B7280),
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -644,7 +708,7 @@ class _CartPageState extends State<CartPage> {
                                   color: textColor,
                                 ),
                               ),
-                              SizedBox(height: kIsWeb ? 12 : 12.h),
+                              SizedBox(height: kIsWeb ? 16 : 16.h),
                               // Subtotal
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -657,7 +721,7 @@ class _CartPageState extends State<CartPage> {
                                     ),
                                   ),
                                   Text(
-                                    "₹${getTotal()}",
+                                    "₹ ${getTotal()}",
                                     style: GoogleFonts.poppins(
                                       fontSize: kIsWeb ? 14 : 14.sp,
                                       color: textColor,
@@ -666,7 +730,7 @@ class _CartPageState extends State<CartPage> {
                                   ),
                                 ],
                               ),
-                              SizedBox(height: kIsWeb ? 8 : 8.h),
+                              SizedBox(height: kIsWeb ? 12 : 12.h),
                               // Tax
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -679,7 +743,7 @@ class _CartPageState extends State<CartPage> {
                                     ),
                                   ),
                                   Text(
-                                    "₹${getTax().toStringAsFixed(2)}",
+                                    "₹ ${getTax().toStringAsFixed(2)}",
                                     style: GoogleFonts.poppins(
                                       fontSize: kIsWeb ? 14 : 14.sp,
                                       color: textColor,
@@ -688,13 +752,13 @@ class _CartPageState extends State<CartPage> {
                                   ),
                                 ],
                               ),
-                              SizedBox(height: kIsWeb ? 8 : 8.h),
+                              SizedBox(height: kIsWeb ? 12 : 12.h),
                               // Divider
                               Divider(
                                 color: const Color(0xFFE5E7EB),
                                 thickness: 1,
                               ),
-                              SizedBox(height: kIsWeb ? 8 : 8.h),
+                              SizedBox(height: kIsWeb ? 12 : 12.h),
                               // Total
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -708,7 +772,7 @@ class _CartPageState extends State<CartPage> {
                                     ),
                                   ),
                                   Text(
-                                    "₹${getFinalTotal().toStringAsFixed(2)}",
+                                    "₹ ${getFinalTotal().toStringAsFixed(2)}",
                                     style: GoogleFonts.poppins(
                                       fontSize: kIsWeb ? 16 : 16.sp,
                                       fontWeight: FontWeight.w600,
@@ -763,7 +827,7 @@ class _CartPageState extends State<CartPage> {
                               ),
                               SizedBox(height: 4.h),
                               Text(
-                                "₹${getFinalTotal().toStringAsFixed(2)}",
+                                "₹ ${getFinalTotal().toStringAsFixed(2)}",
                                 style: GoogleFonts.poppins(
                                   fontSize: kIsWeb ? 20 : 20.sp,
                                   fontWeight: FontWeight.w700,
