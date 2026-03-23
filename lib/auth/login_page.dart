@@ -1,4 +1,7 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../core/constants/app_colors.dart';
 import '../restaurant_admin/restaurant_admin_page.dart';
 import '../super_admin/restaurants_page.dart';
 import '../uttils/session_manager.dart';
@@ -78,149 +81,194 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              colorScheme.primary.withOpacity(0.05),
-              colorScheme.primary.withOpacity(0.15),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Card(
-              elevation: 12,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 28,
+      backgroundColor: AppColors.background,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: kIsWeb ? 420 : 420.w),
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(kIsWeb ? 16 : 16.r),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-
-                    /// HEADER
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-
-                            Text(
-                              "Welcome back,",
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                color: colorScheme.primary,
+              ],
+            ),
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: kIsWeb ? 32 : 32.w,
+                vertical: kIsWeb ? 40 : 40.h,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Logo and Title
+                  Container(
+                    width: kIsWeb ? 80 : 80.w,
+                    height: kIsWeb ? 80 : 80.w,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(kIsWeb ? 20 : 20.r),
+                    ),
+                    child: Icon(
+                      Icons.restaurant_menu_rounded,
+                      size: kIsWeb ? 40 : 40.w,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  
+                  SizedBox(height: kIsWeb ? 24 : 24.h),
+                  
+                  Text(
+                    "Restaurant Admin",
+                    style: TextStyle(
+                      fontSize: kIsWeb ? 28 : 28.sp,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.black,
+                    ),
+                  ),
+                  
+                  SizedBox(height: kIsWeb ? 8 : 8.h),
+                  
+                  Text(
+                    "Sign in to manage your restaurant",
+                    style: TextStyle(
+                      fontSize: kIsWeb ? 14 : 14.sp,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  
+                  SizedBox(height: kIsWeb ? 40 : 40.h),
+                  
+                  // Email Field
+                  TextField(
+                    controller: emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    style: TextStyle(fontSize: kIsWeb ? 14 : 14.sp),
+                    decoration: InputDecoration(
+                      labelText: "Email Address",
+                      labelStyle: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: kIsWeb ? 14 : 14.sp,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.email_outlined,
+                        color: AppColors.primary,
+                        size: kIsWeb ? 20 : 20.w,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.r),
+                        borderSide: BorderSide(color: Colors.grey[300]!),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.r),
+                        borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                      ),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: kIsWeb ? 16 : 16.w,
+                        vertical: kIsWeb ? 16 : 16.h,
+                      ),
+                    ),
+                  ),
+                  
+                  SizedBox(height: kIsWeb ? 20 : 20.h),
+                  
+                  // Password Field
+                  TextField(
+                    controller: passwordController,
+                    obscureText: obscurePassword,
+                    style: TextStyle(fontSize: kIsWeb ? 14 : 14.sp),
+                    decoration: InputDecoration(
+                      labelText: "Password",
+                      labelStyle: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: kIsWeb ? 14 : 14.sp,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.lock_outline,
+                        color: AppColors.primary,
+                        size: kIsWeb ? 20 : 20.w,
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscurePassword ? Icons.visibility_off : Icons.visibility,
+                          color: Colors.grey[600],
+                          size: kIsWeb ? 20 : 20.w,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            obscurePassword = !obscurePassword;
+                          });
+                        },
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.r),
+                        borderSide: BorderSide(color: Colors.grey[300]!),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.r),
+                        borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                      ),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: kIsWeb ? 16 : 16.w,
+                        vertical: kIsWeb ? 16 : 16.h,
+                      ),
+                    ),
+                  ),
+                  
+                  SizedBox(height: kIsWeb ? 32 : 32.h),
+                  
+                  // Login Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: kIsWeb ? 50 : 50.h,
+                    child: ElevatedButton(
+                      onPressed: loading ? null : login,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: AppColors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.r),
+                        ),
+                        disabledBackgroundColor: AppColors.primary.withOpacity(0.6),
+                      ),
+                      child: loading
+                          ? SizedBox(
+                              width: kIsWeb ? 20 : 20.w,
+                              height: kIsWeb ? 20 : 20.w,
+                              child: const CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: AppColors.white,
+                              ),
+                            )
+                          : Text(
+                              "Sign In",
+                              style: TextStyle(
+                                fontSize: kIsWeb ? 16 : 16.sp,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-
-                            const SizedBox(height: 4),
-
-                            Text(
-                              "Restaurant Admin Panel",
-                              style: theme.textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        Icon(
-                          Icons.restaurant_menu_rounded,
-                          size: 36,
-                          color: colorScheme.primary,
-                        ),
-                      ],
                     ),
-
-                    const SizedBox(height: 24),
-
-                    Text(
-                      "Sign in with your admin credentials to manage restaurants, menus and orders.",
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 28),
-                    TextField(
-                      controller: emailController,
-                      decoration: InputDecoration(
-                        labelText: "Email",
-                        prefixIcon: const Icon(Icons.email_outlined),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                  ),
+                  
+                  SizedBox(height: kIsWeb ? 24 : 24.h),
+                  
+                  // Additional Info
+                  Center(
+                    child: Text(
+                      "Admin & Super Admin Access",
+                      style: TextStyle(
+                        fontSize: kIsWeb ? 12 : 12.sp,
+                        color: Colors.grey[500],
                       ),
                     ),
-
-                    const SizedBox(height: 16),
-
-                    TextField(
-                      controller: passwordController,
-                      obscureText: obscurePassword,
-                      decoration: InputDecoration(
-                        labelText: "Password",
-                        prefixIcon: const Icon(Icons.lock_outline),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            obscurePassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              obscurePassword = !obscurePassword;
-                            });
-                          },
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    /// LOGIN BUTTON
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton(
-                        onPressed: loading ? null : login,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: colorScheme.primary,
-                          foregroundColor: colorScheme.onPrimary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: loading
-                            ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            color: Colors.white,
-                          ),
-                        )
-                            : const Text("Login"),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),

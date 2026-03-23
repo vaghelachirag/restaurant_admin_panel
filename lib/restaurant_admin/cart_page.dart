@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:restaurant_admin_panel/data/models/cart_item.dart';
 
 import 'order_status_page.dart';
 
@@ -12,22 +13,6 @@ Color _hexToColor(String hex) {
     hex = "FF$hex";
   }
   return Color(int.parse(hex, radix: 16));
-}
-
-class CartItem {
-  String itemId;
-  String name;
-  String variant;
-  int price;
-  int qty;
-
-  CartItem({
-    required this.itemId,
-    required this.name,
-    required this.variant,
-    required this.price,
-    this.qty = 1,
-  });
 }
 
 class CartPage extends StatefulWidget {
@@ -245,7 +230,7 @@ class _CartPageState extends State<CartPage> {
                                 children: [
                                   Row(
                                     children: [
-                                      // Food Icon (burger + drink)
+                                      // Product Image
                                       Container(
                                         width: kIsWeb ? 60 : 60.w,
                                         height: kIsWeb ? 60 : 60.h,
@@ -253,27 +238,31 @@ class _CartPageState extends State<CartPage> {
                                           color: const Color(0xFFF3F4F6),
                                           borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
                                         ),
-                                        child: Stack(
-                                          alignment: Alignment.center,
-                                          children: [
-                                            Positioned(
-                                              top: kIsWeb ? 8 : 8.h,
-                                              child: Icon(
-                                                Icons.fastfood,
-                                                color: const Color(0xFF6B7280),
-                                                size: kIsWeb ? 28 : 28.sp,
-                                              ),
-                                            ),
-                                            Positioned(
-                                              bottom: kIsWeb ? 6 : 6.h,
-                                              right: kIsWeb ? 8 : 8.w,
-                                              child: Icon(
-                                                Icons.local_drink,
-                                                color: const Color(0xFF6B7280),
-                                                size: kIsWeb ? 18 : 18.sp,
-                                              ),
-                                            ),
-                                          ],
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
+                                          child: item.image != null
+                                              ? Image.network(
+                                                  item.image!,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (context, error, stackTrace) {
+                                                    return Container(
+                                                      color: Colors.grey[100],
+                                                      child: Icon(
+                                                        Icons.restaurant,
+                                                        color: Colors.grey[400],
+                                                        size: kIsWeb ? 30 : 30.sp,
+                                                      ),
+                                                    );
+                                                  },
+                                                )
+                                              : Container(
+                                                  color: Colors.grey[100],
+                                                  child: Icon(
+                                                    Icons.restaurant,
+                                                    color: Colors.grey[400],
+                                                    size: kIsWeb ? 30 : 30.sp,
+                                                  ),
+                                                ),
                                         ),
                                       ),
                                       SizedBox(width: kIsWeb ? 12 : 12.w),

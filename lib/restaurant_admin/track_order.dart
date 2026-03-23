@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -87,13 +88,13 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
               style: GoogleFonts.poppins(
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
-                fontSize: 18.sp,
+                fontSize:  kIsWeb ? 18 : 18.sp,
               ),
             ),
             centerTitle: false,
           ),
           body: SingleChildScrollView(
-            padding: EdgeInsets.all(16.sp),
+            padding: EdgeInsets.all(kIsWeb ? 16 : 16.sp),
             child: Column(
               children: [
                 /// SEARCH CARD
@@ -108,39 +109,39 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10.sp,
+                        blurRadius:  kIsWeb ? 10 : 12.sp,
                         offset: const Offset(0, 2),
                       ),
                     ],
                   ),
-                  padding: EdgeInsets.all(20.sp),
+                  padding: EdgeInsets.all(kIsWeb ? 20 : 20.sp),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         "Enter Token Number",
                         style: GoogleFonts.poppins(
-                          fontSize: 16.sp,
+                          fontSize:  kIsWeb ? 16 : 16.sp,
                           fontWeight: FontWeight.w600,
                           color: textColor,
                         ),
                       ),
-                      SizedBox(height: 16.h),
+                      SizedBox(height: kIsWeb ? 16 : 16.h),
                       TextField(
                         controller: tokenController,
                         style: GoogleFonts.poppins(
-                          fontSize: 16.sp,
+                          fontSize:  kIsWeb ? 16 : 16.sp,
                           color: textColor,
                         ),
                         decoration: InputDecoration(
                           labelText: "Token Number",
                           labelStyle: GoogleFonts.poppins(
                             color: const Color(0xFF6B7280),
-                            fontSize: 14.sp,
+                            fontSize:  kIsWeb ? 14 : 14.sp,
                           ),
                           hintStyle: GoogleFonts.poppins(
                             color: const Color(0xFF9CA3AF),
-                            fontSize: 14.sp,
+                            fontSize:  kIsWeb ? 14 : 14.sp,
                           ),
                           prefixIcon: Icon(
                             Icons.confirmation_number_outlined,
@@ -154,22 +155,22 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
                             borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                             borderSide: const BorderSide(color: Color(0xFF7C3AED), width: 2),
                           ),
                         ),
                         keyboardType: TextInputType.number,
                       ),
-                      SizedBox(height: 16.h),
+                      SizedBox(height: kIsWeb ? 16 : 16.sp),
                       SizedBox(
                         width: double.infinity,
-                        height: 50.h,
+                        height: kIsWeb ? 50 : 50.sp,
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF7C3AED),
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                             ),
                             elevation: 0,
                           ),
@@ -181,7 +182,7 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
                           child: Text(
                             "Track Order",
                             style: GoogleFonts.poppins(
-                              fontSize: 16.sp,
+                              fontSize:  kIsWeb ? 16 : 16.sp,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -191,7 +192,7 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
                   ),
                 ),
                 
-                SizedBox(height: 24.h),
+                SizedBox(height: kIsWeb ? 24 : 24.h),
                 
                 /// ORDER RESULTS
                 if (token != null && token!.isNotEmpty)
@@ -205,7 +206,7 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return Container(
-                          padding: EdgeInsets.all(40.sp),
+                          padding: EdgeInsets.all(kIsWeb ? 40 : 40.sp),
                           child: Center(
                             child: CircularProgressIndicator(
                               color: const Color(0xFF7C3AED),
@@ -224,19 +225,19 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
                               width: 1,
                             ),
                           ),
-                          padding: EdgeInsets.all(20.sp),
+                          padding: EdgeInsets.all( kIsWeb ? 20 : 20.sp),
                           child: Column(
                             children: [
                               Icon(
                                 Icons.error_outline,
                                 color: Colors.red.shade400,
-                                size: 48.sp,
+                                size:  kIsWeb ? 48 : 48.sp,
                               ),
-                              SizedBox(height: 12.h),
+                              SizedBox(height: kIsWeb ? 12 : 12.h),
                               Text(
                                 "Error loading order",
                                 style: GoogleFonts.poppins(
-                                  fontSize: 16.sp,
+                                  fontSize:  kIsWeb ? 16 : 16.sp,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.red.shade400,
                                 ),
@@ -256,28 +257,28 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
                               width: 1,
                             ),
                           ),
-                          padding: EdgeInsets.all(20.sp),
+                          padding: EdgeInsets.all( kIsWeb ? 20 : 20.sp),
                           child: Column(
                             children: [
                               Icon(
                                 Icons.search_off,
                                 color: const Color(0xFF6B7280),
-                                size: 48.sp,
+                                size:  kIsWeb ? 48 : 48.sp,
                               ),
                               SizedBox(height: 12.h),
                               Text(
                                 "Order not found",
                                 style: GoogleFonts.poppins(
-                                  fontSize: 16.sp,
+                                  fontSize:  kIsWeb ? 16 : 16.sp,
                                   fontWeight: FontWeight.w500,
                                   color: const Color(0xFF6B7280),
                                 ),
                               ),
-                              SizedBox(height: 8.h),
+                              SizedBox(height: kIsWeb ? 8 : 8.h),
                               Text(
                                 "Please check your token number and try again",
                                 style: GoogleFonts.poppins(
-                                  fontSize: 14.sp,
+                                  fontSize:  kIsWeb ? 14 : 14.sp,
                                   color: const Color(0xFF9CA3AF),
                                 ),
                                 textAlign: TextAlign.center,
@@ -307,7 +308,7 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.05),
-                              blurRadius: 10.sp,
+                              blurRadius: kIsWeb ? 12 : 12.sp,
                               offset: const Offset(0, 2),
                             ),
                           ],
@@ -331,22 +332,22 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
                                   topRight: Radius.circular(16),
                                 ),
                               ),
-                              padding: EdgeInsets.all(20.sp),
+                              padding: EdgeInsets.all( kIsWeb ? 20 : 20.sp),
                               child: Row(
                                 children: [
                                   Container(
                                     padding: EdgeInsets.symmetric(
-                                      horizontal: 12.sp,
-                                      vertical: 8.sp,
+                                      horizontal: kIsWeb ? 12 : 12.sp,
+                                      vertical: kIsWeb ? 8 : 8.sp,
                                     ),
                                     decoration: BoxDecoration(
                                       color: Colors.white.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(20.sp),
+                                      borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                                     ),
                                     child: Text(
                                       "Token #$tokenNumber",
                                       style: GoogleFonts.poppins(
-                                        fontSize: 16.sp,
+                                        fontSize:  kIsWeb ? 16 : 16.sp,
                                         fontWeight: FontWeight.w600,
                                         color: Colors.white,
                                       ),
@@ -359,7 +360,7 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
                             ),
                             
                             Padding(
-                              padding: EdgeInsets.all(20.sp),
+                              padding: EdgeInsets.all( kIsWeb ? 20 : 20.sp),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -369,13 +370,13 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
                                       Icon(
                                         Icons.person_outline,
                                         color: const Color(0xFF6B7280),
-                                        size: 20.sp,
+                                        size: kIsWeb ? 20 : 20.sp,
                                       ),
-                                      SizedBox(width: 8.w),
+                                      SizedBox(width: kIsWeb ? 8 : 8.w),
                                       Text(
                                         customerName,
                                         style: GoogleFonts.poppins(
-                                          fontSize: 16.sp,
+                                          fontSize:  kIsWeb ? 16 : 16.sp,
                                           fontWeight: FontWeight.w500,
                                           color: textColor,
                                         ),
@@ -383,17 +384,17 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
                                       Spacer(),
                                       Container(
                                         padding: EdgeInsets.symmetric(
-                                          horizontal: 8.sp,
-                                          vertical: 4.sp,
+                                          horizontal: kIsWeb ? 8 : 8.sp,
+                                          vertical: kIsWeb ? 4 : 4.sp,
                                         ),
                                         decoration: BoxDecoration(
                                           color: const Color(0xFFF3F4F6),
-                                          borderRadius: BorderRadius.circular(12.sp),
+                                          borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                                         ),
                                         child: Text(
                                           orderType,
                                           style: GoogleFonts.poppins(
-                                            fontSize: 12.sp,
+                                            fontSize: kIsWeb ? 12 : 12.sp,
                                             color: const Color(0xFF6B7280),
                                             fontWeight: FontWeight.w500,
                                           ),
@@ -402,37 +403,37 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
                                     ],
                                   ),
                                   
-                                  SizedBox(height: 16.h),
+                                  SizedBox(height: kIsWeb ? 16 : 16.h),
                                   
                                   /// Order Items
                                   if (items.isNotEmpty) ...[
                                     Text(
                                       "Order Items",
                                       style: GoogleFonts.poppins(
-                                        fontSize: 14.sp,
+                                        fontSize: kIsWeb ? 14 : 14.sp,
                                         fontWeight: FontWeight.w600,
                                         color: textColor,
                                       ),
                                     ),
-                                    SizedBox(height: 12.h),
+                                    SizedBox(height: kIsWeb ? 12 : 12.h),
                                     ...items.map((item) => Padding(
-                                      padding: EdgeInsets.only(bottom: 8.h),
+                                      padding: EdgeInsets.only(bottom: kIsWeb ? 8 : 8.h),
                                       child: Row(
                                         children: [
                                           Container(
-                                            width: 4.w,
-                                            height: 16.h,
+                                            width: kIsWeb ? 4 : 4.w,
+                                            height: kIsWeb ? 16 : 16.h,
                                             decoration: BoxDecoration(
                                               color: const Color(0xFF7C3AED),
                                               borderRadius: BorderRadius.circular(2),
                                             ),
                                           ),
-                                          SizedBox(width: 12.w),
+                                          SizedBox(width: kIsWeb ? 12 : 12.w),
                                           Expanded(
                                             child: Text(
                                               "${item['name']} (${item['variant']}) x${item['qty']}",
                                               style: GoogleFonts.poppins(
-                                                fontSize: 14.sp,
+                                                fontSize: kIsWeb ? 14 : 14.sp,
                                                 color: const Color(0xFF6B7280),
                                               ),
                                             ),
@@ -440,7 +441,7 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
                                           Text(
                                             "₹${item['price'] * item['qty']}",
                                             style: GoogleFonts.poppins(
-                                              fontSize: 14.sp,
+                                              fontSize: kIsWeb ? 14 : 14.sp,
                                               fontWeight: FontWeight.w500,
                                               color: const Color(0xFF7C3AED),
                                             ),
@@ -448,15 +449,15 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
                                         ],
                                       ),
                                     )),
-                                    SizedBox(height: 16.h),
+                                    SizedBox(height: kIsWeb ? 16 : 16.h),
                                   ],
                                   
                                   /// Total Amount
                                   Container(
-                                    padding: EdgeInsets.all(16.sp),
+                                    padding: EdgeInsets.all(kIsWeb ? 16 : 16.sp),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFFF8F9FA),
-                                      borderRadius: BorderRadius.circular(12.sp),
+                                      borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                                       border: Border.all(
                                         color: const Color(0xFFE5E7EB),
                                       ),
@@ -467,7 +468,7 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
                                         Text(
                                           "Total Amount",
                                           style: GoogleFonts.poppins(
-                                            fontSize: 16.sp,
+                                            fontSize: kIsWeb ? 16 : 16.sp,
                                             fontWeight: FontWeight.w600,
                                             color: textColor,
                                           ),
@@ -475,7 +476,7 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
                                         Text(
                                           "₹$totalAmount",
                                           style: GoogleFonts.poppins(
-                                            fontSize: 18.sp,
+                                            fontSize: kIsWeb ? 18 : 18.sp,
                                             fontWeight: FontWeight.w700,
                                             color: const Color(0xFF7C3AED),
                                           ),
@@ -533,17 +534,17 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
     
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: 12.sp,
-        vertical: 6.sp,
+        horizontal: kIsWeb ? 12 : 12.sp,
+        vertical: kIsWeb ? 6 : 6.sp,
       ),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(20.sp),
+        borderRadius: BorderRadius.circular(kIsWeb ? 20 : 20.sp),
       ),
       child: Text(
         displayText,
         style: GoogleFonts.poppins(
-          fontSize: 12.sp,
+          fontSize: kIsWeb ? 12 : 12.sp,
           fontWeight: FontWeight.w500,
           color: textColor,
         ),
@@ -568,7 +569,7 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(kIsWeb ? 20 : 20),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
