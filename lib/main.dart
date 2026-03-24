@@ -1,6 +1,8 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:restaurant_admin_panel/restaurant_admin/dashboard_page.dart';
 import 'package:restaurant_admin_panel/uttils/session_manager.dart';
 
 import 'auth/login_page.dart';
@@ -48,8 +50,10 @@ class MyApp extends StatelessWidget {
 
     return   ScreenUtilInit(
       child:   MaterialApp(
+        theme: ThemeData(
+          textTheme: GoogleFonts.poppinsTextTheme(),
+        ),
         debugShowCheckedModeBanner: false,
-
         onGenerateRoute: (settings) {
 
           Uri uri = Uri.parse(settings.name ?? "/");
@@ -77,7 +81,7 @@ class MyApp extends StatelessWidget {
                 return const RestaurantListPage();
               }
 
-              return RestaurantAdminPanel(
+              return DashboardPage(
                 restaurantId: restaurantId!,
               );
             },

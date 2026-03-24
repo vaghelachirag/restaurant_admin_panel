@@ -682,261 +682,223 @@ class _CategoryPageState extends State<CategoryPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-
-
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: addCategory,
-        icon: const Icon(Icons.add),
-        label: const Text("Add Category"),
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              colorScheme.primary.withOpacity(0.06),
-              colorScheme.primary.withOpacity(0.14),
-              colorScheme.secondary.withOpacity(0.10),
-            ],
-          ),
-        ),
-        child: SafeArea(
+      backgroundColor: const Color(0xFFF6F7FB),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 22, 24, 16),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: double.infinity,
-                padding:  EdgeInsets.all(kIsWeb ? 24 : 24.sp),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: kIsWeb ? 10 : 10.sp,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(kIsWeb ? 12 : 12.sp),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.orange.shade400,
-                            Colors.orange.shade600,
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(kIsWeb ? 16 : 16.sp),
-                      ),
-                      child:  Icon(
-                        Icons.category,
-                        color: Colors.white,
-                        size: kIsWeb ? 28 : 28.sp,
-                      ),
-                    ),
-                     SizedBox(width: kIsWeb ? 16 : 16.w),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Categories",
-                            style: TextStyle(
-                              fontSize: kIsWeb ? 24 : 24.sp,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey.shade800,
-                            ),
-                          ),
-                           SizedBox(height: kIsWeb ? 4 : 4.h),
-                          Text(
-                            "Organize and prioritize your menu sections",
-                            style: TextStyle(
-                              fontSize: kIsWeb ? 14 : 14.sp,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+              Text(
+                "Home / Categories",
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  color: const Color(0xFF9AA0AA),
                 ),
               ),
-
-              // BODY
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final bool isWide = constraints.maxWidth > 900;
-
-                    return Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isWide
-                            ? constraints.maxWidth * 0.2
-                            : 16.w,
-                        vertical: 16.h,
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Text(
+                    "Categories",
+                    style: GoogleFonts.poppins(
+                      fontSize: 42,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF0E1A2F),
+                    ),
+                  ),
+                  const Spacer(),
+                  ElevatedButton(
+                    onPressed: addCategory,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF070B2D),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 12,
                       ),
-                      child: StreamBuilder<QuerySnapshot>(
-                        stream: FirebaseFirestore.instance
-                            .collection("categories")
-                            .where(
-                              "restaurantId",
-                              isEqualTo: widget.restaurantId,
-                            )
-                            .orderBy("position")
-                            .snapshots(),
-                        builder: (context, snapshot) {
-                          if (!snapshot.hasData) {
-                            return const Center(
-                              child: CircularProgressIndicator(),
-                            );
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.add, size: 16),
+                        const SizedBox(width: 8),
+                        Text(
+                          "Add Category",
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Expanded(
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection("categories")
+                      .where("restaurantId", isEqualTo: widget.restaurantId)
+                      .orderBy("position")
+                      .snapshots(),
+                  builder: (context, catSnapshot) {
+                    if (!catSnapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    final categories = catSnapshot.data!.docs;
+                    if (categories.isEmpty) {
+                      return Center(
+                        child: Text(
+                          "No categories yet",
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            color: const Color(0xFF808896),
+                          ),
+                        ),
+                      );
+                    }
+
+                    return StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection("menu_items")
+                          .where("restaurantId", isEqualTo: widget.restaurantId)
+                          .snapshots(),
+                      builder: (context, menuSnapshot) {
+                        final Map<String, int> itemCounts = {};
+                        if (menuSnapshot.hasData) {
+                          for (final doc in menuSnapshot.data!.docs) {
+                            final data = doc.data() as Map<String, dynamic>;
+                            final categoryId =
+                                (data["categoryId"] ?? "").toString();
+                            if (categoryId.isEmpty) continue;
+                            itemCounts[categoryId] =
+                                (itemCounts[categoryId] ?? 0) + 1;
                           }
+                        }
 
-                          List<QueryDocumentSnapshot> categories =
-                              List.from(snapshot.data!.docs);
+                        return LayoutBuilder(
+                          builder: (context, constraints) {
+                            int crossAxisCount = 1;
+                            if (constraints.maxWidth >= 1200) {
+                              crossAxisCount = 4;
+                            } else if (constraints.maxWidth >= 900) {
+                              crossAxisCount = 3;
+                            } else if (constraints.maxWidth >= 620) {
+                              crossAxisCount = 2;
+                            }
 
-                          if (categories.isEmpty) {
-                            return Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.category_outlined,
-                                    size: kIsWeb ? 48 : 48.sp,
-                                    color: Colors.grey.shade400,
-                                  ),
-                                   SizedBox(height: kIsWeb ? 12 : 12.h),
-                                  Text(
-                                    "No categories yet",
-                                    style: TextStyle(
-                                      fontSize: kIsWeb ? 16 : 16.sp,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.grey.shade700,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    "Tap \"Add Category\" to create your first one.",
-                                    style: TextStyle(
-                                      fontSize: kIsWeb ? 13 : 13.sp,
-                                      color: Colors.grey.shade500,
-                                    ),
-                                  ),
-                                ],
+                            return GridView.builder(
+                              itemCount: categories.length,
+                              gridDelegate:
+                                  SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: crossAxisCount,
+                                crossAxisSpacing: 16,
+                                mainAxisSpacing: 16,
+                                childAspectRatio: 1.72,
                               ),
-                            );
-                          }
+                              itemBuilder: (context, index) {
+                                final cat = categories[index];
+                                final data = cat.data() as Map<String, dynamic>;
+                                final name = (data["name"] ?? "").toString();
+                                final count = itemCounts[cat.id] ?? 0;
 
-                          return ReorderableListView.builder(
-                            buildDefaultDragHandles: false,
-                            itemCount: categories.length,
-                            onReorder: (oldIndex, newIndex) async {
-                              if (newIndex > oldIndex) newIndex--;
-                              final item = categories.removeAt(oldIndex);
-                              categories.insert(newIndex, item);
-                              await updateOrder(categories);
-                            },
-                            itemBuilder: (context, index) {
-                              final cat = categories[index];
-                              final data =
-                                  cat.data() as Map<String, dynamic>;
-                              final int position = data["position"] is num
-                                  ? (data["position"] as num).toInt()
-                                  : index;
-
-                              return Container(
-                                key: ValueKey(cat.id),
-                                margin:  EdgeInsets.symmetric(
-                                  horizontal: 4.w,
-                                  vertical: 6.h,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(kIsWeb ? 16 : 16.sp),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.04),
-                                      blurRadius: kIsWeb ? 8 : 8.sp,
-                                      offset: const Offset(0, 3),
-                                    ),
-                                  ],
-                                  border: Border.all(
-                                    color: Colors.grey.shade200,
-                                  ),
-                                ),
-                                child: ListTile(
-                                  contentPadding:  EdgeInsets.symmetric(
-                                    horizontal: 16.w,
-                                    vertical: 8.h,
-                                  ),
-                                  leading: ReorderableDragStartListener(
-                                    index: index,
-                                    child: Container(
-                                      padding:  EdgeInsets.all(kIsWeb ? 8 : 8.sp),
-                                      decoration: BoxDecoration(
-                                        color: Colors.orange.shade50,
-                                        borderRadius:
-                                            BorderRadius.circular(kIsWeb ? 12 : 12.sp),
-                                      ),
-                                      child: Icon(
-                                        Icons.drag_handle,
-                                        color: Colors.orange.shade400,
-                                      ),
+                                return Container(
+                                  padding: const EdgeInsets.all(22),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: const Color(0xFFE6E8EF),
                                     ),
                                   ),
-                                  title: Text(
-                                    data['name'] ?? '',
-                                    style: TextStyle(
-                                      fontSize: kIsWeb ? 16 : 16.sp,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.grey.shade800,
-                                    ),
-                                  ),
-                                  subtitle: Text(
-                                    "Position: ${position + 1}",
-                                    style: TextStyle(
-                                      fontSize: kIsWeb ? 12 : 12.sp,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      IconButton(
-                                        icon: Icon(
-                                          Icons.edit,
-                                          color: Colors.blue.shade500,
-                                        ),
-                                        onPressed: () => editCategory(
-                                          cat.id,
-                                          data['name'] ?? '',
+                                      Row(
+                                        children: [
+                                          Container(
+                                            width: 42,
+                                            height: 42,
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFFFF2E6),
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                            child: const Icon(
+                                              Icons.folder_open_outlined,
+                                              color: Color(0xFFE0752D),
+                                              size: 22,
+                                            ),
+                                          ),
+                                          const Spacer(),
+                                          InkWell(
+                                            onTap: () =>
+                                                editCategory(cat.id, name),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            child: const Padding(
+                                              padding: EdgeInsets.all(4),
+                                              child: Icon(
+                                                Icons.edit_outlined,
+                                                size: 18,
+                                                color: Color(0xFF6A7280),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          InkWell(
+                                            onTap: () =>
+                                                deleteCategory(cat.id, name),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            child: const Padding(
+                                              padding: EdgeInsets.all(4),
+                                              child: Icon(
+                                                Icons.delete_outline,
+                                                size: 18,
+                                                color: Color(0xFFE15757),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const Spacer(),
+                                      Text(
+                                        name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF111827),
                                         ),
                                       ),
-                                      IconButton(
-                                        icon: Icon(
-                                          Icons.delete_outline,
-                                          color: Colors.red.shade400,
-                                        ),
-                                        onPressed: () => deleteCategory(
-                                          cat.id,
-                                          data['name'] ?? '',
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        "$count items",
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                          color: const Color(0xFF8A93A3),
                                         ),
                                       ),
                                     ],
                                   ),
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      ),
+                                );
+                              },
+                            );
+                          },
+                        );
+                      },
                     );
                   },
                 ),

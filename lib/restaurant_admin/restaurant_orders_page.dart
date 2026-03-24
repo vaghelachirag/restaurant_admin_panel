@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class RestaurantOrdersPage extends StatefulWidget {
   final String restaurantId;
@@ -11,713 +12,547 @@ class RestaurantOrdersPage extends StatefulWidget {
 }
 
 class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
-  final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = "";
+  String _selectedFilter = 'All';
 
-  @override
-  void initState() {
-    super.initState();
-    _searchController.addListener(() {
-      setState(() {
-        _searchQuery = _searchController.text.trim();
-      });
-    });
+  List<QueryDocumentSnapshot> _filterOrders(
+      List<QueryDocumentSnapshot> orders, String filter) {
+    if (filter == 'All') return orders;
+
+    return orders.where((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      final status = (data["status"] ?? "pending").toString().toLowerCase();
+      return status.toLowerCase() == filter.toLowerCase();
+    }).toList();
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
+  String _getTimeAgo(Timestamp? timestamp) {
+    if (timestamp == null) return '0m ago';
+
+    final now = DateTime.now();
+    final orderTime = timestamp.toDate();
+    final difference = now.difference(orderTime);
+
+    if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h ago';
+    } else {
+      return '${difference.inDays}d ago';
+    }
+  }
+
+  String _getNextStatus(String currentStatus) {
+    switch (currentStatus.toLowerCase()) {
+      case 'pending':
+        return 'Mark as Preparing';
+      case 'preparing':
+        return 'Mark as Ready';
+      case 'ready':
+        return 'Mark as Served';
+      case 'served':
+        return 'Mark as Completed';
+      default:
+        return 'Mark as Preparing';
+    }
+  }
+
+  String _getNextStatusValue(String currentStatus) {
+    switch (currentStatus.toLowerCase()) {
+      case 'pending':
+        return 'preparing';
+      case 'preparing':
+        return 'ready';
+      case 'ready':
+        return 'served';
+      case 'served':
+        return 'completed';
+      default:
+        return 'preparing';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final isDesktop = width >= 1024;
+    final isTablet = width >= 768 && width < 1024;
+
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.blue.shade50,
-              Colors.purple.shade50,
-              Colors.pink.shade50,
+      backgroundColor: const Color(0xFFFFFFFF),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection("orders")
+            .where("restaurantId", isEqualTo: widget.restaurantId)
+            .orderBy("createdAt", descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final allOrders = snapshot.data!.docs;
+          final filteredOrders = _filterOrders(allOrders, _selectedFilter);
+          final counts = _buildStatusCounts(allOrders);
+
+          return Column(
+            children: [
+              _buildHeader(isDesktop, isTablet),
+              _buildFilterTabs(counts, isDesktop, isTablet),
+              Expanded(
+                child: _buildOrdersGrid(filteredOrders, width, isDesktop, isTablet),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  TextStyle _p(double size, FontWeight weight, Color color) {
+    return GoogleFonts.poppins(fontSize: size, fontWeight: weight, color: color);
+  }
+
+  Map<String, int> _buildStatusCounts(List<QueryDocumentSnapshot> allOrders) {
+    int countStatus(String status) {
+      return allOrders.where((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return (data["status"] ?? "").toString().toLowerCase() ==
+            status.toLowerCase();
+      }).length;
+    }
+
+    return {
+      'All': allOrders.length,
+      'Pending': countStatus('pending'),
+      'Preparing': countStatus('preparing'),
+      'Ready': countStatus('ready'),
+      'Served': countStatus('served'),
+      'Completed': countStatus('completed'),
+    };
+  }
+
+  Widget _buildHeader(bool isDesktop, bool isTablet) {
+    final sidePadding = isDesktop ? 24.0 : (isTablet ? 20.0 : 14.0);
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        sidePadding,
+        isDesktop ? 16 : 12,
+        sidePadding,
+        8,
+      ),
+      color: Colors.white,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Home / Orders',
+            style: _p(13, FontWeight.w400, const Color(0xFF8E8E8E)),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Text(
+                'Orders',
+                style: _p(
+                  isDesktop ? 44 : (isTablet ? 38 : 30),
+                  FontWeight.w700,
+                  const Color(0xFF1C1C1C),
+                ),
+              ),
+              const Spacer(),
+              SizedBox(
+                height: 44,
+                child: ElevatedButton(
+                  onPressed: () {
+                    // TODO: Navigate to new order page
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF070B2D),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.add, size: 16),
+                      const SizedBox(width: 8),
+                      Text('New Order',
+                          style: _p(14, FontWeight.w600, Colors.white)),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterTabs(
+      Map<String, int> counts, bool isDesktop, bool isTablet) {
+    final labels = ['All', 'Pending', 'Preparing', 'Ready', 'Served', 'Completed'];
+    final sidePadding = isDesktop ? 24.0 : (isTablet ? 20.0 : 14.0);
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(sidePadding, 0, sidePadding, 8),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Container(
+          padding: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8F8F8),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: const Color(0xFFEAEAEA)),
+          ),
+          child: Row(
+            children: labels.map((label) {
+              final selected = _selectedFilter == label;
+              final text = '$label (${counts[label] ?? 0})';
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(999),
+                  onTap: () => setState(() => _selectedFilter = label),
+                  child: Container(
+                    padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: selected ? const Color(0xFFFFFFFF) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(999),
+                      border: selected
+                          ? Border.all(color: const Color(0xFFE3E3E3))
+                          : null,
                     ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.red.shade400, Colors.red.shade600],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
+                    child: Text(
+                      text,
+                      style: _p(
+                        13,
+                        selected ? FontWeight.w600 : FontWeight.w500,
+                        const Color(0xFF2A2A2A),
                       ),
-                      child: const Icon(Icons.receipt_long,
-                          color: Colors.white),
                     ),
-                    const SizedBox(width: 16),
-                    const Expanded(
-                      child: Text(
-                        "Live Orders",
-                        style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold),
-                      ),
-                    ),
-
-                    /// ACTIVE COUNT
-                    StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance
-                          .collection("orders")
-                          .where("restaurantId", isEqualTo: widget.restaurantId)
-                          .where("status",
-                          whereIn: ["pending", "preparing", "ready"])
-                          .snapshots(),
-                      builder: (context, snapshot) {
-                        int count =
-                        snapshot.hasData ? snapshot.data!.docs.length : 0;
-
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.red.shade50,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            "$count Active",
-                            style: TextStyle(
-                                color: Colors.red.shade700,
-                                fontWeight: FontWeight.bold),
-                          ),
-                        );
-                      },
-                    )
-                  ],
+                  ),
                 ),
-              ),
-
-              /// BODY
-              Expanded(
-                child: StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection("orders")
-                      .where("restaurantId", isEqualTo: widget.restaurantId)
-                      .orderBy("createdAt", descending: true)
-                      .snapshots(),
-                  builder: (context, snapshot) {
-
-                    if (!snapshot.hasData) {
-                      return const Center(
-                          child: CircularProgressIndicator());
-                    }
-
-                    final allOrders = snapshot.data!.docs;
-
-                    final activeOrders = allOrders.where((doc) {
-                      final data = doc.data() as Map<String, dynamic>;
-                      final status =
-                      (data["status"] ?? "pending").toString();
-                      return status != "served";
-                    }).toList();
-
-                    /// SEARCH FILTER
-                    List<QueryDocumentSnapshot> filteredOrders = activeOrders;
-                    if (_searchQuery.isNotEmpty) {
-                      final query = _searchQuery.toLowerCase();
-                      filteredOrders = activeOrders.where((doc) {
-                        final data = doc.data() as Map<String, dynamic>;
-                        final name = (data["customerName"] ?? "").toString().toLowerCase();
-                        final mobile = (data["mobile"] ?? "").toString().toLowerCase();
-                        final tokenNumber = (data["tokenNumber"] ?? "").toString().toLowerCase();
-                        return name.contains(query) ||
-                            mobile.contains(query) ||
-                            tokenNumber.contains(query);
-                      }).toList();
-                    }
-
-                    return Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                          child: TextField(
-                            controller: _searchController,
-                            decoration: InputDecoration(
-                              hintText: "Search by token, name or number",
-                              prefixIcon: const Icon(Icons.search),
-                              contentPadding: const EdgeInsets.symmetric(
-                                  vertical: 0, horizontal: 12),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Expanded(
-                          child: filteredOrders.isEmpty
-                              ? const Center(
-                                  child: Text(
-                                    "No Active Orders",
-                                    style: TextStyle(fontSize: 18),
-                                  ),
-                                )
-                              : ListView.builder(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 20, vertical: 8),
-                                  itemCount: filteredOrders.length,
-                                  itemBuilder: (context, index) {
-                              final order = filteredOrders[index];
-                              final data =
-                                  order.data() as Map<String, dynamic>;
-
-                              final items = data["items"] ?? [];
-                              final status =
-                                  (data["status"] ?? "pending").toString();
-                              final customerName =
-                                  (data["customerName"] ?? "Guest")
-                                      .toString();
-
-                              final mobile =
-                                  (data["mobile"] ?? "").toString();
-                              final orderType =
-                                  (data["orderType"] ?? "").toString();
-                              final tableNumber =
-                                  (data["tableNumber"] ?? (orderType == "Dine In" ? "1" : "")).toString();
-                              final specialInstruction =
-                                  (data["specialInstruction"] ?? "")
-                                      .toString();
-
-                              final totalAmount =
-                                  (data["totalAmount"] ?? 0) as int;
-
-                              /// TOKEN NUMBER
-                              final tokenNumber =
-                                  data["tokenNumber"] ?? 0;
-
-                              final statusOptions = [
-                                "pending",
-                                "preparing",
-                                "ready",
-                                "served"
-                              ];
-
-                              return Container(
-                                margin:
-                                    const EdgeInsets.only(bottom: 16),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius:
-                                      BorderRadius.circular(18),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black
-                                          .withOpacity(0.08),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
-                                    )
-                                  ],
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      /// HEADER
-                                      Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              /// TOKEN BADGE
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets
-                                                        .symmetric(
-                                                        horizontal: 12,
-                                                        vertical: 6),
-                                                decoration:
-                                                    BoxDecoration(
-                                                  color: Colors.black,
-                                                  borderRadius:
-                                                      BorderRadius
-                                                          .circular(8),
-                                                ),
-                                                child: Text(
-                                                  "Token $tokenNumber",
-                                                  style: const TextStyle(
-                                                      color: Colors.white,
-                                                      fontWeight:
-                                                          FontWeight
-                                                              .bold),
-                                                ),
-                                              ),
-
-                                              const Spacer(),
-
-                                              /// STATUS
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets
-                                                        .symmetric(
-                                                        horizontal: 10,
-                                                        vertical: 4),
-                                                decoration:
-                                                    BoxDecoration(
-                                                  color: _statusColor(
-                                                          status)
-                                                      .withOpacity(0.1),
-                                                  borderRadius:
-                                                      BorderRadius
-                                                          .circular(8),
-                                                ),
-                                                child: Text(
-                                                  status.toUpperCase(),
-                                                  style: TextStyle(
-                                                      color:
-                                                          _statusColor(
-                                                              status),
-                                                      fontWeight:
-                                                          FontWeight
-                                                              .bold),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-
-                                          /// TABLE INFO SECTION
-                                          if (orderType == "Dine In" && tableNumber.isNotEmpty) ...[
-                                            const SizedBox(height: 12),
-                                            Container(
-                                              width: double.infinity,
-                                              padding: const EdgeInsets
-                                                  .symmetric(
-                                                  horizontal: 12,
-                                                  vertical: 8),
-                                              decoration:
-                                                  BoxDecoration(
-                                                color: Colors.blue
-                                                    .shade50,
-                                                borderRadius:
-                                                    BorderRadius
-                                                        .circular(10),
-                                                border: Border.all(
-                                                  color: Colors.blue.shade200,
-                                                  width: 1,
-                                                ),
-                                              ),
-                                              child: Row(
-                                                children: [
-                                                  Icon(
-                                                      Icons.table_restaurant,
-                                                      size: 20,
-                                                      color: Colors.blue.shade700),
-                                                  const SizedBox(width: 8),
-                                                  Text(
-                                                    "Table $tableNumber",
-                                                    style: TextStyle(
-                                                      fontWeight:
-                                                          FontWeight
-                                                              .bold,
-                                                      fontSize: 16,
-                                                      color: Colors.blue
-                                                          .shade700,
-                                                    ),
-                                                  ),
-                                                  const Spacer(),
-                                                  Container(
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                        horizontal: 8,
-                                                        vertical: 4),
-                                                    decoration:
-                                                        BoxDecoration(
-                                                      color: Colors.blue
-                                                          .shade100,
-                                                      borderRadius:
-                                                          BorderRadius
-                                                              .circular(6),
-                                                    ),
-                                                    child: Text(
-                                                      orderType,
-                                                      style: TextStyle(
-                                                        fontWeight:
-                                                            FontWeight
-                                                                .bold,
-                                                        color: Colors.blue
-                                                            .shade800,
-                                                        fontSize: 12,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ],
-                                      ),
-
-                                      const SizedBox(height: 10),
-
-                                      /// CUSTOMER INFO (only for non-Dine In)
-                                      if (orderType != "Dine In") ...[
-                                        Text(
-                                          customerName,
-                                          style: const TextStyle(
-                                              fontWeight:
-                                                  FontWeight.bold,
-                                              fontSize: 16),
-                                        ),
-                                        const SizedBox(height: 10),
-                                        Row(
-                                          children: [
-                                            const Icon(Icons.phone,
-                                                size: 16),
-                                            const SizedBox(width: 5),
-                                            Text(mobile)
-                                          ],
-                                        ),
-                                        const SizedBox(height: 4),
-                                      ],
-                                      ExpansionTile(
-                                        tilePadding:
-                                            EdgeInsets.zero,
-                                        childrenPadding:
-                                            const EdgeInsets.only(
-                                                top: 8),
-                                        title: const Text(
-                                          "Show order details",
-                                          style: TextStyle(
-                                            fontWeight:
-                                                FontWeight.w500,
-                                          ),
-                                        ),
-                                        children: [
-                                          Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment
-                                                    .start,
-                                            children: [
-                                              /// ITEM LIST
-                                              ...List.generate(
-                                                  items.length,
-                                                  (i) {
-                                                final item =
-                                                    items[i];
-                                                final variant =
-                                                    (item['variant'] ?? '')
-                                                        .toString();
-
-                                                return Padding(
-                                                  padding:
-                                                      const EdgeInsets
-                                                          .only(
-                                                          bottom:
-                                                              6),
-                                                  child: Row(
-                                                    children: [
-                                                      Expanded(
-                                                        child:
-                                                            Column(
-                                                          crossAxisAlignment:
-                                                              CrossAxisAlignment.start,
-                                                          children: [
-                                                            Text(
-                                                              "${item['qty']}x ${item['name']}",
-                                                            ),
-                                                            if (variant
-                                                                .isNotEmpty)
-                                                              Padding(
-                                                                padding: const EdgeInsets.only(top: 2),
-                                                                child: Text(
-                                                                  variant,
-                                                                  style: TextStyle(
-                                                                    fontSize: 12,
-                                                                    color: Colors.grey.shade600,
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                      Text(
-                                                        "₹${item['price']}",
-                                                        style:
-                                                            const TextStyle(
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                );
-                                              }),
-
-                                              const SizedBox(
-                                                  height: 10),
-
-                                              /// SPECIAL INSTRUCTION
-                                              if (specialInstruction
-                                                  .isNotEmpty) ...[
-                                                Container(
-                                                  width: double
-                                                      .infinity,
-                                                  padding:
-                                                      const EdgeInsets
-                                                          .all(8),
-                                                  decoration:
-                                                      BoxDecoration(
-                                                    color: Colors
-                                                        .orange
-                                                        .shade50,
-                                                    borderRadius:
-                                                        BorderRadius
-                                                            .circular(
-                                                                8),
-                                                  ),
-                                                  child: Row(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    children: [
-                                                      Icon(
-                                                        Icons.notes,
-                                                        size: 16,
-                                                        color: Colors
-                                                            .orange
-                                                            .shade700,
-                                                      ),
-                                                      const SizedBox(
-                                                          width:
-                                                              6),
-                                                      Expanded(
-                                                        child: Text(
-                                                          specialInstruction,
-                                                          style:
-                                                              const TextStyle(
-                                                            fontSize:
-                                                                12,
-                                                            fontWeight:
-                                                                FontWeight.w500,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                                const SizedBox(
-                                                    height: 10),
-                                              ],
-
-                                              /// FOOTER: TOTAL + STATUS
-                                              Column(
-                                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                                children: [
-                                                  /// TOTAL AMOUNT
-                                                  Container(
-                                                    padding: const EdgeInsets.symmetric(
-                                                        horizontal: 16, vertical: 8),
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.grey.shade50,
-                                                      borderRadius: BorderRadius.circular(8),
-                                                    ),
-                                                    child: Row(
-                                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                      children: [
-                                                        const Text(
-                                                          "Total:",
-                                                          style: TextStyle(
-                                                            fontWeight: FontWeight.w600,
-                                                            fontSize: 14,
-                                                            color: Colors.grey,
-                                                          ),
-                                                        ),
-                                                        Text(
-                                                          "₹$totalAmount",
-                                                          style: const TextStyle(
-                                                            fontWeight: FontWeight.bold,
-                                                            fontSize: 18,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 8),
-                                                  /// STATUS DROPDOWN
-                                                  Container(
-                                                    decoration: BoxDecoration(
-                                                      borderRadius: BorderRadius.circular(12),
-                                                      boxShadow: [
-                                                        BoxShadow(
-                                                          color: Colors.black.withOpacity(0.05),
-                                                          blurRadius: 4,
-                                                          offset: const Offset(0, 2),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    child: DropdownButtonFormField<
-                                                        String>(
-                                                      value: statusOptions.contains(
-                                                              status)
-                                                          ? status
-                                                          : statusOptions
-                                                              .first,
-                                                      decoration: InputDecoration(
-                                                        filled: true,
-                                                        fillColor: Colors.grey.shade50,
-                                                        border: OutlineInputBorder(
-                                                          borderRadius: BorderRadius.circular(12),
-                                                          borderSide: BorderSide(
-                                                            color: Colors.grey.shade300,
-                                                            width: 1,
-                                                          ),
-                                                        ),
-                                                        enabledBorder: OutlineInputBorder(
-                                                          borderRadius: BorderRadius.circular(12),
-                                                          borderSide: BorderSide(
-                                                            color: Colors.grey.shade300,
-                                                            width: 1,
-                                                          ),
-                                                        ),
-                                                        focusedBorder: OutlineInputBorder(
-                                                          borderRadius: BorderRadius.circular(12),
-                                                          borderSide: BorderSide(
-                                                            color: _statusColor(status),
-                                                            width: 2,
-                                                          ),
-                                                        ),
-                                                        contentPadding: const EdgeInsets.symmetric(
-                                                            horizontal: 16, vertical: 12),
-                                                        prefixIcon: Icon(
-                                                          Icons.sync_alt,
-                                                          color: _statusColor(status),
-                                                          size: 20,
-                                                        ),
-                                                      ),
-                                                      style: TextStyle(
-                                                        color: _statusColor(status),
-                                                        fontWeight: FontWeight.bold,
-                                                        fontSize: 14,
-                                                      ),
-                                                      dropdownColor: Colors.white,
-                                                      icon: Icon(
-                                                        Icons.keyboard_arrow_down,
-                                                        color: _statusColor(status),
-                                                      ),
-                                                      items: statusOptions
-                                                          .map(
-                                                            (s) =>
-                                                                DropdownMenuItem(
-                                                              value: s,
-                                                              child: Container(
-                                                                padding: const EdgeInsets.symmetric(
-                                                                    horizontal: 8, vertical: 4),
-                                                                decoration: BoxDecoration(
-                                                                  color: _statusColor(s)
-                                                                      .withOpacity(0.1),
-                                                                  borderRadius: BorderRadius.circular(6),
-                                                                ),
-                                                                child: Row(
-                                                                  children: [
-                                                                    Container(
-                                                                      width: 8,
-                                                                      height: 8,
-                                                                      decoration: BoxDecoration(
-                                                                        color: _statusColor(s),
-                                                                        shape: BoxShape.circle,
-                                                                      ),
-                                                                    ),
-                                                                    const SizedBox(width: 8),
-                                                                    Text(
-                                                                      s.toUpperCase(),
-                                                                      style: TextStyle(
-                                                                        color: _statusColor(s),
-                                                                        fontWeight: FontWeight.bold,
-                                                                        fontSize: 13,
-                                                                      ),
-                                                                    ),
-                                                                  ],
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          )
-                                                          .toList(),
-                                                      onChanged:
-                                                          (value) {
-                                                        if (value ==
-                                                            null) {
-                                                          return;
-                                                        }
-
-                                                        FirebaseFirestore
-                                                            .instance
-                                                            .collection(
-                                                                "orders")
-                                                            .doc(order
-                                                                .id)
-                                                            .update({
-                                                          "status":
-                                                              value
-                                                        });
-                                                      },
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ],
+              );
+            }).toList(),
           ),
         ),
       ),
     );
   }
 
-  Color _statusColor(String status) {
-    switch (status) {
-      case "preparing":
-        return Colors.orange;
-      case "ready":
-        return Colors.green;
-      case "served":
-        return Colors.blue;
+  Widget _buildOrdersGrid(
+    List<QueryDocumentSnapshot> filteredOrders,
+    double width,
+    bool isDesktop,
+    bool isTablet,
+  ) {
+    if (filteredOrders.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.receipt_long_outlined,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No $_selectedFilter orders',
+              style: _p(16, FontWeight.w500, const Color(0xFF777777)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final sidePadding = isDesktop ? 24.0 : (isTablet ? 20.0 : 14.0);
+    final availableWidth = width - (sidePadding * 2);
+    final desiredCardWidth = isDesktop ? 335.0 : (isTablet ? 320.0 : availableWidth);
+    final crossAxisCount = (availableWidth / desiredCardWidth).floor().clamp(1, 4);
+    final cardWidth = (availableWidth - ((crossAxisCount - 1) * 14)) / crossAxisCount;
+    final childAspectRatio = cardWidth / (isDesktop ? 290 : 300);
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(sidePadding, 12, sidePadding, 16),
+      child: GridView.builder(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: crossAxisCount,
+          childAspectRatio: childAspectRatio,
+          crossAxisSpacing: 14,
+          mainAxisSpacing: 14,
+        ),
+        itemCount: filteredOrders.length,
+        itemBuilder: (context, index) {
+          final order = filteredOrders[index];
+          final data = order.data() as Map<String, dynamic>;
+          return _buildOrderCard(order, data);
+        },
+      ),
+    );
+  }
+
+  Widget _buildOrderCard(QueryDocumentSnapshot order, Map<String, dynamic> data) {
+    final tableNumber = (data["tableNumber"] ?? "").toString();
+    final status = (data["status"] ?? "pending").toString();
+    final customerName = (data["customerName"] ?? "Guest").toString();
+    final items = (data["items"] as List?) ?? [];
+    final totalAmount = (data["totalAmount"] ?? 0) as num;
+    final createdAt = data["createdAt"] as Timestamp?;
+    final orderNumber =
+    (data["orderNumber"] ?? "#${1000 + order.id.hashCode.abs() % 1000}")
+        .toString();
+
+    final bool isCompleted = status.toLowerCase() == 'completed';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFFFF),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE8E8E8)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Row 1: Table + Status badge | Time
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Left: table name + badge
+                Expanded(
+                  child: Row(
+                    children: [
+                      Text(
+                        tableNumber.isNotEmpty ? 'Table $tableNumber' : 'Takeaway',
+                        style: _p(15, FontWeight.w700, const Color(0xFF232323)),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: _getStatusPillBg(status),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          _toTitle(status),
+                          style: _p(10.5, FontWeight.w600, _getStatusPillText(status)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Right: time + order number stacked
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.access_time, size: 13, color: Colors.grey[500]),
+                        const SizedBox(width: 3),
+                        Text(
+                          _getTimeAgo(createdAt),
+                          style: _p(12.5, FontWeight.w400, const Color(0xFF8B8B8B)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      orderNumber.startsWith('#') ? orderNumber : '#$orderNumber',
+                      style: _p(12.5, FontWeight.w400, const Color(0xFF8B8B8B)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 6),
+
+            // Customer name with person icon
+            Row(
+              children: [
+                Icon(Icons.person_outline, size: 14, color: Colors.grey[500]),
+                const SizedBox(width: 4),
+                Text(
+                  customerName,
+                  style: _p(13, FontWeight.w400, const Color(0xFF757575)),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // Items list
+            Expanded(
+              child: ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: items.length > 3 ? 3 : items.length,
+                itemBuilder: (context, index) {
+                  final item = items[index];
+                  final itemName = (item['name'] ?? '').toString();
+                  final quantity = (item['qty'] ?? 1).toString();
+                  final price = (item['price'] ?? 0) as num;
+                  final variant = (item['variant'] ?? '').toString();
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${quantity}x $itemName${variant.isNotEmpty ? '  ($variant)' : ''}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: _p(12, FontWeight.w500, const Color(0xFF2F2F2F)),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          '\$${price.toStringAsFixed(2)}',
+                          style: _p(12, FontWeight.w500, const Color(0xFF505050)),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            if (items.length > 3)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(
+                  '+${items.length - 3} more items',
+                  style: _p(11.5, FontWeight.w500, const Color(0xFF969696)),
+                ),
+              ),
+
+            Container(height: 1, color: const Color(0xFFF0F0F0)),
+            const SizedBox(height: 12),
+
+            // Bottom row: total | Details [+ action button]
+            Row(
+              children: [
+                Text(
+                  '\$ ${totalAmount.toStringAsFixed(2)}',
+                  style: _p(18, FontWeight.w700, const Color(0xFF232323)),
+                ),
+                const Spacer(),
+                SizedBox(
+                  height: 34,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      // TODO: Show order details.
+                    },
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(74, 34),
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      side: const BorderSide(color: Color(0xFFE2E2E2)),
+                      backgroundColor: const Color(0xFFFFFFFF),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Text(
+                      'Details',
+                      style: _p(10, FontWeight.w600, const Color(0xFF252525)),
+                    ),
+                  ),
+                ),
+                if (!isCompleted) ...[
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    height: 34,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final nextStatus = _getNextStatusValue(status);
+                        FirebaseFirestore.instance
+                            .collection("orders")
+                            .doc(order.id)
+                            .update({"status": nextStatus});
+                      },
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(126, 34),
+                        elevation: 0,
+                        backgroundColor: const Color(0xFF070B2D),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: Text(
+                        _getNextStatus(status),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: _p(10, FontWeight.w600, Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _toTitle(String value) {
+    if (value.isEmpty) return value;
+    final lower = value.toLowerCase();
+    return '${lower[0].toUpperCase()}${lower.substring(1)}';
+  }
+
+  Color _getStatusPillBg(String status) {
+    switch (status.toLowerCase()) {
+      case 'preparing':
+        return const Color(0xFF0C1338);
+      case 'ready':
+        return const Color(0xFFECEFF3);
+      case 'pending':
+        return const Color(0xFFECEFF3);
+      case 'served':
+        return const Color(0xFFE8EDF0);
+      case 'completed':
+        return const Color(0xFFEDF5EE);
       default:
-        return Colors.red;
+        return const Color(0xFFECEFF3);
+    }
+  }
+
+  Color _getStatusPillText(String status) {
+    switch (status.toLowerCase()) {
+      case 'preparing':
+        return Colors.white;
+      case 'ready':
+        return const Color(0xFF3A3A3A);
+      case 'pending':
+        return const Color(0xFF3A3A3A);
+      case 'served':
+        return const Color(0xFF4A4A4A);
+      case 'completed':
+        return const Color(0xFF2D6C3A);
+      default:
+        return const Color(0xFF3A3A3A);
     }
   }
 }

@@ -23,13 +23,14 @@ class _MenuPageState extends State<MenuPage> {
 
   final String apiKey = "a923bc17d28cd6fe1be417700456eb69";
   String? _selectedCategoryId;
-  
+  String _searchQuery = "";
+
   /// View mode: false = grid view, true = list view
   bool _isListView = false;
-  
+
   /// Loading state for add menu item
   bool _isAddingMenuItem = false;
-  
+
   /// Loading state for edit menu item
   bool _isEditingMenuItem = false;
 
@@ -108,13 +109,13 @@ class _MenuPageState extends State<MenuPage> {
         final isTablet = Responsive.isTablet(context);
         final isDesktop = Responsive.isDesktop(context);
         final screenWidth = Responsive.width(context);
-        
+
         return StatefulBuilder(
           builder: (context, setStateDialog) {
 
             double dialogWidth = screenWidth * 0.9;
             double maxHeight = MediaQuery.of(context).size.height * 0.9;
-            
+
             if (isDesktop) {
               dialogWidth = screenWidth > 1200 ? 700 : 600;
             } else if (isTablet) {
@@ -341,35 +342,35 @@ class _MenuPageState extends State<MenuPage> {
 
               child: isLoading
                   ? Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SizedBox(
-                          width: kIsWeb ? 16 : 16,
-                          height: kIsWeb ? 16 : 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              colorScheme.onPrimary,
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: kIsWeb ? 8 : 8),
-                        Text(
-                          "Adding...",
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: kIsWeb ? 14 : 14.sp,
-                          ),
-                        ),
-                      ],
-                    )
-                  : Text(
-                      "Save Menu Item",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: kIsWeb ? 14 : 14.sp,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: kIsWeb ? 16 : 16,
+                    height: kIsWeb ? 16 : 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        colorScheme.onPrimary,
                       ),
                     ),
+                  ),
+                  SizedBox(width: kIsWeb ? 8 : 8),
+                  Text(
+                    "Adding...",
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: kIsWeb ? 14 : 14.sp,
+                    ),
+                  ),
+                ],
+              )
+                  : Text(
+                "Save Menu Item",
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: kIsWeb ? 14 : 14.sp,
+                ),
+              ),
             ),
           ),
         ],
@@ -713,8 +714,8 @@ class _MenuPageState extends State<MenuPage> {
               ),
             ],
           ) : ClipRRect(
-            borderRadius: BorderRadius.circular(kIsWeb ?  10 : 14.sp),
-            child: buildImage(imageBytes, colorScheme, isMobile)
+              borderRadius: BorderRadius.circular(kIsWeb ?  10 : 14.sp),
+              child: buildImage(imageBytes, colorScheme, isMobile)
           ),
         ),
       ),
@@ -1043,80 +1044,80 @@ class _MenuPageState extends State<MenuPage> {
                                     borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                                     child: newImageBytes != null
                                         ? Image.memory(
-                                            newImageBytes!,
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            height: double.infinity,
-                                          )
+                                      newImageBytes!,
+                                      fit: BoxFit.cover,
+                                      width: double.infinity,
+                                      height: double.infinity,
+                                    )
                                         : (imageUrl != null && imageUrl.isNotEmpty
-                                            ? Image.network(
-                                                imageUrl,
-                                                fit: BoxFit.cover,
-                                                width: double.infinity,
-                                                height: double.infinity,
-                                                loadingBuilder: (context, child, loadingProgress) {
-                                                  if (loadingProgress == null) return child;
-                                                  return Container(
-                                                    decoration: BoxDecoration(
-                                                      gradient: const LinearGradient(
-                                                        colors: [
-                                                          Color(0xFFF3F4F6),
-                                                          Color(0xFFE5E7EB),
-                                                        ],
-                                                        begin: Alignment.topLeft,
-                                                        end: Alignment.bottomRight,
-                                                      ),
-                                                    ),
-                                                    child: Center(
-                                                      child: CircularProgressIndicator(
-                                                        strokeWidth: 2,
-                                                        value: loadingProgress.expectedTotalBytes != null
-                                                            ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                                                            : null,
-                                                        valueColor: AlwaysStoppedAnimation<Color>(
-                                                          colorScheme.onSurface.withOpacity(0.4),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  );
-                                                },
-                                                errorBuilder: (context, error, stackTrace) {
-                                                  return Container(
-                                                    decoration: BoxDecoration(
-                                                      gradient: const LinearGradient(
-                                                        colors: [
-                                                          Color(0xFFF3F4F6),
-                                                          Color(0xFFE5E7EB),
-                                                        ],
-                                                        begin: Alignment.topLeft,
-                                                        end: Alignment.bottomRight,
-                                                      ),
-                                                    ),
-                                                    child: Icon(
-                                                      Icons.broken_image,
-                                                      color: colorScheme.onSurface.withOpacity(0.4),
-                                                      size: kIsWeb ? 30 : 30.sp,
-                                                    ),
-                                                  );
-                                                },
-                                              )
-                                            : Container(
-                                                decoration: BoxDecoration(
-                                                  gradient: const LinearGradient(
-                                                    colors: [
-                                                      Color(0xFFF3F4F6),
-                                                      Color(0xFFE5E7EB),
-                                                    ],
-                                                    begin: Alignment.topLeft,
-                                                    end: Alignment.bottomRight,
-                                                  ),
-                                                ),
-                                                child: Icon(
-                                                  Icons.restaurant,
-                                                  color: colorScheme.onSurface.withOpacity(0.4),
-                                                  size: kIsWeb ? 30 : 30.sp,
-                                                ),
-                                              )),
+                                        ? Image.network(
+                                      imageUrl,
+                                      fit: BoxFit.cover,
+                                      width: double.infinity,
+                                      height: double.infinity,
+                                      loadingBuilder: (context, child, loadingProgress) {
+                                        if (loadingProgress == null) return child;
+                                        return Container(
+                                          decoration: BoxDecoration(
+                                            gradient: const LinearGradient(
+                                              colors: [
+                                                Color(0xFFF3F4F6),
+                                                Color(0xFFE5E7EB),
+                                              ],
+                                              begin: Alignment.topLeft,
+                                              end: Alignment.bottomRight,
+                                            ),
+                                          ),
+                                          child: Center(
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              value: loadingProgress.expectedTotalBytes != null
+                                                  ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                                  : null,
+                                              valueColor: AlwaysStoppedAnimation<Color>(
+                                                colorScheme.onSurface.withOpacity(0.4),
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return Container(
+                                          decoration: BoxDecoration(
+                                            gradient: const LinearGradient(
+                                              colors: [
+                                                Color(0xFFF3F4F6),
+                                                Color(0xFFE5E7EB),
+                                              ],
+                                              begin: Alignment.topLeft,
+                                              end: Alignment.bottomRight,
+                                            ),
+                                          ),
+                                          child: Icon(
+                                            Icons.broken_image,
+                                            color: colorScheme.onSurface.withOpacity(0.4),
+                                            size: kIsWeb ? 30 : 30.sp,
+                                          ),
+                                        );
+                                      },
+                                    )
+                                        : Container(
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          colors: [
+                                            Color(0xFFF3F4F6),
+                                            Color(0xFFE5E7EB),
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                      ),
+                                      child: Icon(
+                                        Icons.restaurant,
+                                        color: colorScheme.onSurface.withOpacity(0.4),
+                                        size: kIsWeb ? 30 : 30.sp,
+                                      ),
+                                    )),
                                   ),
                                 ),
                                 SizedBox(width: kIsWeb ? 12 : 16.sp),
@@ -1222,8 +1223,8 @@ class _MenuPageState extends State<MenuPage> {
                                         return DropdownMenuItem<String>(
                                           value: cat.id,
                                           child: Text(
-                                            cat['name'],
-                                            style:  TextStyle(fontSize: kIsWeb ? 12 : 15.sp)
+                                              cat['name'],
+                                              style:  TextStyle(fontSize: kIsWeb ? 12 : 15.sp)
                                           ),
                                         );
                                       }).toList(),
@@ -1274,7 +1275,7 @@ class _MenuPageState extends State<MenuPage> {
                               ),
                             ),
 
-                             SizedBox(height: kIsWeb ? 24 : 24.sp),
+                            SizedBox(height: kIsWeb ? 24 : 24.sp),
 
                             /// VARIANTS SECTION
                             Row(
@@ -1284,7 +1285,7 @@ class _MenuPageState extends State<MenuPage> {
                                   color: colorScheme.onSurface.withOpacity(0.7),
                                   size:  kIsWeb ? 20 : 20.sp,
                                 ),
-                                 SizedBox(width:  kIsWeb ? 8 : 8.sp),
+                                SizedBox(width:  kIsWeb ? 8 : 8.sp),
                                 Text(
                                   "Variants",
                                   style: TextStyle(
@@ -1329,7 +1330,7 @@ class _MenuPageState extends State<MenuPage> {
                                         ),
                                       ),
                                     ),
-                                     SizedBox(width: kIsWeb ? 12 : 12.sp),
+                                    SizedBox(width: kIsWeb ? 12 : 12.sp),
                                     SizedBox(
                                       width: kIsWeb ? 100 : 100.sp,
                                       child: TextField(
@@ -1469,30 +1470,47 @@ class _MenuPageState extends State<MenuPage> {
                                     });
                                   }
 
-                                String? finalImageUrl = imageUrl;
-                                if (newImageBytes != null) {
-                                  try {
-                                    var request = http.MultipartRequest(
-                                      'POST',
-                                      Uri.parse("https://api.imgbb.com/1/upload?key=$apiKey"),
-                                    );
+                                  String? finalImageUrl = imageUrl;
+                                  if (newImageBytes != null) {
+                                    try {
+                                      var request = http.MultipartRequest(
+                                        'POST',
+                                        Uri.parse("https://api.imgbb.com/1/upload?key=$apiKey"),
+                                      );
 
-                                    request.files.add(
-                                      http.MultipartFile.fromBytes(
-                                        'image',
-                                        newImageBytes!,
-                                        filename: "menu.jpg",
-                                      ),
-                                    );
+                                      request.files.add(
+                                        http.MultipartFile.fromBytes(
+                                          'image',
+                                          newImageBytes!,
+                                          filename: "menu.jpg",
+                                        ),
+                                      );
 
-                                    var response = await request.send();
-                                    var responseData = await response.stream.bytesToString();
-                                    var jsonData = json.decode(responseData);
-                                    final uploadedUrl = jsonData['data']['url'];
+                                      var response = await request.send();
+                                      var responseData = await response.stream.bytesToString();
+                                      var jsonData = json.decode(responseData);
+                                      final uploadedUrl = jsonData['data']['url'];
 
-                                    if (uploadedUrl != null && uploadedUrl.isNotEmpty) {
-                                      finalImageUrl = uploadedUrl;
-                                    } else {
+                                      if (uploadedUrl != null && uploadedUrl.isNotEmpty) {
+                                        finalImageUrl = uploadedUrl;
+                                      } else {
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: const Text("Failed to upload image"),
+                                              backgroundColor: colorScheme.error,
+                                              behavior: SnackBarBehavior.floating,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    } catch (e) {
+                                      if (kDebugMode) {
+                                        print("UPLOAD ERROR $e");
+                                      }
                                       if (context.mounted) {
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           SnackBar(
@@ -1506,48 +1524,31 @@ class _MenuPageState extends State<MenuPage> {
                                         );
                                       }
                                     }
-                                  } catch (e) {
-                                    if (kDebugMode) {
-                                      print("UPLOAD ERROR $e");
-                                    }
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: const Text("Failed to upload image"),
-                                          backgroundColor: colorScheme.error,
-                                          behavior: SnackBarBehavior.floating,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
-                                          ),
-                                        ),
-                                      );
-                                    }
                                   }
-                                }
 
-                                await FirebaseFirestore.instance
-                                    .collection("menu_items")
-                                    .doc(doc.id)
-                                    .update({
-                                  "name": nameController.text.trim(),
-                                  "categoryId": selectedCategoryId,
-                                  "variants": updatedVariants,
-                                  "image": finalImageUrl ?? imageUrl ?? '',
-                                });
+                                  await FirebaseFirestore.instance
+                                      .collection("menu_items")
+                                      .doc(doc.id)
+                                      .update({
+                                    "name": nameController.text.trim(),
+                                    "categoryId": selectedCategoryId,
+                                    "variants": updatedVariants,
+                                    "image": finalImageUrl ?? imageUrl ?? '',
+                                  });
 
-                                if (context.mounted) {
-                                  Navigator.pop(context);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: const Text("Menu item updated successfully!"),
-                                      backgroundColor: colorScheme.primary,
-                                      behavior: SnackBarBehavior.floating,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
+                                  if (context.mounted) {
+                                    Navigator.pop(context);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: const Text("Menu item updated successfully!"),
+                                        backgroundColor: colorScheme.primary,
+                                        behavior: SnackBarBehavior.floating,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
+                                        ),
                                       ),
-                                    ),
-                                  );
-                                }
+                                    );
+                                  }
                                 } catch (e) {
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
@@ -1580,33 +1581,33 @@ class _MenuPageState extends State<MenuPage> {
                               ),
                               child: isEditing
                                   ? Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        SizedBox(
-                                          width: 16,
-                                          height: 16,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            valueColor: AlwaysStoppedAnimation<Color>(
-                                              colorScheme.onPrimary,
-                                            ),
-                                          ),
-                                        ),
-                                        SizedBox(width: 8),
-                                        Text(
-                                          "Updating...",
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
-                                    )
-                                  : const Text(
-                                      "Update Menu Item",
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w600,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        colorScheme.onPrimary,
                                       ),
                                     ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    "Updating...",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              )
+                                  : const Text(
+                                "Update Menu Item",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
                           ),
                         ],
@@ -1636,308 +1637,126 @@ class _MenuPageState extends State<MenuPage> {
 
   @override
   Widget build(BuildContext context) {
-
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final screenWidth = Responsive.width(context);
     final isMobile = Responsive.isMobile(context);
-    final isTablet = Responsive.isTablet(context);
     final isDesktop = Responsive.isDesktop(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: const Color(0xFFF6F7FB),
       body: CustomScrollView(
         slivers: [
-          SliverAppBar(
-            automaticallyImplyLeading: false,
-            expandedHeight: kIsWeb ? 110 : 110.sp,
-            pinned: false,
-            floating: false,
-            elevation: 0,
-            backgroundColor: Colors.transparent,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Color(0xFF7C3AED),
-                      Color(0xFFA855F7),
-                      Color(0xFFC084FC),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+          SliverToBoxAdapter(
+            child: Container(
+              color: const Color(0xFFF6F7FB),
+              padding: EdgeInsets.fromLTRB(
+                isDesktop ? 28 : 16,
+                isDesktop ? 20 : 14,
+                isDesktop ? 28 : 16,
+                8,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Home / Menu Items',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                      color: Color(0xFF999999),
+                    ),
                   ),
-                ),
-                child: SafeArea(
-                  child: Padding(
-                    padding: EdgeInsets.all(kIsWeb ? 16 : 16.sp),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        /// Top Navigation Row
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Text(
+                        'Menu Items',
+                        style: TextStyle(
+                          fontSize: isDesktop ? 42 : 30,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF1C1C1C),
+                        ),
+                      ),
+                      const Spacer(),
+                      ElevatedButton(
+                        onPressed: addMenuItem,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF070B2D),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            /// Back Arrow
-                            Container(
-                              width: kIsWeb ? 40 : 40.sp,
-                              height: kIsWeb ? 40 : 40.sp,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
-                              ),
-                              child: IconButton(
-                                icon: Icon(
-                                  Icons.arrow_back_ios_new,
-                                  color: Colors.white,
-                                  size: kIsWeb ? 20 : 20.sp,
-                                ),
-                                onPressed: () {
-                                  Navigator.pop(context);
-                                },
-                              )
-                            ),
-                            /// Menu Icon
-                            Container(
-                              width: kIsWeb ? 40 : 40.sp,
-                              height: kIsWeb ? 40 : 40.sp,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
-                              ),
-                              child: Icon(
-                                Icons.restaurant,
-                                color: Colors.white,
-                                size: kIsWeb ? 20 : 20.sp,
-                              ),
+                            Icon(Icons.add, size: 16),
+                            SizedBox(width: 8),
+                            Text(
+                              'Add Menu Item',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                             ),
                           ],
                         ),
-                        SizedBox(height: kIsWeb ? 10 : 10.sp),
-                        /// Title and Subtitle
-                        Text(
-                          "Menu Items",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: kIsWeb ? 16 : 16.sp,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        )
-                      ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    height: 44,
+                    width: isDesktop ? 400 : double.infinity,
+                    child: TextField(
+                      onChanged: (value) {
+                        setState(() {
+                          _searchQuery = value.trim().toLowerCase();
+                        });
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Search menu items...',
+                        hintStyle: const TextStyle(
+                          color: Color(0xFFAAAAAA),
+                          fontSize: 14,
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.search,
+                          color: Color(0xFFAAAAAA),
+                          size: 20,
+                        ),
+                        filled: true,
+                        fillColor: const Color(0xFFF1F3F6),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: Color(0xFFF1F3F6)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: Color(0xFFCCCCCC)),
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  const SizedBox(height: 8),
+                ],
               ),
             ),
           ),
-          /// CATEGORY FILTER
           SliverToBoxAdapter(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection("categories")
                   .where("restaurantId", isEqualTo: widget.restaurantId)
                   .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return Padding(
-                    padding: EdgeInsets.all(kIsWeb ? 16 : 16.sp),
-                    child: Text(
-                      'Error: ${snapshot.error}',
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                  );
-                }
-                if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-                  return Padding(
-                    padding: EdgeInsets.all(kIsWeb ? 16 : 16.sp),
-                    child: const LinearProgressIndicator(),
-                  );
-                }
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return Padding(
-                    padding: EdgeInsets.all(kIsWeb ? 16 : 16.sp),
-                    child: Text(
-                      snapshot.hasData && snapshot.data!.docs.isEmpty
-                          ? "No Categories"
-                          : "Loading...",
-                      style: TextStyle(fontSize: kIsWeb ? 14 : 14.sp),
-                    ),
-                  );
+              builder: (context, catSnapshot) {
+                if (!catSnapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
                 }
 
-                final rawCategories = snapshot.data!.docs;
-                final categories = List<QueryDocumentSnapshot>.from(rawCategories)
-                  ..sort((a, b) {
-                    final posA = (a.data() as Map<String, dynamic>)["position"] as num?;
-                    final posB = (b.data() as Map<String, dynamic>)["position"] as num?;
-                    return ((posA ?? 0).toInt()).compareTo((posB ?? 0).toInt());
-                  });
-
-                // Auto-select first category if none is selected
-                if (_selectedCategoryId == null && categories.isNotEmpty) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    setState(() {
-                      _selectedCategoryId = categories.first.id;
-                    });
-                  });
-                }
-
-                return Container(
-                  margin: EdgeInsets.fromLTRB(
-                      kIsWeb ? 16 : 24.sp,
-                      kIsWeb ? 20 : 24.sp,
-                      kIsWeb ? 16 : 24.sp,
-                      kIsWeb ? 8 : 12.sp
-                  ),
-                  child: SizedBox(
-                    height: kIsWeb ? 45 : 50.sp,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: categories.length + 1, // +1 for ellipsis
-                      itemBuilder: (context, index) {
-                        if (index == categories.length) {
-                          // Ellipsis button
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: kIsWeb ? 16 : 20.sp,
-                                vertical: kIsWeb ? 12 : 14.sp,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(kIsWeb ? 20 : 20.sp),
-                                border: Border.all(
-                                  color: const Color(0xFFE5E7EB),
-                                  width: 1,
-                                ),
-                              ),
-                              child: Icon(
-                                Icons.more_horiz,
-                                color: const Color(0xFF6B7280),
-                                size: kIsWeb ? 20 : 20.sp,
-                              ),
-                            ),
-                          );
-                        }
-
-                        final cat = categories[index];
-                        final bool isSelected = cat.id == _selectedCategoryId;
-
-                        return Padding(
-                          padding:  EdgeInsets.only(right: 8.sp),
-                          child: GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _selectedCategoryId = cat.id;
-                              });
-                            },
-                            child: Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal:  kIsWeb ?  16 : 20.sp,
-                                vertical:  kIsWeb ?  12 : 14.sp,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isSelected ?  Color(0xFF7C3AED) : Colors.white,
-                                borderRadius: BorderRadius.circular(kIsWeb ? 20 : 20.sp),
-                                border: Border.all(
-                                  color: const Color(0xFFE5E7EB),
-                                  width: 1,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (isSelected)
-                                    Padding(
-                                      padding: EdgeInsets.only(right: isMobile ? 6 : 8),
-                                      child: Icon(
-                                        Icons.check,
-                                        size: kIsWeb ? 16 : 16.sp,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  Text(
-                                    cat['name'],
-                                    style: TextStyle(
-                                      fontSize: kIsWeb ? 14 : 14.sp,
-                                      fontWeight: FontWeight.w500,
-                                      color: isSelected ? Colors.white : const Color(0xFF1F2937),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-
-          /// MENU ITEMS
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                if (_selectedCategoryId == null) {
-                  return SizedBox(
-                    height: MediaQuery.of(context).size.height - 300, // Give it a fixed height
-                    child: Center(
-                      child: Container(
-                        padding: EdgeInsets.all(isMobile ? 32.sp : 48),
-                        margin: EdgeInsets.all(kIsWeb ? 24 : 24),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(kIsWeb ? 20 : 20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: kIsWeb ? 20 : 20,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              padding: EdgeInsets.all(kIsWeb ? 24 : 24),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF3F4F6),
-                                borderRadius: BorderRadius.circular(kIsWeb ? 20 : 20),
-                              ),
-                              child: Icon(
-                                Icons.category,
-                                size: kIsWeb ? 48 : 48.sp,
-                                color: const Color(0xFF9CA3AF),
-                              ),
-                            ),
-                            SizedBox(height: kIsWeb ? 16 : 16.sp),
-                            Text(
-                              "Select a Category",
-                              style: TextStyle(
-                                fontSize: isMobile ? 18 : 22,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF1F2937),
-                              ),
-                            ),
-                            SizedBox(height: kIsWeb ? 8 : 8.sp),
-                            Text(
-                              "Choose a category to view menu items",
-                              style: TextStyle(
-                                fontSize: kIsWeb ? 14 : 14.sp,
-                                color: const Color(0xFF6B7280),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                }
+                final categories = catSnapshot.data!.docs;
+                final Map<String, String> categoryMap = {
+                  for (final c in categories)
+                    c.id: ((c.data() as Map<String, dynamic>)["name"] ?? "").toString(),
+                };
 
                 return StreamBuilder<QuerySnapshot>(
                   stream: FirebaseFirestore.instance
@@ -1948,7 +1767,7 @@ class _MenuPageState extends State<MenuPage> {
                     if (snapshot.hasError) {
                       return Center(
                         child: Padding(
-                          padding: EdgeInsets.all(kIsWeb ? 16 : 16.sp),
+                          padding: const EdgeInsets.all(16),
                           child: Text(
                             "Failed to load menu: ${snapshot.error}",
                             style: const TextStyle(color: Colors.red),
@@ -1958,395 +1777,229 @@ class _MenuPageState extends State<MenuPage> {
                       );
                     }
 
-                    if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
                     if (!snapshot.hasData) {
-                      return const Center(child: Text("No menu data"));
+                      return const Center(child: CircularProgressIndicator());
                     }
 
                     final allItems = snapshot.data!.docs;
-
-                    // Filter items by selected category on client side
                     final items = allItems.where((doc) {
                       final data = doc.data() as Map<String, dynamic>;
-                      return data["categoryId"] == _selectedCategoryId;
+                      final name = (data['name'] ?? '').toString().toLowerCase();
+                      final desc =
+                          (data['description'] ?? '').toString().toLowerCase();
+                      final categoryId =
+                          (data['categoryId'] ?? '').toString().toLowerCase();
+                      final categoryName =
+                          (categoryMap[categoryId] ?? '').toLowerCase();
+                      if (_searchQuery.isEmpty) return true;
+                      return name.contains(_searchQuery) ||
+                          desc.contains(_searchQuery) ||
+                          categoryName.contains(_searchQuery);
                     }).toList();
 
                     if (items.isEmpty) {
-                      return Center(
-                        child: Container(
-                          padding: EdgeInsets.all(kIsWeb ? 32 : 32.sp),
-                          margin: EdgeInsets.all(kIsWeb ? 24 : 24),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(kIsWeb ? 20 : 20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: kIsWeb ? 20 : 20,
-                                offset: const Offset(0, 10),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: EdgeInsets.all(kIsWeb ? 24 : 24),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF3F4F6),
-                                  borderRadius: BorderRadius.circular(kIsWeb ? 20 : 20),
-                                ),
-                                child: Icon(
-                                  Icons.restaurant_menu,
-                                  size: kIsWeb ? 48 : 48.sp,
-                                  color: const Color(0xFF9CA3AF),
-                                ),
-                              ),
-                              SizedBox(height: kIsWeb ? 16 : 16.sp),
-                              Text(
-                                "No Menu Items",
-                                style: TextStyle(
-                                  fontSize: isMobile ? 18 : 22,
-                                  fontWeight: FontWeight.w600,
-                                  color: const Color(0xFF1F2937),
-                                ),
-                              ),
-                              SizedBox(height: kIsWeb ? 8 : 8.sp),
-                              Text(
-                                "Add menu items to this category",
-                                style: TextStyle(
-                                  fontSize: kIsWeb ? 14 : 14.sp,
-                                  color: const Color(0xFF6B7280),
-                                ),
-                              ),
-                            ],
+                      return Padding(
+                        padding: const EdgeInsets.fromLTRB(28, 20, 28, 30),
+                        child: Center(
+                          child: Text(
+                            _searchQuery.isEmpty
+                                ? "No menu items"
+                                : "No results for your search",
+                            style: const TextStyle(
+                              fontSize: 15,
+                              color: Color(0xFF6B7280),
+                            ),
                           ),
                         ),
                       );
                     }
 
-                    // List view - redesigned to match image
-                    return ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      padding: EdgeInsets.fromLTRB(
-                        isMobile ? 16 : 24,
-                        isMobile ? 8 : 12,
-                        isMobile ? 16 : 24,
-                        100 // Bottom padding for FAB
-                      ),
-                      itemCount: items.length,
-                      itemBuilder: (context, index) {
-                        final doc = items[index];
-                        final data = doc.data() as Map<String, dynamic>;
-                        final List variants = (data['variants'] ?? []) as List;
-                        final String name = (data['name'] ?? '').toString();
-                        final String? imageUrl = (data['image'] ?? '') as String?;
-                        final bool isAvailable = (data['isAvailable'] ?? true) as bool;
+                    final isTablet = Responsive.isTablet(context);
+                    final crossAxisCount = isDesktop ? 4 : (isTablet ? 2 : 1);
 
-                        return Container(
-                          margin: EdgeInsets.only(bottom: isMobile ? 12 : 16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(kIsWeb ? 16 : 16.sp),
-                            border: Border.all(
-                              color: const Color(0xFFE5E7EB),
-                              width: 1,
+                    return Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        isDesktop ? 28 : 16,
+                        10,
+                        isDesktop ? 28 : 16,
+                        30,
+                      ),
+                      child: GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: crossAxisCount,
+                          childAspectRatio: isDesktop ? 0.72 : 0.76,
+                          crossAxisSpacing: 14,
+                          mainAxisSpacing: 14,
+                        ),
+                        itemCount: items.length,
+                        itemBuilder: (context, index) {
+                          final doc = items[index];
+                          final data = doc.data() as Map<String, dynamic>;
+                          final List variants = (data['variants'] ?? []) as List;
+                          final String name = (data['name'] ?? '').toString();
+                          final String imageUrl = (data['image'] ?? '').toString();
+                          final String description =
+                              (data['description'] ?? '').toString();
+                          final String categoryId =
+                              (data['categoryId'] ?? '').toString();
+                          final String categoryName =
+                              (categoryMap[categoryId] ?? '').toString();
+                          final num firstPrice = variants.isNotEmpty
+                              ? (variants.first['price'] ?? 0) as num
+                              : 0;
+
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: const Color(0xFFE5E7EB)),
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.03),
-                                blurRadius: kIsWeb ? 10 : 10.sp,
-                                offset: const Offset(0, 6),
-                              ),
-                            ],
-                          ),
-                          child: Padding(
-                            padding: EdgeInsets.all(kIsWeb ? 16 : 16.sp),
-                            child: Row(
+                            child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                /// Item Image
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
-                                  child: imageUrl != null && imageUrl.isNotEmpty
-                                      ? Image.network(
-                                          imageUrl,
-                                          width: kIsWeb ? 80 : 80.sp,
-                                          height: kIsWeb ? 80 : 80.sp,
-                                          fit: BoxFit.cover,
-                                          loadingBuilder: (context, child, loadingProgress) {
-                                            if (loadingProgress == null) return child;
-                                            return Container(
-                                              width: kIsWeb ? 80 : 80.sp,
-                                              height: kIsWeb ? 80 : 80.sp,
-                                              decoration: BoxDecoration(
-                                                gradient: const LinearGradient(
-                                                  colors: [
-                                                    Color(0xFFF3F4F6),
-                                                    Color(0xFFE5E7EB),
-                                                  ],
-                                                  begin: Alignment.topLeft,
-                                                  end: Alignment.bottomRight,
-                                                ),
-                                              ),
-                                              child: Center(
-                                                child: CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                  value: loadingProgress.expectedTotalBytes != null
-                                                      ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                                                      : null,
-                                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                                    const Color(0xFF7C3AED).withOpacity(0.6),
-                                                  ),
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                          errorBuilder: (context, error, stackTrace) {
-                                            return Container(
-                                              width: kIsWeb ? 80 : 80.sp,
-                                              height: kIsWeb ? 80 : 80.sp,
-                                              decoration: BoxDecoration(
-                                                gradient: const LinearGradient(
-                                                  colors: [
-                                                    Color(0xFFF3F4F6),
-                                                    Color(0xFFE5E7EB),
-                                                  ],
-                                                  begin: Alignment.topLeft,
-                                                  end: Alignment.bottomRight,
-                                                ),
-                                              ),
-                                              child: Icon(
-                                                Icons.broken_image,
-                                                color: const Color(0xFF7C3AED).withOpacity(0.6),
-                                                size: kIsWeb ? 32 : 32.sp,
-                                              ),
-                                            );
-                                          },
-                                        )
-                                      : Container(
-                                          width: kIsWeb ? 80 : 80.sp,
-                                          height: kIsWeb ? 80 : 80.sp,
-                                          decoration: BoxDecoration(
-                                            gradient: const LinearGradient(
-                                              colors: [
-                                                Color(0xFFF3F4F6),
-                                                Color(0xFFE5E7EB),
-                                              ],
-                                              begin: Alignment.topLeft,
-                                              end: Alignment.bottomRight,
-                                            ),
-                                          ),
-                                          child: Icon(
-                                            Icons.fastfood_rounded,
-                                            color: const Color(0xFF7C3AED),
-                                            size: kIsWeb ? 32 : 32.sp,
-                                          ),
-                                        ),
-                                ),
-                                SizedBox(width: kIsWeb ? 16 : 16.sp),
-
-                                /// Item Details
                                 Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      /// Item Name and Availability
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              name,
-                                              style: TextStyle(
-                                                fontSize: kIsWeb ? 16 : 16.sp,
-                                                fontWeight: FontWeight.bold,
-                                                color: const Color(0xFF1F2937),
+                                  flex: 5,
+                                  child: ClipRRect(
+                                    borderRadius: const BorderRadius.vertical(
+                                      top: Radius.circular(14),
+                                    ),
+                                    child: imageUrl.isNotEmpty
+                                        ? Image.network(
+                                            imageUrl,
+                                            width: double.infinity,
+                                            fit: BoxFit.cover,
+                                            errorBuilder:
+                                                (context, error, stackTrace) =>
+                                                    Container(
+                                              color: const Color(0xFFF3F4F6),
+                                              child: const Center(
+                                                child: Icon(
+                                                  Icons.fastfood_rounded,
+                                                  color: Color(0xFFCCCCCC),
+                                                  size: 36,
+                                                ),
+                                              ),
+                                            ),
+                                          )
+                                        : Container(
+                                            color: const Color(0xFFF3F4F6),
+                                            child: const Center(
+                                              child: Icon(
+                                                Icons.fastfood_rounded,
+                                                color: Color(0xFFCCCCCC),
+                                                size: 36,
                                               ),
                                             ),
                                           ),
-                                        ],
-                                      ),
-                                      SizedBox(height: kIsWeb ? 4 : 4.sp),
-
-                                      /// Availability Status
-                                      Container(
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: isMobile ? 8 : 10,
-                                          vertical: isMobile ? 4 : 6,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: isAvailable
-                                              ? const Color(0xFF10B981).withOpacity(0.1)
-                                              : const Color(0xFFEF4444).withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(isMobile ? 12 : 14),
-                                        ),
-                                        child: Text(
-                                          isAvailable ? "Available" : "Not available",
-                                          style: TextStyle(
-                                            fontSize: kIsWeb ? 12 : 12.sp,
-                                            color: isAvailable ? const Color(0xFF10B981) : const Color(0xFFEF4444),
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-
-                                      SizedBox(height: kIsWeb ? 8 : 8.sp),
-
-                                      /// Variants Section
-                                      Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            "Variants:",
-                                            style: TextStyle(
-                                              fontSize: kIsWeb ? 12 : 12.sp,
-                                              fontWeight: FontWeight.w600,
-                                              color: const Color(0xFF6B7280),
-                                            ),
-                                          ),
-                                          SizedBox(height: kIsWeb ? 6 : 6.sp),
-                                          Wrap(
-                                            spacing: isMobile ? 6 : 8,
-                                            runSpacing: isMobile ? 4 : 6,
-                                            children: variants.map<Widget>((v) {
-                                              return Container(
-                                                padding: EdgeInsets.symmetric(
-                                                  horizontal: isMobile ? 8 : 10,
-                                                  vertical: isMobile ? 4 : 6,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color: const Color(0xFFEDE9FE),
-                                                  borderRadius: BorderRadius.circular(isMobile ? 12 : 14),
-                                                ),
-                                                child: Text(
-                                                  "${v['name']} ₹${v['price']}",
-                                                  style: TextStyle(
-                                                    fontSize: kIsWeb ? 11 : 11.sp,
-                                                    fontWeight: FontWeight.w500,
-                                                    color: const Color(0xFF7C3AED),
-                                                  ),
-                                                ),
-                                              );
-                                            }).toList(),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
                                   ),
                                 ),
-
-                                /// Action Buttons
-                                Column(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    /// Toggle Switch
-                                    Transform.scale(
-                                      scale: isMobile ? 0.8 : 1.0,
-                                      child: Switch(
-                                        value: isAvailable,
-                                        activeColor: const Color(0xFF10B981),
-                                        onChanged: (value) {
-                                          toggleAvailability(doc.id, value);
-                                        },
-                                      ),
+                                Expanded(
+                                  flex: 4,
+                                  child: Padding(
+                                    padding:
+                                        const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                name,
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: Color(0xFF1A1A1A),
+                                                ),
+                                              ),
+                                            ),
+                                            InkWell(
+                                              onTap: () => editMenuItem(doc),
+                                              child: Icon(
+                                                Icons.edit_outlined,
+                                                size: 17,
+                                                color: Colors.grey[500],
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            InkWell(
+                                              onTap: () =>
+                                                  deleteMenuItem(doc.id, name),
+                                              child: const Icon(
+                                                Icons.delete_outline,
+                                                size: 17,
+                                                color: Color(0xFFEF4444),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 6),
+                                        if (categoryName.isNotEmpty)
+                                          Container(
+                                            margin:
+                                                const EdgeInsets.only(bottom: 6),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFF2F3F5),
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                            ),
+                                            child: Text(
+                                              categoryName,
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                color: Color(0xFF222B38),
+                                              ),
+                                            ),
+                                          ),
+                                        if (description.isNotEmpty)
+                                          Text(
+                                            description,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: Color(0xFF6B7280),
+                                              height: 1.4,
+                                            ),
+                                          ),
+                                        const Spacer(),
+                                        Text(
+                                          '\$${firstPrice.toStringAsFixed(2)}',
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w700,
+                                            color: Color(0xFFE8650A),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-
-                                    SizedBox(height: kIsWeb ? 8 : 8.sp),
-
-                                    /// Edit Icon
-                                    GestureDetector(
-                                      onTap: () => editMenuItem(doc),
-                                      child: Container(
-                                        padding: EdgeInsets.all(kIsWeb ? 8 : 8.sp),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF7C3AED).withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
-                                        ),
-                                        child: Icon(
-                                          Icons.edit,
-                                          color: const Color(0xFF7C3AED),
-                                          size: kIsWeb ? 16 : 16.sp,
-                                        ),
-                                      ),
-                                    ),
-
-                                    SizedBox(height: kIsWeb ? 6 : 6.sp),
-
-                                    /// Delete Icon
-                                    GestureDetector(
-                                      onTap: () => deleteMenuItem(doc.id, name),
-                                      child: Container(
-                                        padding: EdgeInsets.all(kIsWeb ? 8 : 8.sp),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFEF4444).withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
-                                        ),
-                                        child: Icon(
-                                          Icons.delete,
-                                          color: const Color(0xFFEF4444),
-                                          size: kIsWeb ? 16 : 16.sp,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                  ),
                                 ),
                               ],
                             ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     );
                   },
                 );
               },
-              childCount: 1,
             ),
           ),
-                                  ],
+        ],
       ),
-      /// ADD ITEM BUTTON
-      floatingActionButton: Container(
-        margin: EdgeInsets.only(bottom: isMobile ? 20 : 24),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [
-              Color(0xFF7C3AED),
-              Color(0xFFA855F7),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(kIsWeb ? 16 : 16.sp),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF7C3AED).withOpacity(0.3),
-              blurRadius: kIsWeb ? 12 : 12.sp,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: FloatingActionButton.extended(
-          onPressed: addMenuItem,
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          icon: Icon(
-            Icons.add,
-            color: Colors.white,
-            size: kIsWeb ? 24 : 24.sp,
-          ),
-          label: Text(
-            "Add Item",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: kIsWeb ? 14 : 14.sp,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ),
+      floatingActionButton: null,
     );
   }
 }
@@ -2459,5 +2112,3 @@ Widget headerWidget(BuildContext context) {
     ),
   );
 }
-
-

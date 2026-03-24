@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:restaurant_admin_panel/restaurant_admin/dashboard_page.dart';
 import '../core/constants/app_colors.dart';
 import '../restaurant_admin/restaurant_admin_page.dart';
 import '../super_admin/restaurants_page.dart';
@@ -62,7 +63,7 @@ class _LoginPageState extends State<LoginPage> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (_) => RestaurantAdminPanel(
+            builder: (_) => DashboardPage(
               restaurantId: restaurantId!,
             ),
           ),
