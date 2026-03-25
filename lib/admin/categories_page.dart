@@ -74,37 +74,48 @@ class _CategoriesPageState extends State<CategoriesPage> {
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
         final theme = Theme.of(context);
         final colorScheme = theme.colorScheme;
         final screenWidth = Responsive.width(context);
+        final screenHeight = Responsive.height(context);
         
         return StatefulBuilder(
           builder: (context, setStateDialog) {
-            double dialogWidth = screenWidth * 0.9;
-            double maxHeight = MediaQuery.of(context).size.height * 0.9;
+            double dialogWidth;
+            double dialogHeight;
             
             if (Responsive.isDesktop(context)) {
-              dialogWidth = screenWidth > 1200 ? 600 : 500;
+              dialogWidth = screenWidth > 1400 ? 650 : 550;
+              dialogHeight = screenHeight > 900 ? 650 : 550;
             } else if (Responsive.isTablet(context)) {
-              dialogWidth = screenWidth * 0.8;
+              dialogWidth = screenWidth * 0.85;
+              dialogHeight = screenHeight * 0.75;
+            } else {
+              dialogWidth = screenWidth * 0.95;
+              dialogHeight = screenHeight * 0.85;
             }
 
             return Dialog(
+              insetPadding: EdgeInsets.symmetric(
+                horizontal: Responsive.isMobile(context) ? 16 : 24,
+                vertical: Responsive.isMobile(context) ? 24 : 40,
+              ),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(kIsWeb ? 20 : 16.sp),
+                borderRadius: BorderRadius.circular(kIsWeb ? 24 : 20.sp),
               ),
               backgroundColor: colorScheme.surface,
               child: Container(
                 width: dialogWidth,
-                constraints: BoxConstraints(maxHeight: maxHeight),
+                height: dialogHeight,
                 child: Column(
                   children: [
                     headerWidget(context, "Add New Category"),
                     Expanded(
                       child: SingleChildScrollView(
                         physics: const ClampingScrollPhysics(),
-                        padding: EdgeInsets.all(kIsWeb ? 24 : 16.sp),
+                        padding: EdgeInsets.all(kIsWeb ? 28 : 20.sp),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -112,9 +123,9 @@ class _CategoriesPageState extends State<CategoriesPage> {
                               await pickImage();
                               setStateDialog(() {});
                             }),
-                            SizedBox(height: kIsWeb ? 24 : 20.sp),
+                            SizedBox(height: kIsWeb ? 28 : 24.sp),
                             categoryNameField(nameController),
-                            SizedBox(height: kIsWeb ? 20 : 16.sp),
+                            SizedBox(height: kIsWeb ? 24 : 20.sp),
                             positionField(positionController),
                           ],
                         ),
@@ -154,37 +165,48 @@ class _CategoriesPageState extends State<CategoriesPage> {
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
         final theme = Theme.of(context);
         final colorScheme = theme.colorScheme;
         final screenWidth = Responsive.width(context);
+        final screenHeight = Responsive.height(context);
         
         return StatefulBuilder(
           builder: (context, setStateDialog) {
-            double dialogWidth = screenWidth * 0.9;
-            double maxHeight = MediaQuery.of(context).size.height * 0.9;
+            double dialogWidth;
+            double dialogHeight;
             
             if (Responsive.isDesktop(context)) {
-              dialogWidth = screenWidth > 1200 ? 600 : 500;
+              dialogWidth = screenWidth > 1400 ? 650 : 550;
+              dialogHeight = screenHeight > 900 ? 650 : 550;
             } else if (Responsive.isTablet(context)) {
-              dialogWidth = screenWidth * 0.8;
+              dialogWidth = screenWidth * 0.85;
+              dialogHeight = screenHeight * 0.75;
+            } else {
+              dialogWidth = screenWidth * 0.95;
+              dialogHeight = screenHeight * 0.85;
             }
 
             return Dialog(
+              insetPadding: EdgeInsets.symmetric(
+                horizontal: Responsive.isMobile(context) ? 16 : 24,
+                vertical: Responsive.isMobile(context) ? 24 : 40,
+              ),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(kIsWeb ? 20 : 16.sp),
+                borderRadius: BorderRadius.circular(kIsWeb ? 24 : 20.sp),
               ),
               backgroundColor: colorScheme.surface,
               child: Container(
                 width: dialogWidth,
-                constraints: BoxConstraints(maxHeight: maxHeight),
+                height: dialogHeight,
                 child: Column(
                   children: [
                     headerWidget(context, "Edit Category"),
                     Expanded(
                       child: SingleChildScrollView(
                         physics: const ClampingScrollPhysics(),
-                        padding: EdgeInsets.all(kIsWeb ? 24 : 16.sp),
+                        padding: EdgeInsets.all(kIsWeb ? 28 : 20.sp),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -192,9 +214,9 @@ class _CategoriesPageState extends State<CategoriesPage> {
                               await pickImage();
                               setStateDialog(() {});
                             }, imageUrl: imageUrl),
-                            SizedBox(height: kIsWeb ? 24 : 20.sp),
+                            SizedBox(height: kIsWeb ? 28 : 24.sp),
                             categoryNameField(nameController),
-                            SizedBox(height: kIsWeb ? 20 : 16.sp),
+                            SizedBox(height: kIsWeb ? 24 : 20.sp),
                             positionField(positionController),
                           ],
                         ),
@@ -228,175 +250,320 @@ class _CategoriesPageState extends State<CategoriesPage> {
   void deleteCategory(String id, String categoryName) async {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final screenWidth = Responsive.width(context);
+    final screenHeight = Responsive.height(context);
     
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(kIsWeb ? 20 : 16.sp),
-        ),
-        title: Row(
-          children: [
-            Container(
-              padding: EdgeInsets.all(kIsWeb ? 10 : 10.sp),
-              decoration: BoxDecoration(
-                color: colorScheme.errorContainer,
-                borderRadius: BorderRadius.circular(kIsWeb ? 12 : 10.sp),
-              ),
-              child: Icon(
-                Icons.delete_outline,
-                color: colorScheme.error,
-                size: kIsWeb ? 20 : 20.sp,
-              ),
-            ),
-            SizedBox(width: kIsWeb ? 12 : 12.sp),
-            Expanded(
-              child: Text(
-                "Delete Category",
-                style: TextStyle(
-                  fontSize: kIsWeb ? 18 : 18.sp,
-                  fontWeight: FontWeight.w600,
-                  color: colorScheme.onSurface,
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Are you sure you want to delete this category?",
-              style: TextStyle(
-                fontSize: kIsWeb ? 16 : 14.sp,
-                color: colorScheme.onSurface,
-              ),
-            ),
-            if (categoryName.isNotEmpty) ...[
-              SizedBox(height: kIsWeb ? 12 : 8.sp),
-              Container(
-                padding: EdgeInsets.all(kIsWeb ? 16 : 16.sp),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceVariant.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
-                  border: Border.all(
-                    color: colorScheme.outline.withOpacity(0.2),
+      barrierDismissible: false,
+      builder: (context) {
+        double dialogWidth;
+        double dialogHeight;
+        
+        if (Responsive.isDesktop(context)) {
+          dialogWidth = screenWidth > 1400 ? 450 : 400;
+          dialogHeight = screenHeight > 900 ? 300 : 280;
+        } else if (Responsive.isTablet(context)) {
+          dialogWidth = screenWidth * 0.7;
+          dialogHeight = screenHeight * 0.4;
+        } else {
+          dialogWidth = screenWidth * 0.85;
+          dialogHeight = screenHeight * 0.5;
+        }
+
+        return Dialog(
+          insetPadding: EdgeInsets.symmetric(
+            horizontal: Responsive.isMobile(context) ? 16 : 24,
+            vertical: Responsive.isMobile(context) ? 24 : 40,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(kIsWeb ? 24 : 20.sp),
+          ),
+          backgroundColor: colorScheme.surface,
+          child: Container(
+            width: dialogWidth,
+            height: dialogHeight,
+            child: Column(
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(Responsive.isMobile(context) ? 16 : 20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        colorScheme.error,
+                        colorScheme.errorContainer,
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(Responsive.isMobile(context) ? 16 : 20),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(kIsWeb ? 10 : 8),
+                        decoration: BoxDecoration(
+                          color: colorScheme.onError.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(Responsive.isMobile(context) ? 10 : 12),
+                        ),
+                        child: Icon(
+                          Icons.delete_outline,
+                          color: colorScheme.onError,
+                          size: Responsive.isMobile(context) ? 20 : 24,
+                        ),
+                      ),
+                      SizedBox(width: Responsive.isMobile(context) ? 10 : 12),
+                      Expanded(
+                        child: Text(
+                          "Delete Category",
+                          style: TextStyle(
+                            color: colorScheme.onError,
+                            fontSize: kIsWeb ? 20 : 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: Icon(
+                          Icons.close,
+                          color: colorScheme.onError,
+                          size: Responsive.isMobile(context) ? 20 : 24,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.category,
-                      color: colorScheme.onSurface.withOpacity(0.6),
-                      size: kIsWeb ? 18 : 16.sp,
-                    ),
-                    SizedBox(width: kIsWeb ? 10 : 10.sp),
-                    Expanded(
-                      child: Text(
-                        categoryName,
-                        style: TextStyle(
-                          fontSize: kIsWeb ? 15 : 15.sp,
-                          fontWeight: FontWeight.w500,
-                          color: colorScheme.onSurface,
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.all(kIsWeb ? 24 : 20.sp),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "Are you sure you want to delete this category?",
+                          style: TextStyle(
+                            fontSize: kIsWeb ? 16 : 14.sp,
+                            color: colorScheme.onSurface,
+                          ),
                         ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                        if (categoryName.isNotEmpty) ...[
+                          SizedBox(height: kIsWeb ? 16 : 12.sp),
+                          Container(
+                            padding: EdgeInsets.all(kIsWeb ? 18 : 16.sp),
+                            decoration: BoxDecoration(
+                              color: colorScheme.surfaceVariant.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(kIsWeb ? 14 : 12.sp),
+                              border: Border.all(
+                                color: colorScheme.outline.withOpacity(0.2),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.category,
+                                  color: colorScheme.onSurface.withOpacity(0.6),
+                                  size: kIsWeb ? 20 : 18.sp,
+                                ),
+                                SizedBox(width: kIsWeb ? 12 : 10.sp),
+                                Expanded(
+                                  child: Text(
+                                    categoryName,
+                                    style: TextStyle(
+                                      fontSize: kIsWeb ? 16 : 15.sp,
+                                      fontWeight: FontWeight.w500,
+                                      color: colorScheme.onSurface,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        SizedBox(height: kIsWeb ? 18 : 14.sp),
+                        Text(
+                          "This action cannot be undone.",
+                          style: TextStyle(
+                            fontSize: kIsWeb ? 14 : 13.sp,
+                            color: colorScheme.error,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ],
-            SizedBox(height: kIsWeb ? 16 : 12.sp),
-            Text(
-              "This action cannot be undone.",
-              style: TextStyle(
-                fontSize: kIsWeb ? 13 : 13.sp,
-                color: colorScheme.error,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            style: TextButton.styleFrom(
-              padding: EdgeInsets.symmetric(
-                horizontal: kIsWeb ? 16 : 20.sp,
-                vertical: kIsWeb ? 10 : 12.sp,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(kIsWeb ? 10 : 12.sp),
-              ),
-            ),
-            child: Text(
-              "Cancel",
-              style: TextStyle(
-                color: colorScheme.onSurface.withOpacity(0.7),
-                fontWeight: FontWeight.w500,
-                fontSize: kIsWeb ? 14.sp : null,
-              ),
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(Responsive.isMobile(context) ? 16 : 20),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceVariant.withOpacity(0.3),
+                    borderRadius: BorderRadius.vertical(
+                      bottom: Radius.circular(Responsive.isMobile(context) ? 16 : 20),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            padding: EdgeInsets.symmetric(vertical: Responsive.isMobile(context) ? 12 : 14),
+                            side: BorderSide(color: colorScheme.outline),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(Responsive.isMobile(context) ? 10 : 12),
+                            ),
+                          ),
+                          child: Text(
+                            "Cancel",
+                            style: TextStyle(
+                              color: colorScheme.onSurface.withOpacity(0.7),
+                              fontWeight: FontWeight.w500,
+                              fontSize: Responsive.isMobile(context) ? 14 : null,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: Responsive.isMobile(context) ? 10 : 12),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            Navigator.pop(context);
+                            
+                            // Show loading indicator
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (context) => Center(
+                                child: Container(
+                                  padding: EdgeInsets.all(kIsWeb ? 24 : 20.sp),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.surface,
+                                    borderRadius: BorderRadius.circular(kIsWeb ? 16 : 14.sp),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.2),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      CircularProgressIndicator(
+                                        valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                                      ),
+                                      SizedBox(height: kIsWeb ? 16 : 12.sp),
+                                      Text(
+                                        "Deleting category...",
+                                        style: TextStyle(
+                                          fontSize: kIsWeb ? 16 : 14.sp,
+                                          fontWeight: FontWeight.w500,
+                                          color: colorScheme.onSurface,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                            
+                            try {
+                              await FirebaseFirestore.instance
+                                  .collection("categories")
+                                  .doc(id)
+                                  .delete();
+                              
+                              // Close loading dialog
+                              Navigator.pop(context);
+                              
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.check_circle,
+                                          color: colorScheme.onPrimary,
+                                          size: kIsWeb ? 20 : 18.sp,
+                                        ),
+                                        SizedBox(width: kIsWeb ? 12 : 8.sp),
+                                        const Text("Category deleted successfully"),
+                                      ],
+                                    ),
+                                    backgroundColor: colorScheme.primary,
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    duration: const Duration(seconds: 3),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              // Close loading dialog
+                              Navigator.pop(context);
+                              
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.error,
+                                          color: colorScheme.onError,
+                                          size: kIsWeb ? 20 : 18.sp,
+                                        ),
+                                        SizedBox(width: kIsWeb ? 12 : 8.sp),
+                                        Text("Error deleting category: $e"),
+                                      ],
+                                    ),
+                                    backgroundColor: colorScheme.error,
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    duration: const Duration(seconds: 4),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: colorScheme.error,
+                            foregroundColor: colorScheme.onError,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: Responsive.isMobile(context) ? 16 : 20,
+                              vertical: Responsive.isMobile(context) ? 12 : 14,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(Responsive.isMobile(context) ? 10 : 12),
+                            ),
+                          ),
+                          child: Text(
+                            "Delete",
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: Responsive.isMobile(context) ? 14 : null,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              
-              try {
-                await FirebaseFirestore.instance
-                    .collection("categories")
-                    .doc(id)
-                    .delete();
-                
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text("Category deleted successfully"),
-                      backgroundColor: colorScheme.primary,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text("Error deleting category: $e"),
-                      backgroundColor: colorScheme.error,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: colorScheme.error,
-              foregroundColor: colorScheme.onError,
-              padding: EdgeInsets.symmetric(
-                horizontal: kIsWeb ? 20 : 20.sp,
-                vertical: kIsWeb ? 12 : 12.sp,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
-              ),
-            ),
-            child: Text(
-              "Delete",
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: kIsWeb ? 14 : 14.sp,
-              ),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -952,167 +1119,259 @@ class _CategoriesPageState extends State<CategoriesPage> {
     final isMobile = Responsive.isMobile(context);
     
     return Container(
-      padding: EdgeInsets.all(isMobile ? 16 : 20),
+      padding: EdgeInsets.all(isMobile ? 20 : 24),
       decoration: BoxDecoration(
         color: colorScheme.surfaceVariant.withOpacity(0.3),
         borderRadius: BorderRadius.vertical(
-          bottom: Radius.circular(kIsWeb ? 20 : 16),
+          bottom: Radius.circular(kIsWeb ? 24 : 20),
         ),
       ),
-      child: Row(
+      child: Column(
         children: [
-          Expanded(
-            child: OutlinedButton(
-              onPressed: () => Navigator.pop(context),
-              style: OutlinedButton.styleFrom(
-                padding: EdgeInsets.symmetric(vertical: isMobile ? 12 : 14),
-                side: BorderSide(color: colorScheme.outline),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(isMobile ? 10 : 12),
+          if (isLoading) ...[
+            Container(
+              padding: EdgeInsets.all(kIsWeb ? 16 : 14.sp),
+              decoration: BoxDecoration(
+                color: colorScheme.primaryContainer.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(kIsWeb ? 12 : 10.sp),
+                border: Border.all(
+                  color: colorScheme.primary.withOpacity(0.2),
                 ),
               ),
-              child: Text(
-                "Cancel",
-                style: TextStyle(
-                  color: colorScheme.onSurface.withOpacity(0.7),
-                  fontWeight: FontWeight.w500,
-                  fontSize: isMobile ? 14 : null,
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: kIsWeb ? 20 : 18,
+                    height: kIsWeb ? 20 : 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: kIsWeb ? 12 : 10.sp),
+                  Expanded(
+                    child: Text(
+                      categoryId != null 
+                          ? "Updating category, please wait..."
+                          : "Adding category, please wait...",
+                      style: TextStyle(
+                        color: colorScheme.primary,
+                        fontSize: kIsWeb ? 14 : 13.sp,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                 ),
               ),
             ),
-          ),
-          SizedBox(width: isMobile ? 10 : 12),
-          Expanded(
-            flex: 2,
-            child: ElevatedButton(
-              onPressed: isLoading ? null : () async {
-                if (nameController.text.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text("Please fill all required fields"),
-                      backgroundColor: colorScheme.error,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+            SizedBox(height: kIsWeb ? 16 : 12.sp),
+          ],
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: isLoading ? null : () => Navigator.pop(context),
+                  style: OutlinedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(vertical: isMobile ? 14 : 16),
+                    side: BorderSide(color: colorScheme.outline),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(isMobile ? 12 : 14),
                     ),
-                  );
-                  return;
-                }
-
-                setLoading(true);
-
-                try {
-                  String? imageUrl = await uploadImage();
-                  final position = int.tryParse(positionController.text) ?? 0;
-
-                  if (categoryId != null) {
-                    // Edit existing category
-                    await FirebaseFirestore.instance
-                        .collection("categories")
-                        .doc(categoryId)
-                        .update({
-                      "name": nameController.text.trim(),
-                      "image": imageUrl ?? '',
-                      "position": position,
-                    });
-
-                    if (mounted) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text("Category updated successfully!"),
-                          backgroundColor: colorScheme.primary,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                      );
-                    }
-                  } else {
-                    // Add new category
-                    await FirebaseFirestore.instance
-                        .collection("categories")
-                        .add({
-                      "name": nameController.text.trim(),
-                      "image": imageUrl ?? '',
-                      "restaurantId": restaurantId,
-                      "position": position,
-                      "createdAt": FieldValue.serverTimestamp(),
-                    });
-
-                    if (mounted) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text("Category added successfully!"),
-                          backgroundColor: colorScheme.primary,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                      );
-                    }
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text("Error ${categoryId != null ? 'updating' : 'adding'} category: $e"),
-                        backgroundColor: colorScheme.error,
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    );
-                  }
-                } finally {
-                  setLoading(false);
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colorScheme.primary,
-                foregroundColor: colorScheme.onPrimary,
-                padding: EdgeInsets.symmetric(vertical: isMobile ? 12 : 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(isMobile ? 10 : 12),
+                  ),
+                  child: Text(
+                    "Cancel",
+                    style: TextStyle(
+                      color: isLoading 
+                          ? colorScheme.onSurface.withOpacity(0.4)
+                          : colorScheme.onSurface.withOpacity(0.7),
+                      fontWeight: FontWeight.w500,
+                      fontSize: isMobile ? 14 : kIsWeb ? 15 : null,
+                    ),
+                  ),
                 ),
               ),
-              child: isLoading
-                  ? Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SizedBox(
-                          width: kIsWeb ? 18 : 16,
-                          height: kIsWeb ? 18 : 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              colorScheme.onPrimary,
-                            ),
+              SizedBox(width: isMobile ? 12 : 16),
+              Expanded(
+                flex: 2,
+                child: ElevatedButton(
+                  onPressed: isLoading ? null : () async {
+                    if (nameController.text.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              Icon(
+                                Icons.warning,
+                                color: colorScheme.onError,
+                                size: kIsWeb ? 20 : 18.sp,
+                              ),
+                              SizedBox(width: kIsWeb ? 12 : 8.sp),
+                              const Text("Please fill all required fields"),
+                            ],
+                          ),
+                          backgroundColor: colorScheme.error,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        SizedBox(width: kIsWeb ? 10 : 8),
-                        Text(
-                          categoryId != null ? "Updating..." : "Adding...",
+                      );
+                      return;
+                    }
+
+                    setLoading(true);
+
+                    try {
+                      String? imageUrl = await uploadImage();
+                      final position = int.tryParse(positionController.text) ?? 0;
+
+                      if (categoryId != null) {
+                        // Edit existing category
+                        await FirebaseFirestore.instance
+                            .collection("categories")
+                            .doc(categoryId)
+                            .update({
+                          "name": nameController.text.trim(),
+                          "image": imageUrl ?? '',
+                          "position": position,
+                        });
+
+                        if (mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Row(
+                                children: [
+                                  Icon(
+                                    Icons.check_circle,
+                                    color: colorScheme.onPrimary,
+                                    size: kIsWeb ? 20 : 18.sp,
+                                  ),
+                                  SizedBox(width: kIsWeb ? 12 : 8.sp),
+                                  const Text("Category updated successfully!"),
+                                ],
+                              ),
+                              backgroundColor: colorScheme.primary,
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              duration: const Duration(seconds: 3),
+                            ),
+                          );
+                        }
+                      } else {
+                        // Add new category
+                        await FirebaseFirestore.instance
+                            .collection("categories")
+                            .add({
+                          "name": nameController.text.trim(),
+                          "image": imageUrl ?? '',
+                          "restaurantId": restaurantId,
+                          "position": position,
+                          "createdAt": FieldValue.serverTimestamp(),
+                        });
+
+                        if (mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Row(
+                                children: [
+                                  Icon(
+                                    Icons.check_circle,
+                                    color: colorScheme.onPrimary,
+                                    size: kIsWeb ? 20 : 18.sp,
+                                  ),
+                                  SizedBox(width: kIsWeb ? 12 : 8.sp),
+                                  const Text("Category added successfully!"),
+                                ],
+                              ),
+                              backgroundColor: colorScheme.primary,
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              duration: const Duration(seconds: 3),
+                            ),
+                          );
+                        }
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Row(
+                              children: [
+                                Icon(
+                                  Icons.error,
+                                  color: colorScheme.onError,
+                                  size: kIsWeb ? 20 : 18.sp,
+                                ),
+                                SizedBox(width: kIsWeb ? 12 : 8.sp),
+                                Expanded(
+                                  child: Text("Error ${categoryId != null ? 'updating' : 'adding'} category: $e"),
+                                ),
+                              ],
+                            ),
+                            backgroundColor: colorScheme.error,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            duration: const Duration(seconds: 4),
+                          ),
+                        );
+                      }
+                    } finally {
+                      setLoading(false);
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isLoading 
+                        ? colorScheme.primary.withOpacity(0.6)
+                        : colorScheme.primary,
+                    foregroundColor: colorScheme.onPrimary,
+                    padding: EdgeInsets.symmetric(vertical: isMobile ? 14 : 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(isMobile ? 12 : 14),
+                    ),
+                  ),
+                  child: isLoading
+                      ? Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: kIsWeb ? 20 : 18,
+                              height: kIsWeb ? 20 : 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  colorScheme.onPrimary,
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: kIsWeb ? 12 : 8),
+                            Text(
+                              categoryId != null ? "Updating..." : "Adding...",
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: isMobile ? 14 : kIsWeb ? 15 : null,
+                              ),
+                            ),
+                          ],
+                        )
+                      : Text(
+                          categoryId != null ? "Update Category" : "Save Category",
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
-                            fontSize: kIsWeb ? 14 : null,
+                            fontSize: isMobile ? 14 : kIsWeb ? 15 : null,
                           ),
                         ),
-                      ],
-                    )
-                  : Text(
-                      categoryId != null ? "Update Category" : "Save Category",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: kIsWeb ? 14 : null,
-                      ),
-                    ),
-            ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

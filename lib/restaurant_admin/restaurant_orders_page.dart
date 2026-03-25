@@ -78,7 +78,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
     final isTablet = width >= 768 && width < 1024;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFFFFFF),
+      backgroundColor: Colors.white,
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection("orders")
@@ -95,9 +95,11 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
           final counts = _buildStatusCounts(allOrders);
 
           return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildHeader(isDesktop, isTablet),
               _buildFilterTabs(counts, isDesktop, isTablet),
+              SizedBox(height: 20),
               Expanded(
                 child: _buildOrdersGrid(filteredOrders, width, isDesktop, isTablet),
               ),
@@ -136,7 +138,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
     return Container(
       padding: EdgeInsets.fromLTRB(
         sidePadding,
-        isDesktop ? 16 : 12,
+        isDesktop ? 20 : 14,
         sidePadding,
         8,
       ),
@@ -144,46 +146,14 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Home / Orders',
-            style: _p(13, FontWeight.w400, const Color(0xFF8E8E8E)),
-          ),
-          const SizedBox(height: 8),
           Row(
             children: [
               Text(
                 'Orders',
                 style: _p(
-                  isDesktop ? 44 : (isTablet ? 38 : 30),
-                  FontWeight.w700,
+                  isDesktop ? 24 : (isTablet ? 38 : 30),
+                  FontWeight.w200,
                   const Color(0xFF1C1C1C),
-                ),
-              ),
-              const Spacer(),
-              SizedBox(
-                height: 44,
-                child: ElevatedButton(
-                  onPressed: () {
-                    // TODO: Navigate to new order page
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF070B2D),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.add, size: 16),
-                      const SizedBox(width: 8),
-                      Text('New Order',
-                          style: _p(14, FontWeight.w600, Colors.white)),
-                    ],
-                  ),
                 ),
               ),
             ],
@@ -199,59 +169,59 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
     final sidePadding = isDesktop ? 24.0 : (isTablet ? 20.0 : 14.0);
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(sidePadding, 0, sidePadding, 8),
+      padding: EdgeInsets.fromLTRB(sidePadding, 0, sidePadding, 10),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: Container(
-          padding: const EdgeInsets.all(3),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8F8F8),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: const Color(0xFFEAEAEA)),
-          ),
-          child: Row(
-            children: labels.map((label) {
-              final selected = _selectedFilter == label;
-              final text = '$label (${counts[label] ?? 0})';
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(999),
-                  onTap: () => setState(() => _selectedFilter = label),
-                  child: Container(
-                    padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: selected ? const Color(0xFFFFFFFF) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(999),
-                      border: selected
-                          ? Border.all(color: const Color(0xFFE3E3E3))
-                          : null,
+        child: Row(
+          children: labels.map((label) {
+            final selected = _selectedFilter == label;
+            final text = '$label (${counts[label] ?? 0})';
+            return Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(999),
+                onTap: () => setState(() => _selectedFilter = label),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: selected ? const Color(0xFFE8622A) : const Color(0xFFFFFFFF),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: selected ? const Color(0xFFE8622A) : const Color(0xFFDDDDDD),
                     ),
-                    child: Text(
-                      text,
-                      style: _p(
-                        13,
-                        selected ? FontWeight.w600 : FontWeight.w500,
-                        const Color(0xFF2A2A2A),
-                      ),
+                    boxShadow: selected ? [
+                      BoxShadow(
+                        color: const Color(0xFFE8622A).withOpacity(0.2),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      )
+                    ] : null,
+                  ),
+                  child: Text(
+                    text,
+                    style: _p(
+                      13,
+                      selected ? FontWeight.w600 : FontWeight.w500,
+                      selected ? Colors.white : const Color(0xFF555555),
                     ),
                   ),
                 ),
-              );
-            }).toList(),
-          ),
+              ),
+            );
+          }).toList(),
         ),
       ),
     );
   }
 
   Widget _buildOrdersGrid(
-    List<QueryDocumentSnapshot> filteredOrders,
-    double width,
-    bool isDesktop,
-    bool isTablet,
-  ) {
+      List<QueryDocumentSnapshot> filteredOrders,
+      double width,
+      bool isDesktop,
+      bool isTablet,
+      ) {
     if (filteredOrders.isEmpty) {
       return Center(
         child: Column(
@@ -280,7 +250,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
     final childAspectRatio = cardWidth / (isDesktop ? 290 : 300);
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(sidePadding, 12, sidePadding, 16),
+      padding: EdgeInsets.fromLTRB(sidePadding, 4, sidePadding, 12),
       child: GridView.builder(
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: crossAxisCount,
@@ -325,7 +295,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -344,7 +314,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
                       const SizedBox(width: 8),
                       Container(
                         padding:
-                            const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
                           color: _getStatusPillBg(status),
                           borderRadius: BorderRadius.circular(999),
@@ -426,7 +396,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
                         ),
                         const SizedBox(width: 10),
                         Text(
-                          '\$${price.toStringAsFixed(2)}',
+                          '₹${price.toStringAsFixed(2)}',
                           style: _p(12, FontWeight.w500, const Color(0xFF505050)),
                         ),
                       ],
@@ -452,8 +422,8 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
             Row(
               children: [
                 Text(
-                  '\$ ${totalAmount.toStringAsFixed(2)}',
-                  style: _p(18, FontWeight.w700, const Color(0xFF232323)),
+                  '₹ ${totalAmount.toStringAsFixed(2)}',
+                  style: _p(18, FontWeight.w700, Colors.red),
                 ),
                 const Spacer(),
                 SizedBox(
@@ -524,35 +494,35 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
 
   Color _getStatusPillBg(String status) {
     switch (status.toLowerCase()) {
-      case 'preparing':
-        return const Color(0xFF0C1338);
-      case 'ready':
-        return const Color(0xFFECEFF3);
       case 'pending':
-        return const Color(0xFFECEFF3);
+        return const Color(0xFFFEF3C7);   // amber yellow
+      case 'preparing':
+        return const Color(0xFFDBEAFE);   // sky blue
+      case 'ready':
+        return const Color(0xFFD1FAE5);   // mint green
       case 'served':
-        return const Color(0xFFE8EDF0);
+        return const Color(0xFFF3E8FF);   // soft purple
       case 'completed':
-        return const Color(0xFFEDF5EE);
+        return const Color(0xFFF3F4F6);   // light grey
       default:
-        return const Color(0xFFECEFF3);
+        return const Color(0xFFF3F4F6);
     }
   }
 
   Color _getStatusPillText(String status) {
     switch (status.toLowerCase()) {
-      case 'preparing':
-        return Colors.white;
-      case 'ready':
-        return const Color(0xFF3A3A3A);
       case 'pending':
-        return const Color(0xFF3A3A3A);
+        return const Color(0xFFB45309);   // dark amber
+      case 'preparing':
+        return const Color(0xFF1D4ED8);   // dark blue
+      case 'ready':
+        return const Color(0xFF065F46);   // dark green
       case 'served':
-        return const Color(0xFF4A4A4A);
+        return const Color(0xFF6B21A8);   // dark purple
       case 'completed':
-        return const Color(0xFF2D6C3A);
+        return const Color(0xFF374151);   // dark slate
       default:
-        return const Color(0xFF3A3A3A);
+        return const Color(0xFF374151);
     }
   }
 }

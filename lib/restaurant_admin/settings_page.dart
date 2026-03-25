@@ -20,21 +20,24 @@ class _SettingsPageState extends State<SettingsPage> {
   final _contactNumberController = TextEditingController();
   final _whatsappNumberController = TextEditingController();
   final _gstNumberController = TextEditingController();
-  
+
   // Operating Hours
   TimeOfDay _openingTime = const TimeOfDay(hour: 9, minute: 0);
   TimeOfDay _closingTime = const TimeOfDay(hour: 22, minute: 0);
-  
+
   // Billing Settings
   bool _enableGst = false;
   bool _enablePackagingCharge = false;
   final _gstPercentageController = TextEditingController();
   final _cessPercentageController = TextEditingController();
   final _packagingChargeController = TextEditingController();
-  
+
   // Additional Notes
   List<TextEditingController> _noteControllers = [];
-  List<String> _notes = [];
+
+  // Responsive helpers
+  bool get _isWeb => kIsWeb || MediaQuery.of(context).size.width > 768;
+  double get _contentMaxWidth => 860;
 
   @override
   void initState() {
@@ -52,64 +55,51 @@ class _SettingsPageState extends State<SettingsPage> {
     _gstPercentageController.dispose();
     _cessPercentageController.dispose();
     _packagingChargeController.dispose();
-    for (var controller in _noteControllers) {
-      controller.dispose();
+    for (var c in _noteControllers) {
+      c.dispose();
     }
     super.dispose();
   }
 
   Future<void> _loadRestaurantInfo() async {
     try {
-      DocumentSnapshot restaurantDoc = await FirebaseFirestore.instance
+      DocumentSnapshot doc = await FirebaseFirestore.instance
           .collection('restaurants')
           .doc(widget.restaurantId)
           .get();
 
-      if (restaurantDoc.exists) {
-        Map<String, dynamic> data = restaurantDoc.data() as Map<String, dynamic>;
+      if (doc.exists) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
         setState(() {
           _restaurantNameController.text = data['restaurantName'] ?? '';
           _addressController.text = data['address'] ?? '';
           _contactNumberController.text = data['contactNumber'] ?? '';
           _whatsappNumberController.text = data['whatsappNumber'] ?? '';
           _gstNumberController.text = data['gstNumber'] ?? '';
-          
-          // Parse opening time
+
           if (data['openingTime'] != null) {
-            List<String> timeParts = (data['openingTime'] as String).split(':');
-            _openingTime = TimeOfDay(
-              hour: int.parse(timeParts[0]),
-              minute: int.parse(timeParts[1]),
-            );
+            List<String> parts = (data['openingTime'] as String).split(':');
+            _openingTime = TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
           }
-          
-          // Parse closing time
           if (data['closingTime'] != null) {
-            List<String> timeParts = (data['closingTime'] as String).split(':');
-            _closingTime = TimeOfDay(
-              hour: int.parse(timeParts[0]),
-              minute: int.parse(timeParts[1]),
-            );
+            List<String> parts = (data['closingTime'] as String).split(':');
+            _closingTime = TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
           }
-          
-          // Load billing settings
+
           _enableGst = data['enableGst'] ?? false;
           _enablePackagingCharge = data['enablePackagingCharge'] ?? false;
           _gstPercentageController.text = data['gstPercentage'] ?? '';
           _cessPercentageController.text = data['cessPercentage'] ?? '';
           _packagingChargeController.text = data['packagingCharge'] ?? '';
-          
-          // Load additional notes
+
           List<dynamic> notesData = data['additionalNotes'] ?? [];
-          _notes = List<String>.from(notesData);
-          _noteControllers.clear();
-          for (String note in _notes) {
-            _noteControllers.add(TextEditingController(text: note));
-          }
+          _noteControllers = notesData
+              .map((n) => TextEditingController(text: n.toString()))
+              .toList();
         });
       }
     } catch (e) {
-      print('Error loading restaurant info: $e');
+      debugPrint('Error loading restaurant info: $e');
     }
   }
 
@@ -124,765 +114,484 @@ class _SettingsPageState extends State<SettingsPage> {
         'contactNumber': _contactNumberController.text.trim(),
         'whatsappNumber': _whatsappNumberController.text.trim(),
         'gstNumber': _gstNumberController.text.trim(),
-        'openingTime': '${_openingTime.hour.toString().padLeft(2, '0')}:${_openingTime.minute.toString().padLeft(2, '0')}',
-        'closingTime': '${_closingTime.hour.toString().padLeft(2, '0')}:${_closingTime.minute.toString().padLeft(2, '0')}',
+        'openingTime':
+        '${_openingTime.hour.toString().padLeft(2, '0')}:${_openingTime.minute.toString().padLeft(2, '0')}',
+        'closingTime':
+        '${_closingTime.hour.toString().padLeft(2, '0')}:${_closingTime.minute.toString().padLeft(2, '0')}',
         'enableGst': _enableGst,
         'enablePackagingCharge': _enablePackagingCharge,
         'gstPercentage': _gstPercentageController.text.trim(),
         'cessPercentage': _cessPercentageController.text.trim(),
         'packagingCharge': _packagingChargeController.text.trim(),
-        'additionalNotes': _noteControllers.map((controller) => controller.text.trim()).toList(),
+        'additionalNotes':
+        _noteControllers.map((c) => c.text.trim()).toList(),
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle, color: Colors.white),
-              SizedBox(width: 8.w),
-              const Text("Restaurant information saved successfully!"),
-            ],
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
+                SizedBox(width: 8),
+                Text("Restaurant information saved successfully!",
+                    style: TextStyle(fontSize: 14)),
+              ],
+            ),
+            backgroundColor: const Color(0xFF22C55E),
+            behavior: SnackBarBehavior.floating,
+            shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(16),
           ),
-          backgroundColor: Colors.green.shade500,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      );
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.error, color: Colors.white),
-              SizedBox(width: 8.w),
-              Text("Error saving restaurant info: $e"),
-            ],
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                    child: Text("Error: $e",
+                        style: const TextStyle(fontSize: 14))),
+              ],
+            ),
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+            shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(16),
           ),
-          backgroundColor: Colors.red.shade500,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      );
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.blue.shade50,
-              Colors.blue.shade100,
-              Colors.purple.shade50,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _buildHeader(),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.all(kIsWeb ? 24 : 24.w),
-                  child: Column(
-                    children: [
-                      _buildRestaurantInformationSection(),
-                      SizedBox(height: kIsWeb ? 24 : 24.h),
-                      _buildOperatingHoursSection(),
-                      SizedBox(height: kIsWeb ? 24 : 24.h),
-                      _buildBillingSettingsSection(),
-                      SizedBox(height: kIsWeb ? 24 : 24.h),
-                      _buildAdditionalNotesSection(),
-                      SizedBox(height: kIsWeb ? 32 : 32.h),
-                      _buildSaveButton(),
-                    ],
+      backgroundColor: const Color(0xFFF8F9FA),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildPageHeader(),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: _isWeb ? 32 : 20.w,
+                  vertical: _isWeb ? 24 : 20.h,
+                ),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: _contentMaxWidth),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildRestaurantInformationSection(),
+                        SizedBox(height: _isWeb ? 20 : 18.h),
+                        _buildOperatingHoursSection(),
+                        SizedBox(height: _isWeb ? 20 : 18.h),
+                        _buildBillingSettingsSection(),
+                        SizedBox(height: _isWeb ? 20 : 18.h),
+                        _buildAdditionalNotesSection(),
+                        SizedBox(height: _isWeb ? 28 : 24.h),
+                        _buildSaveButton(),
+                        SizedBox(height: _isWeb ? 32 : 24.h),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
+  // ─── Page Header ──────────────────────────────────────────────────────────
+  Widget _buildPageHeader() {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all( kIsWeb ? 24 : 24.sp),
+      padding: EdgeInsets.symmetric(
+        horizontal: _isWeb ? 32 : 20.w,
+        vertical: _isWeb ? 20 : 16.h,
+      ),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(color: Color(0xFFE5E7EB), width: 1),
+        ),
+      ),
+      child: Row(
+        children: [
+          if (!_isWeb) ...[
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                width: 36.w,
+                height: 36.w,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F4F6),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.arrow_back_ios_new,
+                    size: 16.sp, color: const Color(0xFF374151)),
+              ),
+            ),
+            SizedBox(width: 12.w),
+          ],
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Restaurant Settings",
+                style: TextStyle(
+                  fontSize: _isWeb ? 22 : 18.sp,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF111827),
+                  letterSpacing: -0.3,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                "Manage your restaurant information",
+                style: TextStyle(
+                  fontSize: _isWeb ? 14 : 12.sp,
+                  color: const Color(0xFF6B7280),
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Section Card Shell ───────────────────────────────────────────────────
+  Widget _buildSectionCard({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required List<Widget> children,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(_isWeb ? 24 : 18.w),
       decoration: BoxDecoration(
         color: Colors.white,
+        borderRadius: BorderRadius.circular(_isWeb ? 12 : 10.r),
+        border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: EdgeInsets.all(kIsWeb ? 12 : 12.sp),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.grey.shade300, Colors.grey.shade400],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                Icons.arrow_back,
-                color: Colors.white,
-                size: kIsWeb ? 20 : 20.sp,
-              ),
-            ),
-          ),
-          SizedBox(width: 16.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Restaurant Settings",
-                  style: TextStyle(
-                    fontSize:  kIsWeb ? 20 : 20.sp,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade800,
-                  ),
-                ),
-                SizedBox(height: 4.h),
-                Text(
-                  "Manage your restaurant information",
-                  style: TextStyle(
-                    fontSize: kIsWeb ? 14 : 14.sp,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: EdgeInsets.all(kIsWeb ? 12 : 12.sp),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [AppColors.primary.withOpacity(0.8), AppColors.primary],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Icon(
-              Icons.restaurant,
-              color: Colors.white,
-              size:  kIsWeb ? 20 : 24.sp,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRestaurantInformationSection() {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all( kIsWeb ? 24 : 24.sp),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(kIsWeb ? 24 : 20.sp),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(
-          color: AppColors.primary.withOpacity(0.08),
-          width: 1,
-        ),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Section header
           Row(
             children: [
               Container(
-                padding: EdgeInsets.all( kIsWeb ? 14 : 10.sp),
+                width: _isWeb ? 38 : 34.w,
+                height: _isWeb ? 38 : 34.w,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [AppColors.primary.withOpacity(0.8), AppColors.primary],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
+                  color: iconColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(
-                  Icons.info,
-                  color: Colors.white,
-                  size:  kIsWeb ? 20 : 20.sp,
-                ),
+                child: Icon(icon, color: iconColor, size: _isWeb ? 20 : 18.sp),
               ),
-              SizedBox(width: 12.w),
+              SizedBox(width: _isWeb ? 12 : 10.w),
               Text(
-                "Restaurant Information",
+                title,
                 style: TextStyle(
-                  fontSize:  kIsWeb ? 20 : 20.sp,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey.shade800,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 24.h),
-          
-          _buildTextField(
-            controller: _restaurantNameController,
-            label: "Restaurant Name",
-            icon: Icons.restaurant,
-            hintText: "Enter restaurant name",
-          ),
-          
-          SizedBox(height: kIsWeb ? 16 : 16.h),
-          
-          _buildTextField(
-            controller: _addressController,
-            label: "Address",
-            icon: Icons.location_on,
-            hintText: "Enter restaurant address",
-          ),
-          
-          SizedBox(height: kIsWeb ? 16 : 16.h),
-          
-          _buildTextField(
-            controller: _contactNumberController,
-            label: "Contact Number",
-            icon: Icons.phone,
-            hintText: "Enter contact number",
-            keyboardType: TextInputType.phone,
-          ),
-          
-          SizedBox(height: kIsWeb ? 16 : 16.h),
-          
-          _buildTextField(
-            controller: _whatsappNumberController,
-            label: "WhatsApp Number",
-            icon: Icons.multiline_chart,
-            hintText: "Enter WhatsApp number",
-            keyboardType: TextInputType.phone,
-          ),
-          
-          SizedBox(height: kIsWeb ? 16 : 16.h),
-          
-          _buildTextField(
-            controller: _gstNumberController,
-            label: "GST Number",
-            icon: Icons.receipt,
-            hintText: "Enter GST number",
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOperatingHoursSection() {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(kIsWeb ? 24 : 24.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(
-          color: AppColors.primary.withOpacity(0.08),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(kIsWeb ? 10 : 10.sp),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.green.withOpacity(0.8), Colors.green],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.schedule,
-                  color: Colors.white,
-                  size: kIsWeb ? 20 : 20.sp,
-                ),
-              ),
-              SizedBox(width: kIsWeb ? 12 : 12.sp),
-              Text(
-                "Operating Hours",
-                style: TextStyle(
-                  fontSize: kIsWeb ? 20 : 20.sp,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey.shade800,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: kIsWeb ? 24 : 24.h),
-          
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Opening Time",
-                      style: TextStyle(
-                        fontSize: kIsWeb ? 16 : 16.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                    SizedBox(height: kIsWeb ? 8 : 8.h),
-                    GestureDetector(
-                      onTap: () => _selectTime(context, 'opening'),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 16 : 16.w, vertical: kIsWeb ? 16 : 16.h),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.green.withOpacity(0.3),
-                            width: 1,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.access_time,
-                              color: Colors.green,
-                              size: kIsWeb ? 20 : 20.sp,
-                            ),
-                            SizedBox(width: kIsWeb ? 12 : 12.sp),
-                            Expanded(
-                              child: Text(
-                                _formatTime(_openingTime),
-                                style: TextStyle(
-                                  fontSize: kIsWeb ? 16 : 16.sp,
-                                  color: Colors.grey.shade800,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                            Icon(
-                              Icons.keyboard_arrow_down,
-                              color: Colors.green,
-                              size: kIsWeb ? 20 : 20.sp,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
-              SizedBox(width: kIsWeb ? 16 : 16.sp),
-              
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Closing Time",
-                      style: TextStyle(
-                        fontSize: kIsWeb ? 16 : 16.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                    SizedBox(height: kIsWeb ? 8 : 8.h),
-                    GestureDetector(
-                      onTap: () => _selectTime(context, 'closing'),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 16 : 16.w, vertical: kIsWeb ? 16 : 16.h),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.red.withOpacity(0.3),
-                            width: 1,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.access_time,
-                              color: Colors.red,
-                              size: kIsWeb ? 20 : 20.sp,
-                            ),
-                            SizedBox(width: kIsWeb ? 12 : 12.sp),
-                            Expanded(
-                              child: Text(
-                                _formatTime(_closingTime),
-                                style: TextStyle(
-                                  fontSize: kIsWeb ? 16 : 16.sp,
-                                  color: Colors.grey.shade800,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                            Icon(
-                              Icons.keyboard_arrow_down,
-                              color: Colors.red,
-                              size: kIsWeb ? 20 : 20.sp,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBillingSettingsSection() {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(kIsWeb ? 24 : 24.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(
-          color: AppColors.primary.withOpacity(0.08),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(kIsWeb ? 10 : 10.sp),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.purple.withOpacity(0.8), Colors.purple],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.receipt,
-                  color: Colors.white,
-                  size: kIsWeb ? 20 : 20.sp,
-                ),
-              ),
-              SizedBox(width: kIsWeb ? 12 : 12.sp),
-              Text(
-                "Billing Settings",
-                style: TextStyle(
-                  fontSize: kIsWeb ? 20 : 20.sp,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey.shade800,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 24.h),
-          
-          _buildToggleSetting(
-            title: "Enable GST",
-            description: "Add GST and cess to customer bills.",
-            value: _enableGst,
-            onChanged: (value) {
-              setState(() {
-                _enableGst = value;
-              });
-            },
-          ),
-          
-          if (_enableGst) ...[
-            SizedBox(height: kIsWeb ? 16 : 16.h),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildPercentageInputField(
-                    controller: _gstPercentageController,
-                    label: "GST %",
-                  ),
-                ),
-                SizedBox(width: 16.w),
-                Expanded(
-                  child: _buildPercentageInputField(
-                    controller: _cessPercentageController,
-                    label: "Cess %",
-                  ),
-                ),
-              ],
-            ),
-          ],
-          
-          SizedBox(height: 24.h),
-          
-          _buildToggleSetting(
-            title: "Enable Packaging Charge",
-            description: "Add packaging charge for parcel orders.",
-            value: _enablePackagingCharge,
-            onChanged: (value) {
-              setState(() {
-                _enablePackagingCharge = value;
-              });
-            },
-          ),
-          
-          if (_enablePackagingCharge) ...[
-            SizedBox(height: kIsWeb ? 16 : 16.h),
-            _buildCurrencyInputField(
-              controller: _packagingChargeController,
-              label: "Packaging Charge",
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAdditionalNotesSection() {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(kIsWeb ? 24 : 24.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(
-          color: AppColors.primary.withOpacity(0.08),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(kIsWeb ? 10 : 10.sp),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.orange.withOpacity(0.8), Colors.orange],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.note_add,
-                  color: Colors.white,
-                  size: kIsWeb ? 20 : 20.sp,
-                ),
-              ),
-              SizedBox(width: kIsWeb ? 12 : 12.sp),
-              Text(
-                "Additional Notes",
-                style: TextStyle(
-                  fontSize: kIsWeb ? 20 : 20.sp,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey.shade800,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 24.h),
-          
-          // Display existing notes
-          ..._noteControllers.asMap().entries.map((entry) {
-            int index = entry.key;
-            TextEditingController controller = entry.value;
-            return Padding(
-              padding: EdgeInsets.only(bottom: 16.h),
-              child: _buildNoteField(controller, index),
-            );
-          }).toList(),
-          
-          // Add Note Button
-          Container(
-            width: double.infinity,
-            height: 50.h,
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: Colors.orange.withOpacity(0.3),
-                width: 2,
-                style: BorderStyle.solid,
-              ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: OutlinedButton.icon(
-              onPressed: _addNote,
-              icon: Icon(
-                Icons.add,
-                color: Colors.orange,
-                size: kIsWeb ? 20 : 20.sp,
-              ),
-              label: Text(
-                "Add Note",
-                style: TextStyle(
-                  fontSize: kIsWeb ? 16 : 16.sp,
+                  fontSize: _isWeb ? 16 : 15.sp,
                   fontWeight: FontWeight.w600,
-                  color: Colors.orange,
+                  color: const Color(0xFF111827),
                 ),
               ),
-              style: OutlinedButton.styleFrom(
-                side: BorderSide.none,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
+            ],
           ),
+          Padding(
+            padding: EdgeInsets.only(top: _isWeb ? 20 : 16.h),
+            child: const Divider(color: Color(0xFFF3F4F6), height: 1),
+          ),
+          SizedBox(height: _isWeb ? 20 : 16.h),
+          ...children,
         ],
       ),
     );
   }
 
-  Widget _buildSaveButton() {
-    return Container(
-      width: double.infinity,
-      height: kIsWeb ? 56 : 56.h,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppColors.primary.withOpacity(0.8), AppColors.primary],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+  // ─── Restaurant Information ───────────────────────────────────────────────
+  Widget _buildRestaurantInformationSection() {
+    return _buildSectionCard(
+      icon: Icons.info_outline_rounded,
+      iconColor: AppColors.primary,
+      title: "Restaurant Information",
+      children: [
+        _buildField(
+          label: "Restaurant Name",
+          controller: _restaurantNameController,
+          icon: Icons.restaurant_menu_outlined,
+          hint: "Enter restaurant name",
         ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.4),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: ElevatedButton(
-        onPressed: _saveRestaurantInfo,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          shadowColor: Colors.transparent,
-          padding: EdgeInsets.zero,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+        SizedBox(height: _isWeb ? 16 : 14.h),
+        _buildField(
+          label: "Address",
+          controller: _addressController,
+          icon: Icons.location_on_outlined,
+          hint: "Enter restaurant address",
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        SizedBox(height: _isWeb ? 16 : 14.h),
+        _buildField(
+          label: "Contact Number",
+          controller: _contactNumberController,
+          icon: Icons.phone_outlined,
+          hint: "Enter contact number",
+          keyboardType: TextInputType.phone,
+        ),
+        SizedBox(height: _isWeb ? 16 : 14.h),
+        _buildField(
+          label: "WhatsApp Number",
+          controller: _whatsappNumberController,
+          icon: Icons.chat_bubble_outline_rounded,
+          hint: "Enter WhatsApp number",
+          keyboardType: TextInputType.phone,
+        ),
+        SizedBox(height: _isWeb ? 16 : 14.h),
+        _buildField(
+          label: "GST Number",
+          controller: _gstNumberController,
+          icon: Icons.receipt_long_outlined,
+          hint: "Enter GST number",
+        ),
+      ],
+    );
+  }
+
+  // ─── Operating Hours ──────────────────────────────────────────────────────
+  Widget _buildOperatingHoursSection() {
+    return _buildSectionCard(
+      icon: Icons.schedule_outlined,
+      iconColor: const Color(0xFF10B981),
+      title: "Operating Hours",
+      children: [
+        _isWeb
+            ? Row(
           children: [
-            Icon(
-              Icons.save,
-              color: Colors.white,
-              size: kIsWeb ? 20 : 20.sp,
-            ),
-            SizedBox(width: kIsWeb ? 12 : 12.sp),
-            Text(
-              "Save Restaurant Information",
-              style: TextStyle(
-                fontSize: kIsWeb ? 16 : 16.sp,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-            ),
+            Expanded(child: _buildTimePickerTile("Opening Time", 'opening')),
+            const SizedBox(width: 16),
+            Expanded(child: _buildTimePickerTile("Closing Time", 'closing')),
+          ],
+        )
+            : Column(
+          children: [
+            _buildTimePickerTile("Opening Time", 'opening'),
+            SizedBox(height: 12.h),
+            _buildTimePickerTile("Closing Time", 'closing'),
           ],
         ),
+      ],
+    );
+  }
+
+  Widget _buildTimePickerTile(String label, String type) {
+    final TimeOfDay time = type == 'opening' ? _openingTime : _closingTime;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: _isWeb ? 13 : 12.sp,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xFF374151),
+          ),
+        ),
+        SizedBox(height: _isWeb ? 6 : 6.h),
+        GestureDetector(
+          onTap: () => _selectTime(context, type),
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: _isWeb ? 14 : 12.w,
+              vertical: _isWeb ? 12 : 11.h,
+            ),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF9FAFB),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFD1D5DB), width: 1),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.access_time_outlined,
+                    size: 18, color: Color(0xFF9CA3AF)),
+                const SizedBox(width: 10),
+                Text(
+                  _formatTime(time),
+                  style: TextStyle(
+                    fontSize: _isWeb ? 14 : 13.sp,
+                    color: const Color(0xFF111827),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const Spacer(),
+                const Icon(Icons.keyboard_arrow_down_rounded,
+                    size: 18, color: Color(0xFF9CA3AF)),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ─── Billing Settings ─────────────────────────────────────────────────────
+  Widget _buildBillingSettingsSection() {
+    return _buildSectionCard(
+      icon: Icons.account_balance_wallet_outlined,
+      iconColor: const Color(0xFF8B5CF6),
+      title: "Billing Settings",
+      children: [
+        _buildToggleRow(
+          title: "Enable GST",
+          description: "Apply GST on all orders.",
+          value: _enableGst,
+          onChanged: (v) => setState(() => _enableGst = v),
+        ),
+        if (_enableGst) ...[
+          SizedBox(height: _isWeb ? 16 : 14.h),
+          _isWeb
+              ? Row(
+            children: [
+              Expanded(
+                  child: _buildPercentField(
+                      controller: _gstPercentageController,
+                      label: "GST %")),
+              const SizedBox(width: 16),
+              Expanded(
+                  child: _buildPercentField(
+                      controller: _cessPercentageController,
+                      label: "Cess %")),
+            ],
+          )
+              : Column(
+            children: [
+              _buildPercentField(
+                  controller: _gstPercentageController, label: "GST %"),
+              SizedBox(height: 12.h),
+              _buildPercentField(
+                  controller: _cessPercentageController, label: "Cess %"),
+            ],
+          ),
+        ],
+        SizedBox(height: _isWeb ? 16 : 14.h),
+        _buildToggleRow(
+          title: "Enable Packaging Charge",
+          description: "Add packaging charge for parcel orders.",
+          value: _enablePackagingCharge,
+          onChanged: (v) => setState(() => _enablePackagingCharge = v),
+        ),
+        if (_enablePackagingCharge) ...[
+          SizedBox(height: _isWeb ? 16 : 14.h),
+          _buildCurrencyField(
+              controller: _packagingChargeController,
+              label: "Packaging Charge"),
+        ],
+      ],
+    );
+  }
+
+  // ─── Additional Notes ─────────────────────────────────────────────────────
+  Widget _buildAdditionalNotesSection() {
+    return _buildSectionCard(
+      icon: Icons.note_alt_outlined,
+      iconColor: const Color(0xFFF97316),
+      title: "Additional Notes",
+      children: [
+        ..._noteControllers.asMap().entries.map((entry) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: _isWeb ? 12 : 10.h),
+            child: _buildNoteField(entry.value, entry.key),
+          );
+        }),
+        GestureDetector(
+          onTap: _addNote,
+          child: Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(vertical: _isWeb ? 12 : 11.h),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF7ED),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                  color: const Color(0xFFFED7AA), width: 1.5),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.add_circle_outline,
+                    color: Color(0xFFF97316), size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  "Add Note",
+                  style: TextStyle(
+                    fontSize: _isWeb ? 14 : 13.sp,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFFF97316),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ─── Save Button ──────────────────────────────────────────────────────────
+  Widget _buildSaveButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: _isWeb ? 48 : 48.h,
+      child: ElevatedButton.icon(
+        onPressed: _saveRestaurantInfo,
+        icon: const Icon(Icons.save_outlined, size: 18, color: Colors.white),
+        label: const Text(
+          "Save Restaurant Information",
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+            letterSpacing: 0.2,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
       ),
     );
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
+  // ─── Reusable Widgets ─────────────────────────────────────────────────────
+  Widget _buildField({
     required String label,
+    required TextEditingController controller,
     required IconData icon,
-    required String hintText,
+    required String hint,
     TextInputType? keyboardType,
   }) {
     return Column(
@@ -891,49 +600,258 @@ class _SettingsPageState extends State<SettingsPage> {
         Text(
           label,
           style: TextStyle(
-            fontSize: kIsWeb ? 16 : 16.sp,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey.shade700,
+            fontSize: _isWeb ? 13 : 12.sp,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xFF374151),
           ),
         ),
-        SizedBox(height: kIsWeb ? 8 : 8.h),
+        SizedBox(height: _isWeb ? 6 : 6.h),
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
+          style: TextStyle(
+            fontSize: _isWeb ? 14 : 13.sp,
+            color: const Color(0xFF111827),
+          ),
           decoration: InputDecoration(
-            hintText: hintText,
-            prefixIcon: Icon(icon, color: AppColors.primary),
+            hintText: hint,
+            hintStyle: const TextStyle(color: Color(0xFFBDBDBD), fontSize: 14),
+            prefixIcon: Icon(icon, size: 18, color: const Color(0xFF9CA3AF)),
+            contentPadding: EdgeInsets.symmetric(
+                horizontal: _isWeb ? 14 : 12.w,
+                vertical: _isWeb ? 12 : 11.h),
+            filled: true,
+            fillColor: const Color(0xFFF9FAFB),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.primary, width: 2),
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: AppColors.primary, width: 1.5),
             ),
-            contentPadding: EdgeInsets.symmetric(horizontal: kIsWeb ? 16 : 16.w, vertical: kIsWeb ? 12 : 12.h),
           ),
         ),
       ],
     );
   }
 
+  Widget _buildToggleRow({
+    required String title,
+    required String description,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+          horizontal: _isWeb ? 14 : 12.w, vertical: _isWeb ? 12 : 11.h),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: _isWeb ? 14 : 13.sp,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF111827),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: _isWeb ? 12 : 11.sp,
+                    color: const Color(0xFF6B7280),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Transform.scale(
+            scale: 0.85,
+            child: Switch(
+              value: value,
+              onChanged: onChanged,
+              activeColor: AppColors.primary,
+              activeTrackColor: AppColors.primary.withOpacity(0.25),
+              inactiveThumbColor: const Color(0xFFD1D5DB),
+              inactiveTrackColor: const Color(0xFFE5E7EB),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPercentField({
+    required TextEditingController controller,
+    required String label,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: _isWeb ? 13 : 12.sp,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xFF374151),
+          ),
+        ),
+        SizedBox(height: _isWeb ? 6 : 6.h),
+        TextFormField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          style: TextStyle(fontSize: _isWeb ? 14 : 13.sp),
+          decoration: InputDecoration(
+            suffixText: '%',
+            suffixStyle: const TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w500),
+            contentPadding: EdgeInsets.symmetric(
+                horizontal: _isWeb ? 14 : 12.w,
+                vertical: _isWeb ? 12 : 11.h),
+            filled: true,
+            fillColor: const Color(0xFFF9FAFB),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCurrencyField({
+    required TextEditingController controller,
+    required String label,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: _isWeb ? 13 : 12.sp,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xFF374151),
+          ),
+        ),
+        SizedBox(height: _isWeb ? 6 : 6.h),
+        TextFormField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          style: TextStyle(fontSize: _isWeb ? 14 : 13.sp),
+          decoration: InputDecoration(
+            prefixText: '₹ ',
+            prefixStyle: const TextStyle(
+                color: Color(0xFF374151), fontWeight: FontWeight.w500),
+            contentPadding: EdgeInsets.symmetric(
+                horizontal: _isWeb ? 14 : 12.w,
+                vertical: _isWeb ? 12 : 11.h),
+            filled: true,
+            fillColor: const Color(0xFFF9FAFB),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNoteField(TextEditingController controller, int index) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: TextFormField(
+            controller: controller,
+            maxLines: 2,
+            style: TextStyle(fontSize: _isWeb ? 14 : 13.sp),
+            decoration: InputDecoration(
+              hintText: 'Enter note ${index + 1}',
+              hintStyle:
+              const TextStyle(color: Color(0xFFBDBDBD), fontSize: 13),
+              contentPadding: EdgeInsets.symmetric(
+                  horizontal: _isWeb ? 14 : 12.w,
+                  vertical: _isWeb ? 12 : 10.h),
+              filled: true,
+              fillColor: const Color(0xFFF9FAFB),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(
+                    color: Color(0xFFF97316), width: 1.5),
+              ),
+            ),
+          ),
+        ),
+        SizedBox(width: _isWeb ? 10 : 8.w),
+        GestureDetector(
+          onTap: () => _removeNote(index),
+          child: Container(
+            width: _isWeb ? 40 : 38.w,
+            height: _isWeb ? 40 : 38.w,
+            margin: const EdgeInsets.only(top: 1),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEF2F2),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFFECACA)),
+            ),
+            child: const Icon(Icons.delete_outline,
+                color: Color(0xFFEF4444), size: 18),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ─── Time Picker ──────────────────────────────────────────────────────────
   Future<void> _selectTime(BuildContext context, String type) async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: type == 'opening' ? _openingTime : _closingTime,
-      builder: (BuildContext context, Widget? child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false),
-          child: child!,
-        );
-      },
+      builder: (ctx, child) => MediaQuery(
+        data: MediaQuery.of(ctx).copyWith(alwaysUse24HourFormat: false),
+        child: child!,
+      ),
     );
-
     if (picked != null) {
       setState(() {
         if (type == 'opening') {
@@ -946,202 +864,14 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   String _formatTime(TimeOfDay time) {
-    final hour = time.hourOfPeriod;
-    final minute = time.minute;
+    final h = time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod;
+    final m = time.minute.toString().padLeft(2, '0');
     final period = time.period == DayPeriod.am ? 'AM' : 'PM';
-    
-    return '${hour.toString().padLeft(1, '0')}:${minute.toString().padLeft(2, '0')} $period';
-  }
-
-  Widget _buildToggleSetting({
-    required String title,
-    required String description,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(kIsWeb ? 16 : 16.w),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.grey.shade200,
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: kIsWeb ? 16 : 16.sp,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey.shade800,
-                  ),
-                ),
-                SizedBox(height: kIsWeb ? 4 : 4.h),
-                Text(
-                  description,
-                  style: TextStyle(
-                    fontSize: kIsWeb ? 13 : 13.sp,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: AppColors.primary,
-            activeTrackColor: AppColors.primary.withOpacity(0.3),
-            inactiveThumbColor: Colors.grey.shade400,
-            inactiveTrackColor: Colors.grey.shade200,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPercentageInputField({
-    required TextEditingController controller,
-    required String label,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: kIsWeb ? 14 : 14.sp,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey.shade700,
-          ),
-        ),
-        SizedBox(height: kIsWeb ? 8 : 8.h),
-        TextFormField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(
-            suffixText: '%',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.primary, width: 2),
-            ),
-            contentPadding: EdgeInsets.symmetric(horizontal: kIsWeb ? 16 : 16.w, vertical: kIsWeb ? 12 : 12.h),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCurrencyInputField({
-    required TextEditingController controller,
-    required String label,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: kIsWeb ? 16 : 16.sp,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey.shade700,
-          ),
-        ),
-        SizedBox(height: kIsWeb ? 8 : 8.h),
-        TextFormField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(
-            prefixText: '₹',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.primary, width: 2),
-            ),
-            contentPadding: EdgeInsets.symmetric(horizontal: kIsWeb ? 16 : 16.w, vertical: kIsWeb ? 12 : 12.h),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildNoteField(TextEditingController controller, int index) {
-    return Row(
-      children: [
-        Expanded(
-          child: TextFormField(
-            controller: controller,
-            maxLines: 2,
-            decoration: InputDecoration(
-              hintText: 'Enter note ${index + 1}',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey.shade300),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey.shade300),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.orange, width: 2),
-              ),
-              contentPadding: EdgeInsets.symmetric(horizontal: kIsWeb ? 16 : 16.w, vertical: kIsWeb ? 12 : 12.h),
-            ),
-          ),
-        ),
-        SizedBox(width: kIsWeb ? 12 : 12.sp),
-        Container(
-          width: kIsWeb ? 48 : 48.w,
-          height: kIsWeb ? 48 : 48.w,
-          decoration: BoxDecoration(
-            color: Colors.red.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: Colors.red.withOpacity(0.3),
-              width: 1,
-            ),
-          ),
-          child: IconButton(
-            onPressed: () => _removeNote(index),
-            icon: Icon(
-              Icons.delete,
-              color: Colors.red,
-              size: kIsWeb ? 20 : 20.sp,
-            ),
-            padding: EdgeInsets.zero,
-          ),
-        ),
-      ],
-    );
+    return '$h:$m $period';
   }
 
   void _addNote() {
-    setState(() {
-      _noteControllers.add(TextEditingController());
-    });
+    setState(() => _noteControllers.add(TextEditingController()));
   }
 
   void _removeNote(int index) {

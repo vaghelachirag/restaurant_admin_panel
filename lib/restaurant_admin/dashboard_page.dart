@@ -66,13 +66,13 @@ class _SItem {
 }
 
 const _sItems = [
-  _SItem(Icons.grid_view_rounded,    "Dashboard"),
-  _SItem(Icons.receipt_long_rounded, "Orders"),
-  _SItem(Icons.category_rounded,     "Categories"),
-  _SItem(Icons.restaurant_menu,      "Menu Items"),
-  _SItem(Icons.menu_book_rounded,    "Customer Menu"),
-  _SItem(Icons.link_rounded,         "Menu Link"),
-  _SItem(Icons.settings_rounded,     "Settings"),
+  _SItem(Icons.space_dashboard_outlined,   "Dashboard"),
+  _SItem(Icons.shopping_bag_outlined,      "Orders"),
+  _SItem(Icons.folder_open_outlined,       "Categories"),
+  _SItem(Icons.restaurant_outlined,        "Menu Items"),
+  _SItem(Icons.storefront_outlined,        "Customer Menu"),
+  _SItem(Icons.language_outlined,          "Menu Link"),
+  _SItem(Icons.settings_outlined,          "Settings"),
 ];
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -398,19 +398,9 @@ class _DashboardPageState extends State<DashboardPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Breadcrumb
-          Row(children: [
-            Text("Home", style: _p(12, FontWeight.w400, _C.textLight)),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 5),
-              child: Text("/", style: _p(12, FontWeight.w400, _C.textLight)),
-            ),
-            Text("Dashboard", style: _p(12, FontWeight.w400, _C.textMid)),
-          ]),
-          SizedBox(height: isMobile ? 10 : 12),
-
           // Page title
           Text("Dashboard",
-              style: _p(isMobile ? 26 : 32, FontWeight.w700, _C.textDark)),
+              style: _p(isMobile ? 26 : 24, FontWeight.w200, _C.textDark)),
           SizedBox(height: isMobile ? 18 : 24),
 
           // Stat cards
@@ -439,81 +429,102 @@ class _Sidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 220,
-      color: _C.sidebar,
+      width: 230,
+      decoration: const BoxDecoration(
+        color: _C.sidebar,
+        border: Border(
+          right: BorderSide(color: Color(0xFFEEEEEE), width: 1),
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Logo area
+          // ── Logo / Brand area ──────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(18, 22, 18, 18),
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
             child: Row(children: [
               Container(
-                width: 42, height: 42,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
-                    color: _C.orange,
-                    borderRadius: BorderRadius.circular(12)),
-                child: const Icon(Icons.local_fire_department_rounded,
+                  color: _C.orange,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.storefront_rounded,
                     color: Colors.white, size: 22),
               ),
-              const SizedBox(width: 11),
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text("Restaurant",
-                    style: _p(14, FontWeight.w700, _C.textDark)),
-                Text("Admin Panel",
-                    style: _p(10, FontWeight.w400, _C.textLight)),
-              ]),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Restaurant",
+                      style: _p(15, FontWeight.w700, _C.textDark)),
+                  Text("Admin Panel",
+                      style: _p(11, FontWeight.w400, _C.textLight)),
+                ],
+              ),
             ]),
           ),
 
-          const Divider(color: Color(0xFFEEEEEE), height: 1),
-          const SizedBox(height: 8),
+          const Divider(color: Color(0xFFEEEEEE), height: 1, thickness: 1),
+          const SizedBox(height: 10),
 
-          // Nav items
+          // ── Nav items ──────────────────────────────────────────────────
           Expanded(
             child: ListView.builder(
               itemCount: _sItems.length,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               itemBuilder: (_, i) {
                 final active = i == selected;
-                return GestureDetector(
-                  onTap: () => onTap(i),
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 2),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 13, vertical: 11),
-                    decoration: BoxDecoration(
-                      color: active ? _C.orangeLight : Colors.transparent,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(children: [
-                      Icon(_sItems[i].icon,
-                          color: active ? _C.orange : _C.textMid, size: 19),
-                      const SizedBox(width: 11),
-                      Text(_sItems[i].label,
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: InkWell(
+                    onTap: () => onTap(i),
+                    borderRadius: BorderRadius.circular(10),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 13),
+                      decoration: BoxDecoration(
+                        color: active ? _C.orangeLight : Colors.transparent,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(children: [
+                        Icon(
+                          _sItems[i].icon,
+                          color: active ? _C.orange : const Color(0xFF4B5563),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 13),
+                        Text(
+                          _sItems[i].label,
                           style: _p(
-                            13,
+                            14,
                             active ? FontWeight.w600 : FontWeight.w400,
-                            active ? _C.orange : _C.textMid,
-                          )),
-                    ]),
+                            active ? _C.orange : const Color(0xFF374151),
+                          ),
+                        ),
+                      ]),
+                    ),
                   ),
                 );
               },
             ),
           ),
 
-          const Divider(color: Color(0xFFEEEEEE), height: 1),
+          const Divider(color: Color(0xFFEEEEEE), height: 1, thickness: 1),
 
-          // Logout
-          GestureDetector(
+          // ── Logout ─────────────────────────────────────────────────────
+          InkWell(
             onTap: onLogout,
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 18),
               child: Row(children: [
-                const Icon(Icons.logout_rounded, color: _C.textMid, size: 19),
-                const SizedBox(width: 11),
-                Text("Logout", style: _p(13, FontWeight.w400, _C.textMid)),
+                const Icon(Icons.logout_outlined,
+                    color: Color(0xFF6B7280), size: 20),
+                const SizedBox(width: 13),
+                Text("Logout",
+                    style: _p(14, FontWeight.w400, const Color(0xFF6B7280))),
               ]),
             ),
           ),
@@ -534,25 +545,43 @@ class _MobileBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      decoration: const BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: Color(0xFFEEEEEE), width: 1),
+        ),
+      ),
       child: Row(children: [
         Container(
-          width: 34, height: 34,
+          width: 38,
+          height: 38,
           decoration: BoxDecoration(
-              color: _C.orange, borderRadius: BorderRadius.circular(9)),
-          child: const Icon(Icons.local_fire_department_rounded,
-              color: Colors.white, size: 18),
+              color: _C.orange, borderRadius: BorderRadius.circular(10)),
+          child: const Icon(Icons.storefront_rounded,
+              color: Colors.white, size: 20),
         ),
         const SizedBox(width: 10),
-        Text("Restaurant", style: _p(14, FontWeight.w700, _C.textDark)),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Restaurant", style: _p(14, FontWeight.w700, _C.textDark)),
+            Text("Admin Panel", style: _p(10, FontWeight.w400, _C.textLight)),
+          ],
+        ),
         const Spacer(),
-        GestureDetector(
+        InkWell(
           onTap: onLogout,
-          child: Row(children: [
-            const Icon(Icons.logout_rounded, color: _C.textMid, size: 17),
-            const SizedBox(width: 6),
-            Text("Logout", style: _p(12, FontWeight.w400, _C.textMid)),
-          ]),
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.all(6),
+            child: Row(children: [
+              const Icon(Icons.logout_outlined,
+                  color: Color(0xFF6B7280), size: 18),
+              const SizedBox(width: 6),
+              Text("Logout",
+                  style: _p(12, FontWeight.w400, const Color(0xFF6B7280))),
+            ]),
+          ),
         ),
       ]),
     );

@@ -23,183 +23,190 @@ class _CategoryPageState extends State<CategoryPage> {
       builder: (_) {
         final theme = Theme.of(context);
         final colorScheme = theme.colorScheme;
+        bool _saving = false;
 
-        return Dialog(
-          insetPadding:  EdgeInsets.symmetric(horizontal: kIsWeb ? 4 : 4.w, vertical: kIsWeb ? 6 : 6.h),
-          backgroundColor: Colors.transparent,
-          child: ConstrainedBox(
-            constraints:  BoxConstraints(maxWidth: 420.w),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(kIsWeb ? 24 : 24.sp),
-                color: theme.cardColor,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.12),
-                    blurRadius: kIsWeb ? 24 : 24.sp,
-                    offset: const Offset(0, 12),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(kIsWeb ? 24 : 24.sp)),
-                      gradient: LinearGradient(
-                        colors: [
-                          colorScheme.primary.withOpacity(0.12),
-                          colorScheme.primary.withOpacity(0.03),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+        Future<void> _doSave(StateSetter setDialogState) async {
+          if (controller.text.trim().isEmpty) return;
+          setDialogState(() => _saving = true);
+
+          final snapshot = await FirebaseFirestore.instance
+              .collection("categories")
+              .where("restaurantId", isEqualTo: widget.restaurantId)
+              .orderBy("position", descending: true)
+              .limit(1)
+              .get();
+
+          final int position = snapshot.docs.isEmpty
+              ? 0
+              : ((snapshot.docs.first.data()["position"] as num?)?.toInt() ?? 0) + 1;
+
+          await FirebaseFirestore.instance.collection("categories").add({
+            "name": controller.text.trim(),
+            "restaurantId": widget.restaurantId,
+            "position": position,
+            "createdAt": FieldValue.serverTimestamp(),
+          });
+
+          Navigator.pop(context);
+        }
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              insetPadding: EdgeInsets.symmetric(
+                  horizontal: kIsWeb ? 4 : 4.w, vertical: kIsWeb ? 6 : 6.h),
+              backgroundColor: Colors.transparent,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: 420.w),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(kIsWeb ? 24 : 24.sp),
+                    color: theme.cardColor,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.12),
+                        blurRadius: kIsWeb ? 24 : 24.sp,
+                        offset: const Offset(0, 12),
                       ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: EdgeInsets.all(kIsWeb ? 8 : 8.sp),
-                          decoration: BoxDecoration(
-                            color: colorScheme.primary.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(kIsWeb ? 14 : 14.sp),
-                          ),
-                          child: Icon(
-                            Icons.category_outlined,
-                            color: colorScheme.primary,
-                            size: kIsWeb ? 20 : 20.sp,
-                          ),
-                        ),
-                         SizedBox(width: kIsWeb ? 12 : 12.w),
-                         Expanded(
-                          child: Text(
-                            "Add Category",
-                            style: TextStyle(
-                              fontSize: kIsWeb ? 18 : 18.sp,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                    ],
                   ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          "Create a new section for your menu.",
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: Colors.grey.shade600,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // ── Header ──────────────────────────────────────────
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(kIsWeb ? 24 : 24.sp)),
+                          gradient: LinearGradient(
+                            colors: [
+                              colorScheme.primary.withOpacity(0.12),
+                              colorScheme.primary.withOpacity(0.03),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
                         ),
-                         SizedBox(height: kIsWeb ? 16 : 16.h),
-                        TextField(
-                          controller: controller,
-                          autofocus: true,
-                          decoration: InputDecoration(
-                            labelText: "Category name",
-                            hintText: "e.g. Starters, Desserts",
-                            prefixIcon: const Icon(Icons.label_outline),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(kIsWeb ? 14 : 14.sp),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(kIsWeb ? 8 : 8.sp),
+                              decoration: BoxDecoration(
+                                color: colorScheme.primary.withOpacity(0.12),
+                                borderRadius:
+                                BorderRadius.circular(kIsWeb ? 14 : 14.sp),
+                              ),
+                              child: Icon(
+                                Icons.category_outlined,
+                                color: colorScheme.primary,
+                                size: kIsWeb ? 20 : 20.sp,
+                              ),
                             ),
-                            filled: true,
-                            fillColor: Colors.grey.shade50,
-                          ),
-                          textInputAction: TextInputAction.done,
-                          onSubmitted: (_) async {
-                            if (controller.text.trim().isEmpty) return;
-
-                            final snapshot = await FirebaseFirestore.instance
-                                .collection("categories")
-                                .where(
-                                  "restaurantId",
-                                  isEqualTo: widget.restaurantId,
-                                )
-                                .orderBy("position", descending: true)
-                                .limit(1)
-                                .get();
-
-                            final int position = snapshot.docs.isEmpty
-                                ? 0
-                                : ((snapshot.docs.first.data()["position"] as num?)?.toInt() ?? 0) + 1;
-
-                            await FirebaseFirestore.instance.collection("categories").add({
-                              "name": controller.text.trim(),
-                              "restaurantId": widget.restaurantId,
-                              "position": position,
-                              "createdAt": FieldValue.serverTimestamp(),
-                            });
-
-                            Navigator.pop(context);
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Divider(height: 1),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.grey.shade700,
-                          ),
-                          child: const Text("Cancel"),
-                        ),
-                        SizedBox(width: kIsWeb ? 8 : 8.sp),
-                        ElevatedButton.icon(
-                          icon: Icon(Icons.check_rounded, size: kIsWeb ? 18 : 18.sp),
-                          onPressed: () async {
-                            if (controller.text.trim().isEmpty) return;
-
-                            final snapshot = await FirebaseFirestore.instance
-                                .collection("categories")
-                                .where(
-                                  "restaurantId",
-                                  isEqualTo: widget.restaurantId,
-                                )
-                                .orderBy("position", descending: true)
-                                .limit(1)
-                                .get();
-
-                            final int position = snapshot.docs.isEmpty
-                                ? 0
-                                : ((snapshot.docs.first.data()["position"] as num?)?.toInt() ?? 0) + 1;
-
-                            await FirebaseFirestore.instance.collection("categories").add({
-                              "name": controller.text.trim(),
-                              "restaurantId": widget.restaurantId,
-                              "position": position,
-                              "createdAt": FieldValue.serverTimestamp(),
-                            });
-
-                            Navigator.pop(context);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 18 : 18.w, vertical: kIsWeb ? 10 : 10.h),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(kIsWeb ? 14 : 14.sp),
+                            SizedBox(width: kIsWeb ? 12 : 12.w),
+                            Expanded(
+                              child: Text(
+                                "Add Category",
+                                style: TextStyle(
+                                  fontSize: kIsWeb ? 18 : 18.sp,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                             ),
-                          ),
-                          label: const Text("Save"),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                      // ── Body ────────────────────────────────────────────
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              "Create a new section for your menu.",
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                            SizedBox(height: kIsWeb ? 16 : 16.h),
+                            TextField(
+                              controller: controller,
+                              autofocus: true,
+                              enabled: !_saving,
+                              decoration: InputDecoration(
+                                labelText: "Category name",
+                                hintText: "e.g. Starters, Desserts",
+                                prefixIcon: const Icon(Icons.label_outline),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(
+                                      kIsWeb ? 14 : 14.sp),
+                                ),
+                                filled: true,
+                                fillColor: Colors.grey.shade50,
+                              ),
+                              textInputAction: TextInputAction.done,
+                              onSubmitted: (_) =>
+                                  _doSave(setDialogState),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Divider(height: 1),
+                      // ── Footer ──────────────────────────────────────────
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton(
+                              onPressed:
+                              _saving ? null : () => Navigator.pop(context),
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.grey.shade700,
+                              ),
+                              child: const Text("Cancel"),
+                            ),
+                            SizedBox(width: kIsWeb ? 8 : 8.sp),
+                            ElevatedButton.icon(
+                              icon: _saving
+                                  ? SizedBox(
+                                width: kIsWeb ? 18 : 18.sp,
+                                height: kIsWeb ? 18 : 18.sp,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor:
+                                  AlwaysStoppedAnimation<Color>(
+                                      colorScheme.onPrimary),
+                                ),
+                              )
+                                  : Icon(Icons.check_rounded,
+                                  size: kIsWeb ? 18 : 18.sp),
+                              onPressed: _saving
+                                  ? null
+                                  : () => _doSave(setDialogState),
+                              style: ElevatedButton.styleFrom(
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: kIsWeb ? 18 : 18.w,
+                                    vertical: kIsWeb ? 10 : 10.h),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(
+                                      kIsWeb ? 14 : 14.sp),
+                                ),
+                              ),
+                              label: Text(_saving ? "Saving…" : "Save"),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
@@ -207,155 +214,217 @@ class _CategoryPageState extends State<CategoryPage> {
 
   /// EDIT CATEGORY
   void editCategory(String id, String name) {
-
-    TextEditingController controller =
-    TextEditingController(text: name);
+    TextEditingController controller = TextEditingController(text: name);
 
     showDialog(
       context: context,
-      builder: (_) {
-        final theme = Theme.of(context);
+      builder: (dialogContext) {
+        final theme = Theme.of(dialogContext);
         final colorScheme = theme.colorScheme;
+        bool _saving = false;
 
-        return Dialog(
-          insetPadding:  EdgeInsets.symmetric(horizontal: kIsWeb ? 4 : 4.w, vertical: kIsWeb ? 6 : 6.h),
-          backgroundColor: Colors.transparent,
-          child: ConstrainedBox(
-            constraints:  BoxConstraints(maxWidth: 420.w),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(kIsWeb ? 24 : 24.sp),
-                color: theme.cardColor,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.12),
-                    blurRadius: kIsWeb ? 24 : 24.sp,
-                    offset: const Offset(0, 12),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(kIsWeb ? 24 : 24.sp)),
-                      gradient: LinearGradient(
-                        colors: [
-                          colorScheme.secondary.withOpacity(0.14),
-                          colorScheme.secondary.withOpacity(0.03),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+        Future<void> _doUpdate(StateSetter setDialogState) async {
+          if (controller.text.trim().isEmpty) return;
+          setDialogState(() => _saving = true);
+
+          await FirebaseFirestore.instance
+              .collection("categories")
+              .doc(id)
+              .update({"name": controller.text.trim()});
+
+          Navigator.pop(dialogContext);
+        }
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              insetPadding: EdgeInsets.symmetric(
+                  horizontal: kIsWeb ? 4 : 4.w, vertical: kIsWeb ? 6 : 6.h),
+              backgroundColor: Colors.transparent,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: 420.w),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(kIsWeb ? 24 : 24.sp),
+                    color: theme.cardColor,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.12),
+                        blurRadius: kIsWeb ? 24 : 24.sp,
+                        offset: const Offset(0, 12),
                       ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding:  EdgeInsets.all(kIsWeb ? 8 : 8.sp),
-                          decoration: BoxDecoration(
-                            color: colorScheme.secondary.withOpacity(0.16),
-                            borderRadius: BorderRadius.circular(kIsWeb ? 14 : 14.sp),
-                          ),
-                          child: Icon(
-                            Icons.edit_outlined,
-                            color: colorScheme.secondary,
-                            size: kIsWeb ? 20 : 20.sp,
-                          ),
-                        ),
-                         SizedBox(width: kIsWeb ? 12 : 12.w),
-                         Expanded(
-                          child: Text(
-                            "Edit Category",
-                            style: TextStyle(
-                              fontSize: kIsWeb ? 18 : 18.sp,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                    ],
                   ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          "Rename this menu section.",
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: Colors.grey.shade600,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // ── Header ──────────────────────────────────────────
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(kIsWeb ? 24 : 24.sp)),
+                          gradient: LinearGradient(
+                            colors: [
+                              colorScheme.secondary.withOpacity(0.14),
+                              colorScheme.secondary.withOpacity(0.03),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
                         ),
-                        SizedBox(height: kIsWeb ? 16 : 16.h),
-                        TextField(
-                          controller: controller,
-                          autofocus: true,
-                          decoration: InputDecoration(
-                            labelText: "Category name",
-                            prefixIcon: const Icon(Icons.label_important_outline),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(kIsWeb ? 14 : 14.sp),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(kIsWeb ? 8 : 8.sp),
+                              decoration: BoxDecoration(
+                                color: colorScheme.secondary.withOpacity(0.16),
+                                borderRadius:
+                                BorderRadius.circular(kIsWeb ? 14 : 14.sp),
+                              ),
+                              child: Icon(
+                                Icons.edit_outlined,
+                                color: colorScheme.secondary,
+                                size: kIsWeb ? 20 : 20.sp,
+                              ),
                             ),
-                            filled: true,
-                            fillColor: Colors.grey.shade50,
-                          ),
-                          textInputAction: TextInputAction.done,
-                          onSubmitted: (_) async {
-                            await FirebaseFirestore.instance
-                                .collection("categories")
-                                .doc(id)
-                                .update({"name": controller.text.trim()});
-
-                            Navigator.pop(context);
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Divider(height: 1),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.grey.shade700,
-                          ),
-                          child: const Text("Cancel"),
-                        ),
-                        SizedBox(width: kIsWeb ? 8 : 8.w),
-                        ElevatedButton.icon(
-                          icon:  Icon(Icons.check_circle_rounded, size: kIsWeb ? 18 : 18.sp),
-                          onPressed: () async {
-                            await FirebaseFirestore.instance
-                                .collection("categories")
-                                .doc(id)
-                                .update({"name": controller.text.trim()});
-
-                            Navigator.pop(context);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            padding:  EdgeInsets.symmetric(horizontal: kIsWeb ? 18 : 18.w, vertical: kIsWeb ? 10 : 10.h),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(kIsWeb ? 14 : 14.sp),
+                            SizedBox(width: kIsWeb ? 12 : 12.w),
+                            Expanded(
+                              child: Text(
+                                "Edit Category",
+                                style: TextStyle(
+                                  color: colorScheme.onSurface,
+                                  fontSize: kIsWeb ? 18 : 18.sp,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                             ),
-                          ),
-                          label: const Text("Update"),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                      // ── Body ────────────────────────────────────────────
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              "Rename this menu section.",
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurface.withOpacity(0.7),
+                              ),
+                            ),
+                            SizedBox(height: kIsWeb ? 16 : 16.h),
+                            TextField(
+                              controller: controller,
+                              autofocus: true,
+                              enabled: !_saving,
+                              decoration: InputDecoration(
+                                labelText: "Category name",
+                                prefixIcon: Icon(
+                                  Icons.label_important_outline,
+                                  color:
+                                  colorScheme.onSurface.withOpacity(0.5),
+                                ),
+                                labelStyle:
+                                theme.textTheme.bodySmall?.copyWith(
+                                  color:
+                                  colorScheme.onSurface.withOpacity(0.8),
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(
+                                      kIsWeb ? 14 : 14.sp),
+                                  borderSide: BorderSide(
+                                      color: colorScheme.outline
+                                          .withOpacity(0.2)),
+                                ),
+                                filled: true,
+                                fillColor:
+                                colorScheme.surfaceVariant.withOpacity(0.3),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(
+                                      kIsWeb ? 14 : 14.sp),
+                                  borderSide: BorderSide(
+                                      color: colorScheme.outline
+                                          .withOpacity(0.2)),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(
+                                      kIsWeb ? 14 : 14.sp),
+                                  borderSide:
+                                  BorderSide(color: colorScheme.primary),
+                                ),
+                              ),
+                              textInputAction: TextInputAction.done,
+                              onSubmitted: (_) =>
+                                  _doUpdate(setDialogState),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Divider(height: 1),
+                      // ── Footer ──────────────────────────────────────────
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton(
+                              onPressed: _saving
+                                  ? null
+                                  : () => Navigator.pop(dialogContext),
+                              style: TextButton.styleFrom(
+                                foregroundColor:
+                                colorScheme.onSurface.withOpacity(0.7),
+                              ),
+                              child: const Text("Cancel"),
+                            ),
+                            SizedBox(width: kIsWeb ? 8 : 8.w),
+                            ElevatedButton.icon(
+                              icon: _saving
+                                  ? SizedBox(
+                                width: kIsWeb ? 18 : 18.sp,
+                                height: kIsWeb ? 18 : 18.sp,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor:
+                                  AlwaysStoppedAnimation<Color>(
+                                      colorScheme.onPrimary),
+                                ),
+                              )
+                                  : Icon(
+                                Icons.check_circle_rounded,
+                                size: kIsWeb ? 18 : 18.sp,
+                                color: colorScheme.onPrimary,
+                              ),
+                              onPressed: _saving
+                                  ? null
+                                  : () => _doUpdate(setDialogState),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: colorScheme.primary,
+                                foregroundColor: colorScheme.onPrimary,
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: kIsWeb ? 18 : 18.w,
+                                    vertical: kIsWeb ? 10 : 10.h),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(
+                                      kIsWeb ? 14 : 14.sp),
+                                ),
+                              ),
+                              label: Text(_saving ? "Updating…" : "Update"),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
@@ -369,10 +438,11 @@ class _CategoryPageState extends State<CategoryPage> {
         final theme = Theme.of(context);
 
         return Dialog(
-          insetPadding: EdgeInsets.symmetric(horizontal: kIsWeb ? 4 : 4.w, vertical: kIsWeb ? 6 : 6.h),
+          insetPadding: EdgeInsets.symmetric(
+              horizontal: kIsWeb ? 4 : 4.w, vertical: kIsWeb ? 6 : 6.h),
           backgroundColor: Colors.transparent,
           child: ConstrainedBox(
-            constraints:  BoxConstraints(maxWidth: 420.w),
+            constraints: BoxConstraints(maxWidth: 420.w),
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(kIsWeb ? 24 : 24.sp),
@@ -392,7 +462,8 @@ class _CategoryPageState extends State<CategoryPage> {
                   Container(
                     padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(kIsWeb ? 24 : 24.sp)),
+                      borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(kIsWeb ? 24 : 24.sp)),
                       gradient: LinearGradient(
                         colors: [
                           Colors.red.shade50,
@@ -405,7 +476,7 @@ class _CategoryPageState extends State<CategoryPage> {
                     child: Row(
                       children: [
                         Container(
-                          padding:  EdgeInsets.all(kIsWeb ? 8 : 8.sp),
+                          padding: EdgeInsets.all(kIsWeb ? 8 : 8.sp),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.9),
                             shape: BoxShape.circle,
@@ -417,7 +488,7 @@ class _CategoryPageState extends State<CategoryPage> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                         Expanded(
+                        Expanded(
                           child: Text(
                             "Delete Category",
                             style: TextStyle(
@@ -465,16 +536,20 @@ class _CategoryPageState extends State<CategoryPage> {
                           ),
                           child: const Text("Cancel"),
                         ),
-                         SizedBox(width: kIsWeb ? 8 : 8.w),
+                        SizedBox(width: kIsWeb ? 8 : 8.w),
                         ElevatedButton.icon(
-                          icon:  Icon(Icons.delete_outline_rounded, size: kIsWeb ? 18 : 18.sp),
+                          icon: Icon(Icons.delete_outline_rounded,
+                              size: kIsWeb ? 18 : 18.sp),
                           onPressed: () => Navigator.pop(context, true),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.red.shade600,
                             foregroundColor: Colors.white,
-                            padding:  EdgeInsets.symmetric(horizontal: kIsWeb ? 18 : 18.w, vertical: kIsWeb ? 10 : 10.h),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: kIsWeb ? 18 : 18.w,
+                                vertical: kIsWeb ? 10 : 10.h),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(kIsWeb ? 14 : 14.sp),
+                              borderRadius:
+                              BorderRadius.circular(kIsWeb ? 14 : 14.sp),
                             ),
                           ),
                           label: const Text("Delete"),
@@ -537,7 +612,6 @@ class _CategoryPageState extends State<CategoryPage> {
           children: [
             Row(
               children: [
-                // Item Image (placeholder)
                 Container(
                   width: kIsWeb ? 60 : 60.w,
                   height: kIsWeb ? 60 : 60.h,
@@ -552,7 +626,6 @@ class _CategoryPageState extends State<CategoryPage> {
                   ),
                 ),
                 SizedBox(width: kIsWeb ? 12 : 12.w),
-                // Item Details
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -585,7 +658,6 @@ class _CategoryPageState extends State<CategoryPage> {
                     ],
                   ),
                 ),
-                // Delete Icon
                 GestureDetector(
                   onTap: onDelete,
                   child: Icon(
@@ -597,7 +669,6 @@ class _CategoryPageState extends State<CategoryPage> {
               ],
             ),
             SizedBox(height: kIsWeb ? 12 : 12.h),
-            // Quantity Label and Selector
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -610,20 +681,16 @@ class _CategoryPageState extends State<CategoryPage> {
                   ),
                 ),
                 SizedBox(height: kIsWeb ? 8 : 8.h),
-                // Quantity Selector
                 Container(
                   height: kIsWeb ? 40 : 40.h,
                   decoration: BoxDecoration(
                     color: const Color(0xFFF3F4F6),
                     borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
-                    border: Border.all(
-                      color: const Color(0xFFE5E7EB),
-                    ),
+                    border: Border.all(color: const Color(0xFFE5E7EB)),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      // Minus button
                       GestureDetector(
                         onTap: onQuantityDecrease,
                         child: Container(
@@ -631,19 +698,16 @@ class _CategoryPageState extends State<CategoryPage> {
                           height: kIsWeb ? 32 : 32.h,
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(kIsWeb ? 6 : 6.sp),
-                            border: Border.all(
-                              color: const Color(0xFFE5E7EB),
-                            ),
+                            borderRadius:
+                            BorderRadius.circular(kIsWeb ? 6 : 6.sp),
+                            border:
+                            Border.all(color: const Color(0xFFE5E7EB)),
                           ),
-                          child: Icon(
-                            Icons.remove,
-                            color: const Color(0xFF6B7280),
-                            size: kIsWeb ? 16 : 16.sp,
-                          ),
+                          child: Icon(Icons.remove,
+                              color: const Color(0xFF6B7280),
+                              size: kIsWeb ? 16 : 16.sp),
                         ),
                       ),
-                      // Quantity display
                       Text(
                         quantity.toString(),
                         style: GoogleFonts.poppins(
@@ -652,7 +716,6 @@ class _CategoryPageState extends State<CategoryPage> {
                           color: Colors.black87,
                         ),
                       ),
-                      // Plus button
                       GestureDetector(
                         onTap: onQuantityIncrease,
                         child: Container(
@@ -660,13 +723,12 @@ class _CategoryPageState extends State<CategoryPage> {
                           height: kIsWeb ? 32 : 32.h,
                           decoration: BoxDecoration(
                             color: const Color(0xFF7C3AED),
-                            borderRadius: BorderRadius.circular(kIsWeb ? 6 : 6.sp),
+                            borderRadius:
+                            BorderRadius.circular(kIsWeb ? 6 : 6.sp),
                           ),
-                          child: Icon(
-                            Icons.add,
-                            color: Colors.white,
-                            size: kIsWeb ? 16 : 16.sp,
-                          ),
+                          child: Icon(Icons.add,
+                              color: Colors.white,
+                              size: kIsWeb ? 16 : 16.sp),
                         ),
                       ),
                     ],
@@ -683,28 +745,20 @@ class _CategoryPageState extends State<CategoryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F7FB),
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 22, 24, 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                "Home / Categories",
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  color: const Color(0xFF9AA0AA),
-                ),
-              ),
-              const SizedBox(height: 8),
               Row(
                 children: [
                   Text(
                     "Categories",
                     style: GoogleFonts.poppins(
-                      fontSize: 42,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w200,
                       color: const Color(0xFF0E1A2F),
                     ),
                   ),
@@ -769,15 +823,17 @@ class _CategoryPageState extends State<CategoryPage> {
                     return StreamBuilder<QuerySnapshot>(
                       stream: FirebaseFirestore.instance
                           .collection("menu_items")
-                          .where("restaurantId", isEqualTo: widget.restaurantId)
+                          .where("restaurantId",
+                          isEqualTo: widget.restaurantId)
                           .snapshots(),
                       builder: (context, menuSnapshot) {
                         final Map<String, int> itemCounts = {};
                         if (menuSnapshot.hasData) {
                           for (final doc in menuSnapshot.data!.docs) {
-                            final data = doc.data() as Map<String, dynamic>;
+                            final data =
+                            doc.data() as Map<String, dynamic>;
                             final categoryId =
-                                (data["categoryId"] ?? "").toString();
+                            (data["categoryId"] ?? "").toString();
                             if (categoryId.isEmpty) continue;
                             itemCounts[categoryId] =
                                 (itemCounts[categoryId] ?? 0) + 1;
@@ -798,7 +854,7 @@ class _CategoryPageState extends State<CategoryPage> {
                             return GridView.builder(
                               itemCount: categories.length,
                               gridDelegate:
-                                  SliverGridDelegateWithFixedCrossAxisCount(
+                              SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: crossAxisCount,
                                 crossAxisSpacing: 16,
                                 mainAxisSpacing: 16,
@@ -806,32 +862,37 @@ class _CategoryPageState extends State<CategoryPage> {
                               ),
                               itemBuilder: (context, index) {
                                 final cat = categories[index];
-                                final data = cat.data() as Map<String, dynamic>;
-                                final name = (data["name"] ?? "").toString();
+                                final data =
+                                cat.data() as Map<String, dynamic>;
+                                final name =
+                                (data["name"] ?? "").toString();
                                 final count = itemCounts[cat.id] ?? 0;
 
                                 return Container(
                                   padding: const EdgeInsets.all(22),
                                   decoration: BoxDecoration(
                                     color: Colors.white,
-                                    borderRadius: BorderRadius.circular(14),
+                                    borderRadius:
+                                    BorderRadius.circular(14),
                                     border: Border.all(
                                       color: const Color(0xFFE6E8EF),
                                     ),
                                   ),
                                   child: Column(
                                     crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    CrossAxisAlignment.start,
                                     children: [
                                       Row(
                                         children: [
                                           Container(
-                                            width: 42,
-                                            height: 42,
+                                            width: 64,
+                                            height: 64,
                                             decoration: BoxDecoration(
-                                              color: const Color(0xFFFFF2E6),
+                                              color:
+                                              const Color(0xFFFFF2E6),
                                               borderRadius:
-                                                  BorderRadius.circular(10),
+                                              BorderRadius.circular(
+                                                  10),
                                             ),
                                             child: const Icon(
                                               Icons.folder_open_outlined,
@@ -840,32 +901,36 @@ class _CategoryPageState extends State<CategoryPage> {
                                             ),
                                           ),
                                           const Spacer(),
-                                          InkWell(
-                                            onTap: () =>
-                                                editCategory(cat.id, name),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                            child: const Padding(
-                                              padding: EdgeInsets.all(4),
+                                          // ── Edit button ─────────────────
+                                          SizedBox(
+                                            width: kIsWeb ? 30 : 30.sp,
+                                            height: kIsWeb ? 30 : 30.sp,
+                                            child: InkWell(
+                                              onTap: () =>
+                                                  editCategory(cat.id, name),
+                                              borderRadius:
+                                              BorderRadius.circular(6),
                                               child: Icon(
                                                 Icons.edit_outlined,
-                                                size: 18,
-                                                color: Color(0xFF6A7280),
+                                                size: kIsWeb ? 20 : 20.sp,
+                                                color: const Color(0xFF6A7280),
                                               ),
                                             ),
                                           ),
-                                          const SizedBox(width: 8),
-                                          InkWell(
-                                            onTap: () =>
-                                                deleteCategory(cat.id, name),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                            child: const Padding(
-                                              padding: EdgeInsets.all(4),
+                                          SizedBox(width: kIsWeb ? 6 : 6.sp),
+                                          // ── Delete button ────────────────
+                                          SizedBox(
+                                            width: kIsWeb ? 30 : 30.sp,
+                                            height: kIsWeb ? 30 : 30.sp,
+                                            child: InkWell(
+                                              onTap: () =>
+                                                  deleteCategory(cat.id, name),
+                                              borderRadius:
+                                              BorderRadius.circular(6),
                                               child: Icon(
                                                 Icons.delete_outline,
-                                                size: 18,
-                                                color: Color(0xFFE15757),
+                                                size: kIsWeb ? 20 : 20.sp,
+                                                color: const Color(0xFFE15757),
                                               ),
                                             ),
                                           ),
@@ -877,7 +942,7 @@ class _CategoryPageState extends State<CategoryPage> {
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: GoogleFonts.poppins(
-                                          fontSize: 22,
+                                          fontSize: 24,
                                           fontWeight: FontWeight.w700,
                                           color: const Color(0xFF111827),
                                         ),

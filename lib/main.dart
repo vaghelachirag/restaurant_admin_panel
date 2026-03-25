@@ -10,6 +10,7 @@ import 'firebase_options.dart';
 import 'restaurant_admin/restaurant_admin_page.dart';
 import 'restaurant_admin/customer_menu.dart';
 import 'super_admin/restaurants_page.dart';
+import 'widgets/splash_screen.dart';
 
 void main() async {
 
@@ -32,7 +33,7 @@ void main() async {
   ));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
 
   final bool loggedIn;
   final String? role;
@@ -46,6 +47,13 @@ class MyApp extends StatelessWidget {
   });
 
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  bool _splashShown = false;
+
+  @override
   Widget build(BuildContext context) {
 
     return   ScreenUtilInit(
@@ -56,7 +64,8 @@ class MyApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         onGenerateRoute: (settings) {
 
-          Uri uri = Uri.parse(settings.name ?? "/");
+          final routeName = settings.name ?? '/';
+          final uri = Uri.parse(routeName);
 
           if (uri.pathSegments.length == 2 &&
               uri.pathSegments.first == "menu") {
@@ -70,22 +79,30 @@ class MyApp extends StatelessWidget {
             );
           }
 
-          return MaterialPageRoute(
-            builder: (_) {
+          final Widget targetPage = () {
+            if (!widget.loggedIn) return const LoginPage();
+            if (widget.role == "super_admin") {
+              return const RestaurantListPage();
+            }
 
-              if (!loggedIn) {
-                return const LoginPage();
-              }
+            if (widget.restaurantId == null) {
+              return const LoginPage();
+            }
 
-              if (role == "super_admin") {
-                return const RestaurantListPage();
-              }
+            return DashboardPage(
+              restaurantId: widget.restaurantId!,
+            );
+          }();
 
-              return DashboardPage(
-                restaurantId: restaurantId!,
-              );
-            },
-          );
+          // Show splash only on app startup (root route).
+          if (routeName == '/' && !_splashShown) {
+            _splashShown = true;
+            return MaterialPageRoute(
+              builder: (_) => SplashScreen(nextPage: targetPage),
+            );
+          }
+
+          return MaterialPageRoute(builder: (_) => targetPage);
         },
       ));
   }
