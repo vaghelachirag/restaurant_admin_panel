@@ -68,35 +68,120 @@ class _MenuPageState extends State<MenuPage> {
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
         final theme = Theme.of(context);
         final colorScheme = theme.colorScheme;
-        final isMobile = Responsive.isMobile(context);
-        final isTablet = Responsive.isTablet(context);
-        final isDesktop = Responsive.isDesktop(context);
         final screenWidth = Responsive.width(context);
+
+        double dialogWidth;
+        if (Responsive.isDesktop(context)) {
+          dialogWidth = screenWidth > 1400 ? 450 : 400;
+        } else if (Responsive.isTablet(context)) {
+          dialogWidth = screenWidth * 0.7;
+        } else {
+          dialogWidth = screenWidth * 0.9;
+        }
 
         return StatefulBuilder(
           builder: (context, setStateDialog) {
-            double dialogWidth = screenWidth * 0.9;
-            double maxHeight = MediaQuery.of(context).size.height * 0.9;
-            if (isDesktop) {
-              dialogWidth = screenWidth > 1200 ? 700 : 600;
-            } else if (isTablet) {
-              dialogWidth = screenWidth * 0.8;
-            }
-
             return Dialog(
+              insetPadding: EdgeInsets.symmetric(
+                horizontal: Responsive.isMobile(context) ? 16 : 24,
+                vertical: Responsive.isMobile(context) ? 24 : 40,
+              ),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(kIsWeb ? 16 : 16.sp),
+                borderRadius: BorderRadius.circular(kIsWeb ? 16 : 14.sp),
               ),
               backgroundColor: colorScheme.surface,
               child: Container(
                 width: dialogWidth,
-                constraints: BoxConstraints(maxHeight: maxHeight),
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    headerWidget(context),
+                    // Header with title and close button
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: kIsWeb ? 24 : 20.sp,
+                        vertical: kIsWeb ? 20 : 16.sp,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surface,
+                        border: Border(
+                          bottom: BorderSide(
+                            color: colorScheme.outline.withOpacity(0.15),
+                          ),
+                        ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // Brand icon — terracotta square with plus
+                          Container(
+                            width: kIsWeb ? 44 : 38.sp,
+                            height: kIsWeb ? 44 : 38.sp,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFC4622D),
+                              borderRadius: BorderRadius.circular(kIsWeb ? 12 : 10.sp),
+                            ),
+                            child: Icon(
+                              Icons.restaurant_menu,
+                              color: Colors.white,
+                              size: kIsWeb ? 22 : 19.sp,
+                            ),
+                          ),
+                          SizedBox(width: kIsWeb ? 14 : 12.sp),
+                          // Title + subtitle
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  "Add Menu Item",
+                                  style: TextStyle(
+                                    fontSize: kIsWeb ? 18 : 16.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: colorScheme.onSurface,
+                                    letterSpacing: 0.1,
+                                  ),
+                                ),
+                                SizedBox(height: kIsWeb ? 3 : 2.sp),
+                                Text(
+                                  "Create a new dish for your menu.",
+                                  style: TextStyle(
+                                    fontSize: kIsWeb ? 13 : 12.sp,
+                                    color: colorScheme.onSurface.withOpacity(0.55),
+                                    height: 1.3,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Close button — top-right, same row
+                          SizedBox(width: kIsWeb ? 8 : 6.sp),
+                          InkWell(
+                            onTap: () => Navigator.pop(context),
+                            borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
+                            child: Container(
+                              width: kIsWeb ? 32 : 28.sp,
+                              height: kIsWeb ? 32 : 28.sp,
+                              decoration: BoxDecoration(
+                                color: colorScheme.onSurface.withOpacity(0.07),
+                                borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
+                              ),
+                              child: Icon(
+                                Icons.close_rounded,
+                                color: colorScheme.onSurface.withOpacity(0.6),
+                                size: kIsWeb ? 18 : 16.sp,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Content with scrollable area
                     Expanded(
                       child: SingleChildScrollView(
                         physics: const ClampingScrollPhysics(),
@@ -104,30 +189,292 @@ class _MenuPageState extends State<MenuPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            imageUploadWidget(() async {
-                              await pickImage();
-                              setStateDialog(() {});
-                            }),
+                            Text("Item Image", style: TextStyle(fontSize: kIsWeb ? 14 : 14.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
+                            SizedBox(height: kIsWeb ? 10 : 10.sp),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  width: kIsWeb ? 120 : 120.sp,
+                                  height: kIsWeb ? 120 : 120.sp,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
+                                    color: colorScheme.surfaceVariant.withOpacity(0.5),
+                                    border: Border.all(color: colorScheme.outline.withOpacity(0.3)),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
+                                    child: imageBytes != null
+                                        ? Image.memory(imageBytes!, fit: BoxFit.cover, width: double.infinity, height: double.infinity)
+                                        : Container(
+                                      decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFFF3F4F6), Color(0xFFE5E7EB)], begin: Alignment.topLeft, end: Alignment.bottomRight)),
+                                      child: Icon(Icons.restaurant, color: colorScheme.onSurface.withOpacity(0.4), size: kIsWeb ? 30 : 30.sp),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: kIsWeb ? 12 : 16.sp),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text("Upload dish image. This image is shown in customer menu.", style: TextStyle(fontSize: kIsWeb ? 12 : 12.sp, color: colorScheme.onSurface.withOpacity(0.6))),
+                                      SizedBox(height: kIsWeb ? 10 : 10.sp),
+                                      OutlinedButton.icon(
+                                        onPressed: () async {
+                                          final picker = ImagePicker();
+                                          final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+                                          if (image != null) {
+                                            final bytes = await image.readAsBytes();
+                                            setStateDialog(() { imageBytes = bytes; });
+                                          }
+                                        },
+                                        icon: Icon(Icons.image_outlined, color: colorScheme.primary, size: kIsWeb ? 18 : 18.sp),
+                                        label: Text(
+                                          "Upload Image",
+                                          style: TextStyle(color: colorScheme.primary, fontWeight: FontWeight.w500, fontSize: kIsWeb ? 12 : 12.sp),
+                                        ),
+                                        style: OutlinedButton.styleFrom(
+                                          padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 16 : 20.sp, vertical: kIsWeb ? 10 : 12.sp),
+                                          side: BorderSide(color: colorScheme.primary.withOpacity(0.5)),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp)),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: kIsWeb ? 10 : 20.sp),
+                            Text("Category", style: TextStyle(fontSize: kIsWeb ? 14 : 14.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
+                            SizedBox(height: kIsWeb ? 8 : 8.sp),
+                            StreamBuilder<QuerySnapshot>(
+                              stream: FirebaseFirestore.instance.collection("categories").where("restaurantId", isEqualTo: widget.restaurantId).snapshots(),
+                              builder: (context, snapshot) {
+                                if (!snapshot.hasData) {
+                                  return Container(
+                                    height: kIsWeb ? 50 : 50.sp,
+                                    decoration: BoxDecoration(color: colorScheme.surfaceVariant.withOpacity(0.5), borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
+                                    child: Center(child: CircularProgressIndicator(strokeWidth: kIsWeb ? 2 : 2.sp)),
+                                  );
+                                }
+                                final categories = snapshot.data!.docs;
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.surfaceVariant.withOpacity(0.3),
+                                    borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
+                                    border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
+                                  ),
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<String>(
+                                      value: selectedCategoryId,
+                                      hint: Padding(
+                                        padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 12 : 12.sp, vertical: kIsWeb ? 8 : 8.sp),
+                                        child: Text("Select Category", style: TextStyle(color: colorScheme.onSurface.withOpacity(0.5))),
+                                      ),
+                                      isExpanded: true,
+                                      padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 12 : 12.sp, vertical: kIsWeb ? 8 : 8.sp),
+                                      items: categories.map((cat) => DropdownMenuItem<String>(
+                                        value: cat.id,
+                                        child: Text(cat['name'], style: TextStyle(fontSize: kIsWeb ? 12 : 15.sp)),
+                                      )).toList(),
+                                      onChanged: (value) {
+                                        setStateDialog(() { selectedCategoryId = value; });
+                                      },
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
                             SizedBox(height: kIsWeb ? 20 : 20.sp),
-                            categoryDropdown(selectedCategoryId, widget.restaurantId, (value) {
-                              setStateDialog(() { selectedCategoryId = value; });
+                            Text("Item Name", style: TextStyle(fontSize: kIsWeb ? 14 : 16.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
+                            SizedBox(height: kIsWeb ? 8 : 8.sp),
+                            TextField(
+                              controller: nameController,
+                              decoration: InputDecoration(
+                                hintText: "Enter item name",
+                                filled: true,
+                                fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp), borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.2))),
+                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12), borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.2))),
+                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp), borderSide: BorderSide(color: colorScheme.primary)),
+                                prefixIcon: Icon(Icons.restaurant, color: colorScheme.onSurface.withOpacity(0.5)),
+                              ),
+                            ),
+                            SizedBox(height: kIsWeb ? 24 : 24.sp),
+                            Row(
+                              children: [
+                                Icon(Icons.list_alt, color: colorScheme.onSurface.withOpacity(0.7), size: kIsWeb ? 20 : 20.sp),
+                                SizedBox(width: kIsWeb ? 8 : 8.sp),
+                                Text("Variants", style: TextStyle(fontSize: kIsWeb ? 12 : 12.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
+                              ],
+                            ),
+                            SizedBox(height: kIsWeb ? 12 : 12.sp),
+                            ...variants.asMap().entries.map((entry) {
+                              final index = entry.key;
+                              return Container(
+                                margin: EdgeInsets.only(bottom: kIsWeb ? 12 : 12.sp),
+                                padding: EdgeInsets.all(kIsWeb ? 16 : 16.sp),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.surfaceVariant.withOpacity(0.3),
+                                  borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
+                                  border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: TextField(
+                                        controller: variants[index]["name"],
+                                        decoration: InputDecoration(
+                                          labelText: "Variant Name",
+                                          filled: true,
+                                          fillColor: Colors.white,
+                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp), borderSide: BorderSide.none),
+                                          contentPadding: EdgeInsets.symmetric(horizontal: kIsWeb ? 12 : 12.sp, vertical: kIsWeb ? 8 : 8.sp),
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(width: kIsWeb ? 12 : 12.sp),
+                                    SizedBox(
+                                      width: kIsWeb ? 100 : 100.sp,
+                                      child: TextField(
+                                        controller: variants[index]["price"],
+                                        keyboardType: TextInputType.number,
+                                        decoration: InputDecoration(
+                                          labelText: "Price",
+                                          prefixText: "₹",
+                                          filled: true,
+                                          fillColor: Colors.white,
+                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp), borderSide: BorderSide.none),
+                                          contentPadding: EdgeInsets.symmetric(horizontal: kIsWeb ? 10 : 10.sp, vertical: 8),
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(width: kIsWeb ? 10 : 10.sp),
+                                    if (variants.length > 1)
+                                      IconButton(
+                                        icon: Icon(Icons.remove_circle_outline, color: colorScheme.error),
+                                        onPressed: () { variants.removeAt(index); setStateDialog(() {}); },
+                                      ),
+                                  ],
+                                ),
+                              );
                             }),
-                            itemNameField(nameController),
-                            SizedBox(height: kIsWeb ? 15 : 24.sp),
-                            variantsWidget(variants, () { setStateDialog(() {}); }),
+                            SizedBox(height: kIsWeb ? 12 : 12.sp),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  variants.add({"name": TextEditingController(), "price": TextEditingController()});
+                                  setStateDialog(() {});
+                                },
+                                icon: Icon(Icons.add_circle_outline, color: colorScheme.primary),
+                                label: Text("Add Another Variant", style: TextStyle(color: colorScheme.primary)),
+                                style: OutlinedButton.styleFrom(
+                                  padding: EdgeInsets.symmetric(vertical: kIsWeb ? 12 : 12.sp),
+                                  side: BorderSide(color: colorScheme.primary.withOpacity(0.5)),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
                     ),
-                    footerButtons(
-                      context: context,
-                      selectedCategoryId: selectedCategoryId,
-                      nameController: nameController,
-                      variants: variants,
-                      restaurantId: widget.restaurantId,
-                      uploadImage: uploadImageToImgBB,
-                      isLoading: _isAddingMenuItem,
-                      setLoading: (loading) { setState(() { _isAddingMenuItem = loading; }); },
+                    // Footer buttons
+                    Container(
+                      padding: EdgeInsets.all(kIsWeb ? 20 : 20.sp),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceVariant.withOpacity(0.3),
+                        borderRadius: BorderRadius.vertical(bottom: Radius.circular(kIsWeb ? 20 : 20.sp)),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: OutlinedButton.styleFrom(
+                                padding: EdgeInsets.symmetric(vertical: kIsWeb ? 14 : 12.sp),
+                                side: BorderSide(color: colorScheme.outline),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12)),
+                              ),
+                              child: Text("Cancel", style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7), fontWeight: FontWeight.w500)),
+                            ),
+                          ),
+                          SizedBox(width: kIsWeb ? 12 : 12.sp),
+                          Expanded(
+                            flex: 2,
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                if (selectedCategoryId == null || nameController.text.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: const Text("Please fill all required fields"),
+                                      backgroundColor: colorScheme.error,
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
+                                    ),
+                                  );
+                                  return;
+                                }
+                                setState(() { _isAddingMenuItem = true; });
+                                try {
+                                  String? imageUrl = await uploadImageToImgBB();
+                                  List<Map<String, dynamic>> variantList = [];
+                                  for (var v in variants) {
+                                    variantList.add({"name": v["name"]!.text, "price": int.parse(v["price"]!.text)});
+                                  }
+                                  await FirebaseFirestore.instance.collection("menu_items").add({
+                                    "name": nameController.text,
+                                    "image": imageUrl ?? '',
+                                    "categoryId": selectedCategoryId,
+                                    "restaurantId": widget.restaurantId,
+                                    "variants": variantList,
+                                    "isAvailable": true,
+                                    "createdAt": FieldValue.serverTimestamp(),
+                                  });
+                                  Navigator.pop(context);
+                                  setState(() { _selectedCategoryId = selectedCategoryId; });
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: const Text("Menu item added successfully!"),
+                                      backgroundColor: colorScheme.primary,
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
+                                    ),
+                                  );
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text("Error adding menu item: $e"),
+                                      backgroundColor: colorScheme.error,
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
+                                    ),
+                                  );
+                                } finally {
+                                  setState(() { _isAddingMenuItem = false; });
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF070B2D),
+                                foregroundColor: Colors.white,
+                                padding: EdgeInsets.symmetric(vertical: kIsWeb ? 14 : 12.sp),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12)),
+                              ),
+                              child: _isAddingMenuItem
+                                  ? Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: const [
+                                  SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                                  SizedBox(width: 8),
+                                  Text("Adding...", style: TextStyle(fontWeight: FontWeight.w600)),
+                                ],
+                              )
+                                  : const Text("Add Menu Item", style: TextStyle(fontWeight: FontWeight.w600)),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -601,21 +948,82 @@ class _MenuPageState extends State<MenuPage> {
                   children: [
                     Container(
                       width: double.infinity,
-                      padding: EdgeInsets.all(kIsWeb ? 16 : 20.sp),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: kIsWeb ? 24 : 20.sp,
+                        vertical: kIsWeb ? 20 : 16.sp,
+                      ),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(colors: [colorScheme.primary, colorScheme.primaryContainer], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(kIsWeb ? 16 : 20.sp)),
+                        color: colorScheme.surface,
+                        border: Border(
+                          bottom: BorderSide(
+                            color: colorScheme.outline.withOpacity(0.15),
+                          ),
+                        ),
                       ),
                       child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
+                          // Brand icon — terracotta with edit icon
                           Container(
-                            padding: EdgeInsets.all(kIsWeb ? 8 : 10.sp),
-                            decoration: BoxDecoration(color: colorScheme.onPrimary.withOpacity(0.2), borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp)),
-                            child: Icon(Icons.edit, color: colorScheme.onPrimary, size: kIsWeb ? 20 : 20.sp),
+                            width: kIsWeb ? 44 : 38.sp,
+                            height: kIsWeb ? 44 : 38.sp,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFC4622D),
+                              borderRadius: BorderRadius.circular(kIsWeb ? 12 : 10.sp),
+                            ),
+                            child: Icon(
+                              Icons.edit_outlined,
+                              color: Colors.white,
+                              size: kIsWeb ? 22 : 19.sp,
+                            ),
                           ),
-                          SizedBox(width: kIsWeb ? 10 : 12.sp),
-                          Expanded(child: Text("Edit Menu Item", style: TextStyle(color: colorScheme.onPrimary, fontSize: kIsWeb ? 18 : 18.sp, fontWeight: FontWeight.w600))),
-                          IconButton(onPressed: () => Navigator.pop(context), icon: Icon(Icons.close, color: colorScheme.onPrimary)),
+                          SizedBox(width: kIsWeb ? 14 : 12.sp),
+                          // Title + subtitle
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  "Edit Menu Item",
+                                  style: TextStyle(
+                                    fontSize: kIsWeb ? 18 : 16.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: colorScheme.onSurface,
+                                    letterSpacing: 0.1,
+                                  ),
+                                ),
+                                SizedBox(height: kIsWeb ? 3 : 2.sp),
+                                Text(
+                                  "Update the details of this menu item.",
+                                  style: TextStyle(
+                                    fontSize: kIsWeb ? 13 : 12.sp,
+                                    color: colorScheme.onSurface.withOpacity(0.55),
+                                    height: 1.3,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Close button — top-right, same row
+                          SizedBox(width: kIsWeb ? 8 : 6.sp),
+                          InkWell(
+                            onTap: () => Navigator.pop(context),
+                            borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
+                            child: Container(
+                              width: kIsWeb ? 32 : 28.sp,
+                              height: kIsWeb ? 32 : 28.sp,
+                              decoration: BoxDecoration(
+                                color: colorScheme.onSurface.withOpacity(0.07),
+                                borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
+                              ),
+                              child: Icon(
+                                Icons.close_rounded,
+                                color: colorScheme.onSurface.withOpacity(0.6),
+                                size: kIsWeb ? 18 : 16.sp,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -915,8 +1323,8 @@ class _MenuPageState extends State<MenuPage> {
                                 }
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: colorScheme.primary,
-                                foregroundColor: colorScheme.onPrimary,
+                                backgroundColor: const Color(0xFF070B2D),
+                                foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(vertical: 14),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12)),
                               ),
@@ -1319,30 +1727,72 @@ Widget headerWidget(BuildContext context) {
 
   return Container(
     width: double.infinity,
-    padding: const EdgeInsets.all(16),
+    padding: EdgeInsets.symmetric(
+      horizontal: kIsWeb ? 24 : 20.sp,
+      vertical: kIsWeb ? 18 : 15.sp,
+    ),
     decoration: BoxDecoration(
-      gradient: LinearGradient(
-        colors: [colorScheme.primary, colorScheme.primaryContainer],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
+      color: colorScheme.surface,
+      border: Border(
+        bottom: BorderSide(color: colorScheme.outline.withOpacity(0.15)),
       ),
-      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
     ),
     child: Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: colorScheme.onPrimary.withOpacity(0.2), borderRadius: BorderRadius.circular(10)),
-          child: Icon(Icons.restaurant_menu, color: colorScheme.onPrimary, size: isMobile ? 20 : 24),
+          width: kIsWeb ? 44 : 38.sp,
+          height: kIsWeb ? 44 : 38.sp,
+          decoration: BoxDecoration(
+            color: const Color(0xFFC4622D),
+            borderRadius: BorderRadius.circular(kIsWeb ? 12 : 10.sp),
+          ),
+          child: Icon(Icons.restaurant_menu, color: Colors.white, size: isMobile ? 19 : 22),
         ),
-        const SizedBox(width: 10),
+        SizedBox(width: kIsWeb ? 14 : 12.sp),
         Expanded(
-          child: Text(
-            "Add New Menu Item",
-            style: TextStyle(color: colorScheme.onPrimary, fontSize: kIsWeb ? 18 : 18.sp, fontWeight: FontWeight.w600),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Add New Menu Item",
+                style: TextStyle(
+                  color: colorScheme.onSurface,
+                  fontSize: kIsWeb ? 18 : 16.sp,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.1,
+                ),
+              ),
+              SizedBox(height: kIsWeb ? 3 : 2.sp),
+              Text(
+                "Create a new dish for your menu.",
+                style: TextStyle(
+                  fontSize: kIsWeb ? 13 : 12.sp,
+                  color: colorScheme.onSurface.withOpacity(0.55),
+                ),
+              ),
+            ],
           ),
         ),
-        IconButton(onPressed: () => Navigator.pop(context), icon: Icon(Icons.close, color: colorScheme.onPrimary)),
+        InkWell(
+          onTap: () => Navigator.pop(context),
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            width: kIsWeb ? 32 : 28.sp,
+            height: kIsWeb ? 32 : 28.sp,
+            decoration: BoxDecoration(
+              color: colorScheme.onSurface.withOpacity(0.07),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              Icons.close_rounded,
+              color: colorScheme.onSurface.withOpacity(0.6),
+              size: kIsWeb ? 18 : 16.sp,
+            ),
+          ),
+        ),
       ],
     ),
   );

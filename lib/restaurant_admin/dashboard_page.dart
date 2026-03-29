@@ -415,10 +415,6 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 }
-
-// ════════════════════════════════════════════════════════════════════════════
-// SIDEBAR
-// ════════════════════════════════════════════════════════════════════════════
 class _Sidebar extends StatelessWidget {
   final int selected;
   final ValueChanged<int> onTap;
@@ -439,7 +435,6 @@ class _Sidebar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Logo / Brand area ──────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
             child: Row(children: [

@@ -430,7 +430,6 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
                   height: 34,
                   child: OutlinedButton(
                     onPressed: () {
-                      // TODO: Show order details.
                     },
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size(74, 34),

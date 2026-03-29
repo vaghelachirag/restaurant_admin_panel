@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../restaurant_admin/restaurant_orders_page.dart';
+import '../service/restaurant_service.dart';
+import '../data/models/restaurant_model.dart';
 
 class DashboardPage extends StatefulWidget {
   final String restaurantId;
@@ -12,11 +14,28 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   int _selectedIndex = 0;
+  RestaurantModel? _restaurant;
+  final RestaurantService _restaurantService = RestaurantService();
 
   final List<Widget> _pages = [
     const DashboardContent(),
     // Orders page will be handled separately
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRestaurantData();
+  }
+
+  Future<void> _loadRestaurantData() async {
+    final restaurant = await _restaurantService.fetchRestaurant(widget.restaurantId);
+    if (mounted) {
+      setState(() {
+        _restaurant = restaurant;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,26 +74,45 @@ class _DashboardPageState extends State<DashboardPage> {
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
                     color: Colors.orange,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(
-                    Icons.restaurant,
-                    color: Colors.white,
-                    size: 24,
-                  ),
+                  child: _restaurant?.logoUrl != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            _restaurant!.logoUrl!,
+                            width: 48,
+                            height: 48,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Icon(
+                                Icons.restaurant,
+                                color: Colors.white,
+                                size: 24,
+                              );
+                            },
+                          ),
+                        )
+                      : const Icon(
+                          Icons.restaurant,
+                          color: Colors.white,
+                          size: 24,
+                        ),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Restaurant',
-                    style: TextStyle(
+                    _restaurant?.name ?? 'Restaurant',
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: Colors.black,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],

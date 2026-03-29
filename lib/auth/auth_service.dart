@@ -15,6 +15,8 @@ class AuthService {
 
       String uid = credential.user!.uid;
 
+      print("UserIdUserid$uid");
+
       DocumentSnapshot userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(uid)

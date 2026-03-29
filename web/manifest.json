@@ -1,11 +1,11 @@
 {
-    "name": "restaurant_admin_panel",
-    "short_name": "restaurant_admin_panel",
+    "name": "Restaurant Admin Panel",
+    "short_name": "Restaurant Admin",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Manage your restaurant with our comprehensive admin panel",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -3,8 +3,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:restaurant_admin_panel/restaurant_admin/restrurant_offers_screen.dart';
 import 'package:restaurant_admin_panel/restaurant_admin/track_order.dart';
 import 'package:restaurant_admin_panel/data/models/cart_item.dart';
+import 'package:restaurant_admin_panel/widgets/professional_loader.dart';
+import 'package:restaurant_admin_panel/widgets/loading_card.dart';
+import 'package:restaurant_admin_panel/widgets/keep_alive_wrapper.dart';
+import 'package:restaurant_admin_panel/restaurant_admin/tabs/home_tab.dart';
 import 'account_page.dart';
 import 'cart_page.dart';
 
@@ -22,12 +27,27 @@ class CustomerMenuPage extends StatefulWidget {
   State<CustomerMenuPage> createState() => _CustomerMenuPageState();
 }
 
-class _CustomerMenuPageState extends State<CustomerMenuPage> {
+class _CustomerMenuPageState extends State<CustomerMenuPage>
+    with AutomaticKeepAliveClientMixin {
   String? _selectedCategoryId;
   final Map<String, int> _selectedVariantIndexByItemId = {};
   bool _unifiedCategoryListView = true;
   final Set<String> _collapsedCategoryIds = {};
-  final List<CartItem> cart = [];
+
+  // Cart uses ValueNotifier — updating cart never triggers a full build()
+  // so StreamBuilders never re-subscribe and menu never reloads.
+  final ValueNotifier<List<CartItem>> _cartNotifier =
+  ValueNotifier<List<CartItem>>([]);
+  List<CartItem> get cart => _cartNotifier.value;
+
+  // Notifies individual item buttons to play bounce animation
+  final ValueNotifier<String?> _lastAddedItemId = ValueNotifier(null);
+  // Notifies cart badge to play bounce animation
+  final ValueNotifier<int> _cartBounce = ValueNotifier(0);
+
+  // Tab management
+  int _selectedTabIndex = 0;
+  late PageController _pageController;
 
   String openingTime = "09:00 AM";
   String closingTime = "06:00 AM";
@@ -38,6 +58,24 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
   String? _restaurantLogo;
 
   static const Color _primaryColor = Color(0xFF7C3AED);
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _cartNotifier.dispose();
+    _lastAddedItemId.dispose();
+    _cartBounce.dispose();
+    super.dispose();
+  }
 
   // ─── Cart helpers ─────────────────────────────────────────────────────────────
 
@@ -56,8 +94,6 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
     }
     return qty;
   }
-
-  // ─── Safe variant helpers ─────────────────────────────────────────────────────
 
   List<dynamic> _safeList(dynamic raw) {
     if (raw == null) return [];
@@ -84,13 +120,18 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
     return int.tryParse(val.toString()) ?? 0;
   }
 
-  // ─── Restaurant open/close ────────────────────────────────────────────────────
-
   bool _isRestaurantOpen() {
     final now = DateTime.now();
     final cur = now.hour * 60 + now.minute;
     int parseTime(String t) {
       try {
+        t = t.trim();
+        // Format: "HH:MM" — 24-hour saved by settings page
+        if (!t.contains(' ')) {
+          final hm = t.split(':');
+          return int.parse(hm[0]) * 60 + int.parse(hm[1]);
+        }
+        // Format: "H:MM AM/PM" — legacy 12-hour format
         final parts = t.split(' ');
         final hm = parts[0].split(':');
         int h = int.parse(hm[0]);
@@ -101,7 +142,38 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
         return 0;
       }
     }
-    return cur >= parseTime(openingTime) && cur <= parseTime(closingTime);
+    final open = parseTime(openingTime);
+    final close = parseTime(closingTime);
+    // Handle overnight hours (e.g., 22:00 to 02:00)
+    if (close < open) {
+      return cur >= open || cur <= close;
+    }
+    return cur >= open && cur <= close;
+  }
+
+  /// Converts stored time string ("HH:MM" or "H:MM AM/PM") to a readable "H:MM AM/PM" label.
+  String _formatDisplayTime(String t) {
+    try {
+      t = t.trim();
+      int h, m;
+      if (!t.contains(' ')) {
+        final hm = t.split(':');
+        h = int.parse(hm[0]);
+        m = int.parse(hm[1]);
+      } else {
+        final parts = t.split(' ');
+        final hm = parts[0].split(':');
+        h = int.parse(hm[0]);
+        m = int.parse(hm[1]);
+        if (parts[1] == 'PM' && h != 12) h += 12;
+        if (parts[1] == 'AM' && h == 12) h = 0;
+      }
+      final period = h >= 12 ? 'PM' : 'AM';
+      final displayH = h % 12 == 0 ? 12 : h % 12;
+      return '$displayH:${m.toString().padLeft(2, '0')} $period';
+    } catch (_) {
+      return t;
+    }
   }
 
   void _showRestaurantClosedPopup(BuildContext context) {
@@ -151,7 +223,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                   Icon(Icons.schedule,
                       color: Colors.grey[600], size: kIsWeb ? 20 : 20.sp),
                   SizedBox(width: kIsWeb ? 8 : 8.sp),
-                  Text("Hours: $openingTime – $closingTime",
+                  Text("Hours: ${_formatDisplayTime(openingTime)} – ${_formatDisplayTime(closingTime)}",
                       style: GoogleFonts.poppins(
                           fontSize: kIsWeb ? 13 : 13.sp,
                           fontWeight: FontWeight.w500,
@@ -185,32 +257,47 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
         int? price,
         String? image,
       }) {
-    setState(() {
-      CartItem? existing;
-      int idx = -1;
-      for (int i = 0; i < cart.length; i++) {
-        if (cart[i].itemId == itemId && cart[i].variant == variant) {
-          existing = cart[i];
-          idx = i;
-          break;
-        }
+    // Work on a mutable copy then assign — triggers ValueNotifier listeners
+    // WITHOUT calling setState(), so the main build() and all StreamBuilders
+    // are never touched and the menu never reloads.
+    final updated = List<CartItem>.from(_cartNotifier.value);
+    CartItem? existing;
+    int idx = -1;
+    for (int i = 0; i < updated.length; i++) {
+      if (updated[i].itemId == itemId && updated[i].variant == variant) {
+        existing = updated[i];
+        idx = i;
+        break;
       }
-      if (existing != null) {
-        existing.qty += change;
-        if (existing.qty <= 0)
-          cart.removeAt(idx);
-        else if (existing.qty > 99)
-          existing.qty = 99;
-      } else if (change > 0 && itemName != null && price != null) {
-        cart.add(CartItem(
-            itemId: itemId,
-            name: itemName,
-            variant: variant,
-            price: price,
-            qty: change,
-            image: image));
+    }
+    if (existing != null) {
+      final newQty = existing.qty + change;
+      if (newQty <= 0) {
+        updated.removeAt(idx);
+      } else {
+        updated[idx] = CartItem(
+          itemId: existing.itemId,
+          name: existing.name,
+          variant: existing.variant,
+          price: existing.price,
+          qty: newQty.clamp(1, 99),
+          image: existing.image,
+        );
       }
-    });
+    } else if (change > 0 && itemName != null && price != null) {
+      updated.add(CartItem(
+          itemId: itemId,
+          name: itemName,
+          variant: variant,
+          price: price,
+          qty: change,
+          image: image));
+      // Trigger item bounce animation
+      _lastAddedItemId.value = itemId;
+    }
+    _cartNotifier.value = updated;
+    // Trigger cart badge bounce
+    _cartBounce.value = _cartBounce.value + 1;
   }
 
   // ─── Shared small widgets ─────────────────────────────────────────────────────
@@ -525,7 +612,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
     );
   }
 
-  // ─── ADD / counter widget ──────────────────────────────────────────────────────
+  // ─── ADD / counter widget (animated, no setState) ─────────────────────────────
 
   Widget _buildAddOrCounterWidget(
       BuildContext context,
@@ -534,100 +621,72 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
       String variant,
       int price,
       ) {
-    final qty = getItemQuantity(itemId, variant);
-    final isOpen = true;
+    final isOpen = _isRestaurantOpen();
 
-    if (qty > 0) {
-      return Container(
-        height: kIsWeb ? 34 : 34.h,
-        decoration: BoxDecoration(
-          color: _primaryColor.withOpacity(0.07),
-          borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
-          border: Border.all(color: _primaryColor.withOpacity(0.25)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            GestureDetector(
-              onTap: () => _updateItemQuantity(itemId, variant, -1,
-                  itemName: item['name'], price: price, image: item['image']),
-              child: Container(
-                width: kIsWeb ? 32 : 32.w,
-                height: double.infinity,
-                decoration: BoxDecoration(
-                  color: _primaryColor.withOpacity(0.12),
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(kIsWeb ? 8 : 8.sp),
-                    bottomLeft: Radius.circular(kIsWeb ? 8 : 8.sp),
-                  ),
-                ),
-                child: Icon(Icons.remove,
-                    size: kIsWeb ? 15 : 15.sp, color: _primaryColor),
+    return ValueListenableBuilder<List<CartItem>>(
+      valueListenable: _cartNotifier,
+      builder: (context, cartItems, _) {
+        int qty = 0;
+        for (final c in cartItems) {
+          if (c.itemId == itemId && c.variant == variant) {
+            qty = c.qty;
+            break;
+          }
+        }
+
+        // When restaurant is closed and item is not already in cart,
+        // show a "Closed" pill that triggers the popup on tap.
+        if (!isOpen && qty == 0) {
+          return GestureDetector(
+            onTap: () => _showRestaurantClosedPopup(context),
+            child: Container(
+              height: kIsWeb ? 34 : 34.h,
+              padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 14 : 14.w),
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
+                border: Border.all(color: Colors.grey[350]!),
               ),
-            ),
-            SizedBox(
-              width: kIsWeb ? 34 : 34.w,
-              child: Center(
-                child: Text("$qty",
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.lock_clock,
+                      size: kIsWeb ? 13 : 13.sp, color: Colors.grey[500]),
+                  SizedBox(width: kIsWeb ? 5 : 5.w),
+                  Text(
+                    "CLOSED",
                     style: GoogleFonts.poppins(
-                        fontSize: kIsWeb ? 13 : 13.sp,
-                        fontWeight: FontWeight.w700,
-                        color: _primaryColor)),
-              ),
-            ),
-            GestureDetector(
-              onTap: isOpen
-                  ? () => _updateItemQuantity(itemId, variant, 1,
-                  itemName: item['name'],
-                  price: price,
-                  image: item['image'])
-                  : () => _showRestaurantClosedPopup(context),
-              child: Container(
-                width: kIsWeb ? 32 : 32.w,
-                height: double.infinity,
-                decoration: BoxDecoration(
-                  color: _primaryColor.withOpacity(0.12),
-                  borderRadius: BorderRadius.only(
-                    topRight: Radius.circular(kIsWeb ? 8 : 8.sp),
-                    bottomRight: Radius.circular(kIsWeb ? 8 : 8.sp),
+                        fontSize: kIsWeb ? 11 : 11.sp,
+                        color: Colors.grey[500],
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5),
                   ),
-                ),
-                child: Icon(Icons.add,
-                    size: kIsWeb ? 15 : 15.sp, color: _primaryColor),
+                ],
               ),
             ),
-          ],
-        ),
-      );
-    }
+          );
+        }
 
-    return GestureDetector(
-      onTap: isOpen
-          ? () {
-        _updateItemQuantity(itemId, variant, 1,
-            itemName: item['name'], price: price, image: item['image']);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text("${item['name']} added to cart"),
-          duration: const Duration(seconds: 2),
-        ));
-      }
-          : () => _showRestaurantClosedPopup(context),
-      child: Container(
-        height: kIsWeb ? 34 : 34.h,
-        padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 18 : 18.w),
-        decoration: BoxDecoration(
-          color: isOpen ? _primaryColor : Colors.grey[400],
-          borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
-        ),
-        child: Center(
-          child: Text("ADD",
-              style: GoogleFonts.poppins(
-                  fontSize: kIsWeb ? 12 : 12.sp,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.6)),
-        ),
-      ),
+        if (qty > 0) {
+          return _CounterWidget(
+            qty: qty,
+            primaryColor: _primaryColor,
+            onDecrement: () => _updateItemQuantity(itemId, variant, -1,
+                itemName: item['name'], price: price, image: item['image']),
+            onIncrement: () => _updateItemQuantity(itemId, variant, 1,
+                itemName: item['name'], price: price, image: item['image']),
+          );
+        }
+
+        return _AddButtonWidget(
+          itemId: itemId,
+          primaryColor: _primaryColor,
+          lastAddedNotifier: _lastAddedItemId,
+          onTap: () => _updateItemQuantity(itemId, variant, 1,
+              itemName: item['name'], price: price, image: item['image']),
+          isOpen: true,
+        );
+      },
     );
   }
 
@@ -891,10 +950,52 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
     );
   }
 
+  // ─── Tab Content Widgets ─────────────────────────────────────────────────────
+
+  Widget _buildHomeTab() {
+    return HomeTab(
+      restaurantId: widget.restaurantId,
+      unifiedCategoryListView: _unifiedCategoryListView,
+      selectedCategoryId: _selectedCategoryId,
+      collapsedCategoryIds: _collapsedCategoryIds,
+      onCategorySelected: (categoryId) {
+        setState(() {
+          _selectedCategoryId = categoryId;
+        });
+      },
+      onCategoryToggle: (categoryId) {
+        setState(() {
+          if (_collapsedCategoryIds.contains(categoryId)) {
+            _collapsedCategoryIds.remove(categoryId);
+          } else {
+            _collapsedCategoryIds.add(categoryId);
+          }
+        });
+      },
+      selectedVariantIndexByItemId: _selectedVariantIndexByItemId,
+      updateItemQuantity: _updateItemQuantity,
+      getItemQuantity: getItemQuantity,
+      primaryColor: _primaryColor,
+    );
+  }
+
+  Widget _buildOrdersTab() {
+    return TrackOrderPage(restaurantId: widget.restaurantId);
+  }
+
+  Widget _buildOffersTab() {
+    return SpecialOffersScreen();
+  }
+
+  Widget _buildAccountTab() {
+    return AccountPage(restaurantId: widget.restaurantId);
+  }
+
   // ─── Build ────────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
     return WillPopScope(
       onWillPop: () async {
         final exit = await showDialog<bool>(
@@ -954,17 +1055,11 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
           }
 
           if (!snap.hasData) {
-            return const Scaffold(
-              body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text('Loading restaurant data...'),
-                  ],
-                ),
-              ),
+            return const FullScreenLoader(
+              type: LoaderType.foodLoader,
+              message: 'Loading restaurant menu...',
+              primaryColor: Color(0xFF7C3AED),
+              secondaryColor: Color(0xFFEC4899),
             );
           }
 
@@ -1003,7 +1098,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
           // Load restaurant name, tagline, logo from Firestore
           final String loadedName = (data['name'] ?? data['restaurantName'] ?? '') as String;
           final String loadedTagline = (data['tagline'] ?? data['description'] ?? '') as String;
-          final String? loadedLogo = data['logo'] as String?;
+          final String? loadedLogo = (data['logoUrl'] ?? data['logo']) as String?;
           if (_restaurantName != loadedName ||
               _restaurantTagline != loadedTagline ||
               _restaurantLogo != loadedLogo) {
@@ -1021,7 +1116,21 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
             body: Column(
               children: [
                 _buildHeader(),
-                Expanded(child: _buildContentArea()),
+                Expanded(
+                  child: IndexedStack(
+                    index: _selectedTabIndex,
+                    children: [
+                      // Render directly (not via KeepAliveWrapper) so the
+                      // _unifiedCategoryListView toggle is always reflected.
+                      _unifiedCategoryListView
+                          ? _buildUnifiedListView()
+                          : _buildSeparateView(),
+                      KeepAliveWrapper(child: _buildOrdersTab()),
+                      KeepAliveWrapper(child: _buildOffersTab()),
+                      KeepAliveWrapper(child: _buildAccountTab()),
+                    ],
+                  ),
+                ),
                 _buildBottomNavigationBar(),
               ],
             ),
@@ -1073,7 +1182,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
               ),
               SizedBox(width: kIsWeb ? 10 : 10.sp),
               // ── Restaurant name + tagline ────────────────────────────────
-              Flexible(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1100,32 +1209,57 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
                   ],
                 ),
               ),
-              const Spacer(),
-              GestureDetector(
-                onTap: () => setState(() =>
-                _unifiedCategoryListView = !_unifiedCategoryListView),
-                child: _headerIconButton(
-                  _unifiedCategoryListView
-                      ? Icons.grid_view_rounded
-                      : Icons.view_agenda_rounded,
-                ),
-              ),
-              SizedBox(width: kIsWeb ? 8 : 8.sp),
-              GestureDetector(
-                onTap: cart.isEmpty
-                    ? null
-                    : () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => CartPage(
-                        cart: cart,
-                        restaurantId: widget.restaurantId),
+              // Grid/List toggle — only on Home tab
+              if (_selectedTabIndex == 0) ...[
+                GestureDetector(
+                  onTap: () => setState(() =>
+                  _unifiedCategoryListView = !_unifiedCategoryListView),
+                  child: _headerIconButton(
+                    _unifiedCategoryListView
+                        ? Icons.grid_view_rounded
+                        : Icons.view_agenda_rounded,
                   ),
                 ),
-                child: _headerIconButton(Icons.shopping_cart,
-                    badge: cart.isNotEmpty
-                        ? "${getTotalCartQuantity()}"
-                        : null),
+                SizedBox(width: kIsWeb ? 8 : 8.sp),
+              ],
+              // Cart icon — always visible, badge via ValueListenableBuilder
+              ValueListenableBuilder<int>(
+                valueListenable: _cartBounce,
+                builder: (context, bounceCount, _) {
+                  return ValueListenableBuilder<List<CartItem>>(
+                    valueListenable: _cartNotifier,
+                    builder: (context, cartItems, _) {
+                      final total = cartItems.fold<int>(0, (s, i) => s + i.qty);
+                      return GestureDetector(
+                        onTap: () {
+                          if (cartItems.isEmpty) return;
+                          // Pass a mutable copy; on return, sync notifier
+                          final mutableCart = List<CartItem>.from(cartItems);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => CartPage(
+                                  cart: mutableCart,
+                                  restaurantId: widget.restaurantId),
+                            ),
+                          ).then((_) {
+                            if (mounted) {
+                              // CartPage.placeOrder calls cart.clear() on the
+                              // mutableCart list — sync that back to notifier
+                              _cartNotifier.value = List.from(mutableCart);
+                              _cartBounce.value = _cartBounce.value + 1;
+                            }
+                          });
+                        },
+                        child: _AnimatedCartBadge(
+                          bounceCount: bounceCount,
+                          badge: total > 0 ? '$total' : null,
+                          primaryColor: _primaryColor,
+                        ),
+                      );
+                    },
+                  );
+                },
               ),
             ],
           ),
@@ -1171,10 +1305,6 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
     );
   }
 
-  Widget _buildContentArea() => _unifiedCategoryListView
-      ? _buildUnifiedListView()
-      : _buildSeparateView();
-
   // ─── Bottom nav ───────────────────────────────────────────────────────────────
 
   Widget _buildBottomNavigationBar() {
@@ -1199,32 +1329,23 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
               _buildNavItem(
                   icon: Icons.home_rounded,
                   label: "Home",
-                  isSelected: true,
-                  onTap: () {}),
+                  isSelected: _selectedTabIndex == 0,
+                  onTap: () => _switchTab(0)),
               _buildNavItem(
                   icon: Icons.inventory_2_outlined,
                   label: "Orders",
-                  isSelected: false,
-                  onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => TrackOrderPage(
-                              restaurantId: widget.restaurantId)))),
+                  isSelected: _selectedTabIndex == 1,
+                  onTap: () => _switchTab(1)),
               _buildNavItem(
                   icon: Icons.card_giftcard_outlined,
                   label: "Offers",
-                  isSelected: false,
-                  onTap: () {}),
+                  isSelected: _selectedTabIndex == 2,
+                  onTap: () => _switchTab(2)),
               _buildNavItem(
                   icon: Icons.person_outline_rounded,
                   label: "Account",
-                  isSelected: false,
-                  onTap: () {
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => AccountPage(restaurantId: widget.restaurantId)));
-                  },
+                  isSelected: _selectedTabIndex == 3,
+                  onTap: () => _switchTab(3),
                   showBadge: true,
                   badgeCount: "1"),
             ],
@@ -1232,6 +1353,12 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
         ),
       ),
     );
+  }
+
+  void _switchTab(int index) {
+    setState(() {
+      _selectedTabIndex = index;
+    });
   }
 
   Widget _buildNavItem({
@@ -1304,7 +1431,17 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
       builder: (context, snap) {
         if (snap.hasError)
           return _errorWidget('Error loading categories', snap.error);
-        if (!snap.hasData) return _loadingWidget('Loading categories...');
+        if (!snap.hasData) {
+          return ListView.builder(
+            padding: EdgeInsets.only(
+                top: kIsWeb ? 4 : 4.h, bottom: kIsWeb ? 8 : 8.h),
+            itemCount: 3, // Show 3 skeleton category cards
+            itemBuilder: (context, index) => const CategoryCardSkeleton(
+              width: double.infinity,
+              height: 80,
+            ),
+          );
+        }
 
         final categories = snap.data!.docs;
         if (_selectedCategoryId == null && categories.isNotEmpty) {
@@ -1465,7 +1602,17 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
       builder: (context, snap) {
         if (snap.hasError)
           return _errorWidget('Error loading categories', snap.error);
-        if (!snap.hasData) return _loadingWidget('Loading categories...');
+        if (!snap.hasData) {
+          return ListView.builder(
+            padding: EdgeInsets.only(
+                top: kIsWeb ? 4 : 4.h, bottom: kIsWeb ? 8 : 8.h),
+            itemCount: 3, // Show 3 skeleton category cards
+            itemBuilder: (context, index) => const CategoryCardSkeleton(
+              width: double.infinity,
+              height: 80,
+            ),
+          );
+        }
 
         final categories = snap.data!.docs;
         if (categories.isEmpty) return _emptyWidget('No Categories Found');
@@ -1548,7 +1695,13 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
       builder: (context, snap) {
         if (snap.hasError)
           return _errorWidget('Error loading menu items', snap.error);
-        if (!snap.hasData) return _loadingWidget('Loading menu items...');
+        if (!snap.hasData) {
+          return ListView.builder(
+            padding: EdgeInsets.symmetric(vertical: kIsWeb ? 8 : 8.h),
+            itemCount: 5, // Show 5 skeleton cards
+            itemBuilder: (context, index) => const MenuCardSkeleton(),
+          );
+        }
 
         final items = snap.data!.docs;
         if (items.isEmpty) return _emptyWidget('No Menu Items Available');
@@ -1590,13 +1743,13 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
   // ─── Reusable state widgets ───────────────────────────────────────────────────
 
   Widget _loadingWidget(String msg) => Center(
-    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-      const CircularProgressIndicator(),
-      const SizedBox(height: 12),
-      Text(msg,
-          style: GoogleFonts.poppins(
-              fontSize: kIsWeb ? 14 : 14.sp, color: Colors.grey)),
-    ]),
+    child: ProfessionalLoader(
+      type: LoaderType.waveBounce,
+      message: msg,
+      primaryColor: _primaryColor,
+      secondaryColor: const Color(0xFFEC4899),
+      size: kIsWeb ? 60 : 60.w,
+    ),
   );
 
   Widget _errorWidget(String msg, Object? error) => Center(
@@ -1671,4 +1824,292 @@ class _CustomerMenuPageState extends State<CustomerMenuPage> {
               fontSize: kIsWeb ? 12 : 12.sp, color: Colors.grey[400])),
     ]),
   );
+}
+
+// ─── Animated cart badge in header ───────────────────────────────────────────
+
+class _AnimatedCartBadge extends StatefulWidget {
+  final int bounceCount;
+  final String? badge;
+  final Color primaryColor;
+
+  const _AnimatedCartBadge({
+    required this.bounceCount,
+    required this.badge,
+    required this.primaryColor,
+  });
+
+  @override
+  State<_AnimatedCartBadge> createState() => _AnimatedCartBadgeState();
+}
+
+class _AnimatedCartBadgeState extends State<_AnimatedCartBadge>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 350));
+    _scale = TweenSequence([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.35), weight: 40),
+      TweenSequenceItem(tween: Tween(begin: 1.35, end: 0.90), weight: 30),
+      TweenSequenceItem(tween: Tween(begin: 0.90, end: 1.0), weight: 30),
+    ]).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void didUpdateWidget(_AnimatedCartBadge old) {
+    super.didUpdateWidget(old);
+    if (old.bounceCount != widget.bounceCount) {
+      _ctrl.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _scale,
+      builder: (_, child) => Transform.scale(scale: _scale.value, child: child),
+      child: Container(
+        width: kIsWeb ? 40 : 40.sp,
+        height: kIsWeb ? 40 : 40.sp,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(kIsWeb ? 20 : 20.sp),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Icon(Icons.shopping_cart,
+                size: kIsWeb ? 20 : 20.sp, color: Colors.white),
+            if (widget.badge != null)
+              Positioned(
+                top: kIsWeb ? 2 : 2.sp,
+                right: kIsWeb ? 2 : 2.sp,
+                child: Container(
+                  width: kIsWeb ? 16 : 16.sp,
+                  height: kIsWeb ? 16 : 16.sp,
+                  decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp)),
+                  child: Center(
+                    child: Text(widget.badge!,
+                        style: GoogleFonts.poppins(
+                            fontSize: kIsWeb ? 10 : 10.sp,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white)),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Animated ADD button ──────────────────────────────────────────────────────
+
+class _AddButtonWidget extends StatefulWidget {
+  final String itemId;
+  final Color primaryColor;
+  final ValueNotifier<String?> lastAddedNotifier;
+  final VoidCallback onTap;
+  final bool isOpen;
+
+  const _AddButtonWidget({
+    required this.itemId,
+    required this.primaryColor,
+    required this.lastAddedNotifier,
+    required this.onTap,
+    required this.isOpen,
+  });
+
+  @override
+  State<_AddButtonWidget> createState() => _AddButtonWidgetState();
+}
+
+class _AddButtonWidgetState extends State<_AddButtonWidget>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 400));
+    _scale = TweenSequence([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.85), weight: 20),
+      TweenSequenceItem(tween: Tween(begin: 0.85, end: 1.15), weight: 40),
+      TweenSequenceItem(tween: Tween(begin: 1.15, end: 1.0), weight: 40),
+    ]).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+    widget.lastAddedNotifier.addListener(_onAdded);
+  }
+
+  void _onAdded() {
+    if (widget.lastAddedNotifier.value == widget.itemId) {
+      _ctrl.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.lastAddedNotifier.removeListener(_onAdded);
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _scale,
+      builder: (_, child) => Transform.scale(scale: _scale.value, child: child),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Container(
+          height: kIsWeb ? 34 : 34.h,
+          padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 18 : 18.w),
+          decoration: BoxDecoration(
+            color: widget.isOpen ? widget.primaryColor : Colors.grey[400],
+            borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
+          ),
+          child: Center(
+            child: Text("ADD",
+                style: GoogleFonts.poppins(
+                    fontSize: kIsWeb ? 12 : 12.sp,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.6)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Animated counter (+/−) widget ───────────────────────────────────────────
+
+class _CounterWidget extends StatefulWidget {
+  final int qty;
+  final Color primaryColor;
+  final VoidCallback onDecrement;
+  final VoidCallback onIncrement;
+
+  const _CounterWidget({
+    required this.qty,
+    required this.primaryColor,
+    required this.onDecrement,
+    required this.onIncrement,
+  });
+
+  @override
+  State<_CounterWidget> createState() => _CounterWidgetState();
+}
+
+class _CounterWidgetState extends State<_CounterWidget>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _numCtrl;
+  late Animation<double> _numScale;
+  int _prevQty = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _prevQty = widget.qty;
+    _numCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 250));
+    _numScale = TweenSequence([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.4), weight: 50),
+      TweenSequenceItem(tween: Tween(begin: 1.4, end: 1.0), weight: 50),
+    ]).animate(CurvedAnimation(parent: _numCtrl, curve: Curves.easeOut));
+  }
+
+  @override
+  void didUpdateWidget(_CounterWidget old) {
+    super.didUpdateWidget(old);
+    if (old.qty != widget.qty) {
+      _numCtrl.forward(from: 0);
+      _prevQty = widget.qty;
+    }
+  }
+
+  @override
+  void dispose() {
+    _numCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: kIsWeb ? 34 : 34.h,
+      decoration: BoxDecoration(
+        color: widget.primaryColor.withOpacity(0.07),
+        borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
+        border: Border.all(color: widget.primaryColor.withOpacity(0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            onTap: widget.onDecrement,
+            child: Container(
+              width: kIsWeb ? 32 : 32.w,
+              height: double.infinity,
+              decoration: BoxDecoration(
+                color: widget.primaryColor.withOpacity(0.12),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(kIsWeb ? 8 : 8.sp),
+                  bottomLeft: Radius.circular(kIsWeb ? 8 : 8.sp),
+                ),
+              ),
+              child: Icon(Icons.remove,
+                  size: kIsWeb ? 15 : 15.sp, color: widget.primaryColor),
+            ),
+          ),
+          SizedBox(
+            width: kIsWeb ? 34 : 34.w,
+            child: Center(
+              child: AnimatedBuilder(
+                animation: _numScale,
+                builder: (_, child) =>
+                    Transform.scale(scale: _numScale.value, child: child),
+                child: Text("${widget.qty}",
+                    style: GoogleFonts.poppins(
+                        fontSize: kIsWeb ? 13 : 13.sp,
+                        fontWeight: FontWeight.w700,
+                        color: widget.primaryColor)),
+              ),
+            ),
+          ),
+          GestureDetector(
+            onTap: widget.onIncrement,
+            child: Container(
+              width: kIsWeb ? 32 : 32.w,
+              height: double.infinity,
+              decoration: BoxDecoration(
+                color: widget.primaryColor.withOpacity(0.12),
+                borderRadius: BorderRadius.only(
+                  topRight: Radius.circular(kIsWeb ? 8 : 8.sp),
+                  bottomRight: Radius.circular(kIsWeb ? 8 : 8.sp),
+                ),
+              ),
+              child: Icon(Icons.add,
+                  size: kIsWeb ? 15 : 15.sp, color: widget.primaryColor),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

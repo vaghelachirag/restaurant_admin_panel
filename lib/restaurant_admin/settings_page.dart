@@ -1,7 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
 import '../core/constants/app_colors.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -34,6 +37,12 @@ class _SettingsPageState extends State<SettingsPage> {
 
   // Additional Notes
   List<TextEditingController> _noteControllers = [];
+
+  // Restaurant Logo
+  String? _existingLogoUrl;
+  Uint8List? _newLogoBytes;
+  bool _isUploadingLogo = false;
+  final String _imgBBApiKey = "a923bc17d28cd6fe1be417700456eb69";
 
   // Responsive helpers
   bool get _isWeb => kIsWeb || MediaQuery.of(context).size.width > 768;
@@ -96,6 +105,8 @@ class _SettingsPageState extends State<SettingsPage> {
           _noteControllers = notesData
               .map((n) => TextEditingController(text: n.toString()))
               .toList();
+
+          _existingLogoUrl = data['logoUrl'] as String?;
         });
       }
     } catch (e) {
@@ -103,8 +114,55 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  Future<void> _pickLogo() async {
+    final picker = ImagePicker();
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 512,
+      maxHeight: 512,
+    );
+    if (image != null) {
+      final bytes = await image.readAsBytes();
+      setState(() => _newLogoBytes = bytes);
+    }
+  }
+
+  Future<String?> _uploadLogoToImgBB() async {
+    if (_newLogoBytes == null) return null;
+    try {
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse("https://api.imgbb.com/1/upload?key=$_imgBBApiKey"),
+      );
+      request.files.add(
+        http.MultipartFile.fromBytes('image', _newLogoBytes!, filename: "logo.jpg"),
+      );
+      var response = await request.send();
+      var responseData = await response.stream.bytesToString();
+      var jsonData = json.decode(responseData);
+      return jsonData['data']['url'] as String?;
+    } catch (e) {
+      if (kDebugMode) print("LOGO UPLOAD ERROR: $e");
+      return null;
+    }
+  }
+
   Future<void> _saveRestaurantInfo() async {
     try {
+      // Upload new logo if picked
+      String? logoUrl = _existingLogoUrl;
+      if (_newLogoBytes != null) {
+        setState(() => _isUploadingLogo = true);
+        logoUrl = await _uploadLogoToImgBB();
+        if (logoUrl != null) {
+          setState(() {
+            _existingLogoUrl = logoUrl;
+            _newLogoBytes = null;
+          });
+        }
+        setState(() => _isUploadingLogo = false);
+      }
+
       await FirebaseFirestore.instance
           .collection('restaurants')
           .doc(widget.restaurantId)
@@ -125,6 +183,8 @@ class _SettingsPageState extends State<SettingsPage> {
         'packagingCharge': _packagingChargeController.text.trim(),
         'additionalNotes':
         _noteControllers.map((c) => c.text.trim()).toList(),
+        if (logoUrl != null) 'logoUrl': logoUrl,
+        if (logoUrl != null) 'logo': logoUrl,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
@@ -192,6 +252,8 @@ class _SettingsPageState extends State<SettingsPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        _buildLogoSection(),
+                        SizedBox(height: _isWeb ? 20 : 18.h),
                         _buildRestaurantInformationSection(),
                         SizedBox(height: _isWeb ? 20 : 18.h),
                         _buildOperatingHoursSection(),
@@ -330,6 +392,242 @@ class _SettingsPageState extends State<SettingsPage> {
           ...children,
         ],
       ),
+    );
+  }
+
+  // ─── Restaurant Logo ──────────────────────────────────────────────────────
+  Widget _buildLogoSection() {
+    final bool hasLogo = _newLogoBytes != null ||
+        (_existingLogoUrl != null && _existingLogoUrl!.isNotEmpty);
+
+    return _buildSectionCard(
+      icon: Icons.storefront_outlined,
+      iconColor: const Color(0xFFC4622D),
+      title: "Restaurant Logo",
+      children: [
+        _isWeb
+            ? Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            _buildLogoPreview(hasLogo),
+            const SizedBox(width: 24),
+            Expanded(child: _buildLogoActions(hasLogo)),
+          ],
+        )
+            : Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(child: _buildLogoPreview(hasLogo)),
+            SizedBox(height: 16.h),
+            _buildLogoActions(hasLogo),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLogoPreview(bool hasLogo) {
+    return Stack(
+      children: [
+        Container(
+          width: _isWeb ? 110 : 100.w,
+          height: _isWeb ? 110 : 100.w,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF9FAFB),
+            borderRadius: BorderRadius.circular(_isWeb ? 16 : 14.r),
+            border: Border.all(
+              color: hasLogo
+                  ? const Color(0xFFC4622D).withOpacity(0.5)
+                  : const Color(0xFFD1D5DB),
+              width: hasLogo ? 2 : 1,
+            ),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(_isWeb ? 14 : 12.r),
+            child: _newLogoBytes != null
+                ? Image.memory(_newLogoBytes!, fit: BoxFit.cover,
+                width: double.infinity, height: double.infinity)
+                : (_existingLogoUrl != null && _existingLogoUrl!.isNotEmpty
+                ? Image.network(
+              _existingLogoUrl!,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+              loadingBuilder: (ctx, child, progress) {
+                if (progress == null) return child;
+                return const Center(
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                );
+              },
+              errorBuilder: (ctx, _, __) => _logoPlaceholder(),
+            )
+                : _logoPlaceholder()),
+          ),
+        ),
+        if (hasLogo)
+          Positioned(
+            bottom: 4,
+            right: 4,
+            child: Container(
+              width: 24,
+              height: 24,
+              decoration: const BoxDecoration(
+                color: Color(0xFFC4622D),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.check, color: Colors.white, size: 14),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _logoPlaceholder() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.storefront_outlined,
+            size: _isWeb ? 32 : 28.sp,
+            color: const Color(0xFF9CA3AF)),
+        SizedBox(height: _isWeb ? 6 : 4.h),
+        Text(
+          "No Logo",
+          style: TextStyle(
+            fontSize: _isWeb ? 11 : 10.sp,
+            color: const Color(0xFF9CA3AF),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLogoActions(bool hasLogo) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          hasLogo ? "Update Restaurant Logo" : "Upload Restaurant Logo",
+          style: TextStyle(
+            fontSize: _isWeb ? 14 : 13.sp,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF111827),
+          ),
+        ),
+        SizedBox(height: _isWeb ? 4 : 4.h),
+        Text(
+          "This logo appears on bills and the customer menu. Use a square image for best results (PNG or JPG, max 512×512px).",
+          style: TextStyle(
+            fontSize: _isWeb ? 12 : 11.sp,
+            color: const Color(0xFF6B7280),
+            height: 1.5,
+          ),
+        ),
+        SizedBox(height: _isWeb ? 14 : 12.h),
+        Row(
+          children: [
+            // Pick / Change button
+            GestureDetector(
+              onTap: _isUploadingLogo ? null : _pickLogo,
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: _isWeb ? 16 : 14.w,
+                  vertical: _isWeb ? 10 : 9.h,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF7ED),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: const Color(0xFFC4622D).withOpacity(0.4),
+                    width: 1.5,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.upload_outlined,
+                        color: Color(0xFFC4622D), size: 16),
+                    const SizedBox(width: 6),
+                    Text(
+                      hasLogo ? "Change Logo" : "Upload Logo",
+                      style: TextStyle(
+                        fontSize: _isWeb ? 13 : 12.sp,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFFC4622D),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Remove button — only shown when a logo exists
+            if (hasLogo) ...[
+              SizedBox(width: _isWeb ? 10 : 8.w),
+              GestureDetector(
+                onTap: () => setState(() {
+                  _newLogoBytes = null;
+                  _existingLogoUrl = null;
+                }),
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: _isWeb ? 14 : 12.w,
+                    vertical: _isWeb ? 10 : 9.h,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF2F2),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFFECACA)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.delete_outline,
+                          color: Color(0xFFEF4444), size: 16),
+                      const SizedBox(width: 6),
+                      Text(
+                        "Remove",
+                        style: TextStyle(
+                          fontSize: _isWeb ? 13 : 12.sp,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFFEF4444),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        // "Pending upload" badge when user picked but not yet saved
+        if (_newLogoBytes != null) ...[
+          SizedBox(height: _isWeb ? 10 : 8.h),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF0E6),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                  color: const Color(0xFFC4622D).withOpacity(0.3)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.info_outline,
+                    size: 13, color: Color(0xFFC4622D)),
+                const SizedBox(width: 5),
+                Text(
+                  "New logo will be saved when you tap Save",
+                  style: TextStyle(
+                    fontSize: _isWeb ? 11 : 10.sp,
+                    color: const Color(0xFFC4622D),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
     );
   }
 
