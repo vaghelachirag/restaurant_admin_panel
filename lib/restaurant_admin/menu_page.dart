@@ -25,7 +25,6 @@ class _MenuPageState extends State<MenuPage> {
   String? _selectedCategoryId;
   String _searchQuery = "";
 
-  bool _isListView = false;
   bool _isAddingMenuItem = false;
   bool _isEditingMenuItem = false;
 
@@ -61,7 +60,9 @@ class _MenuPageState extends State<MenuPage> {
 
   void addMenuItem() {
     TextEditingController nameController = TextEditingController();
+    TextEditingController descriptionController = TextEditingController();
     String? selectedCategoryId = _selectedCategoryId;
+    bool isVeg = true;
     List<Map<String, TextEditingController>> variants = [
       {"name": TextEditingController(), "price": TextEditingController()}
     ];
@@ -94,7 +95,7 @@ class _MenuPageState extends State<MenuPage> {
                 borderRadius: BorderRadius.circular(kIsWeb ? 16 : 14.sp),
               ),
               backgroundColor: colorScheme.surface,
-              child: Container(
+              child: SizedBox(
                 width: dialogWidth,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -300,6 +301,101 @@ class _MenuPageState extends State<MenuPage> {
                                 prefixIcon: Icon(Icons.restaurant, color: colorScheme.onSurface.withOpacity(0.5)),
                               ),
                             ),
+                            SizedBox(height: kIsWeb ? 20 : 20.sp),
+                            Text("Description", style: TextStyle(fontSize: kIsWeb ? 14 : 16.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
+                            SizedBox(height: kIsWeb ? 8 : 8.sp),
+                            TextField(
+                              controller: descriptionController,
+                              maxLines: 3,
+                              decoration: InputDecoration(
+                                hintText: "Enter item description (optional)",
+                                filled: true,
+                                fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp), borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.2))),
+                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12), borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.2))),
+                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp), borderSide: BorderSide(color: colorScheme.primary)),
+                                prefixIcon: Padding(
+                                  padding: const EdgeInsets.only(bottom: 40),
+                                  child: Icon(Icons.description_outlined, color: colorScheme.onSurface.withOpacity(0.5)),
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: kIsWeb ? 20 : 20.sp),
+                            Text("Food Type", style: TextStyle(fontSize: kIsWeb ? 14 : 16.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
+                            SizedBox(height: kIsWeb ? 10 : 10.sp),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () => setStateDialog(() { isVeg = true; }),
+                                    child: AnimatedContainer(
+                                      duration: const Duration(milliseconds: 200),
+                                      padding: EdgeInsets.symmetric(vertical: kIsWeb ? 12 : 12.sp),
+                                      decoration: BoxDecoration(
+                                        color: isVeg ? const Color(0xFFE8F5E9) : colorScheme.surfaceVariant.withOpacity(0.3),
+                                        borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
+                                        border: Border.all(color: isVeg ? const Color(0xFF388E3C) : colorScheme.outline.withOpacity(0.3), width: isVeg ? 2 : 1),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Container(
+                                            width: 16, height: 16,
+                                            decoration: BoxDecoration(
+                                              border: Border.all(color: const Color(0xFF388E3C), width: 2),
+                                              borderRadius: BorderRadius.circular(3),
+                                            ),
+                                            child: Center(
+                                              child: Container(
+                                                width: 8, height: 8,
+                                                decoration: const BoxDecoration(color: Color(0xFF388E3C), shape: BoxShape.circle),
+                                              ),
+                                            ),
+                                          ),
+                                          SizedBox(width: kIsWeb ? 8 : 8.sp),
+                                          Text("Veg", style: TextStyle(fontSize: kIsWeb ? 13 : 14.sp, fontWeight: FontWeight.w600, color: const Color(0xFF388E3C))),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: kIsWeb ? 12 : 12.sp),
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () => setStateDialog(() { isVeg = false; }),
+                                    child: AnimatedContainer(
+                                      duration: const Duration(milliseconds: 200),
+                                      padding: EdgeInsets.symmetric(vertical: kIsWeb ? 12 : 12.sp),
+                                      decoration: BoxDecoration(
+                                        color: !isVeg ? const Color(0xFFFFEBEE) : colorScheme.surfaceVariant.withOpacity(0.3),
+                                        borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
+                                        border: Border.all(color: !isVeg ? const Color(0xFFC62828) : colorScheme.outline.withOpacity(0.3), width: !isVeg ? 2 : 1),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Container(
+                                            width: 16, height: 16,
+                                            decoration: BoxDecoration(
+                                              border: Border.all(color: const Color(0xFFC62828), width: 2),
+                                              borderRadius: BorderRadius.circular(3),
+                                            ),
+                                            child: Center(
+                                              child: Container(
+                                                width: 8, height: 8,
+                                                decoration: const BoxDecoration(color: Color(0xFFC62828), shape: BoxShape.circle),
+                                              ),
+                                            ),
+                                          ),
+                                          SizedBox(width: kIsWeb ? 8 : 8.sp),
+                                          Text("Non-Veg", style: TextStyle(fontSize: kIsWeb ? 13 : 14.sp, fontWeight: FontWeight.w600, color: const Color(0xFFC62828))),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                             SizedBox(height: kIsWeb ? 24 : 24.sp),
                             Row(
                               children: [
@@ -429,6 +525,8 @@ class _MenuPageState extends State<MenuPage> {
                                     "categoryId": selectedCategoryId,
                                     "restaurantId": widget.restaurantId,
                                     "variants": variantList,
+                                    "description": descriptionController.text.trim(),
+                                    "isVeg": isVeg,
                                     "isAvailable": true,
                                     "createdAt": FieldValue.serverTimestamp(),
                                   });
@@ -490,6 +588,8 @@ class _MenuPageState extends State<MenuPage> {
     required BuildContext context,
     required String? selectedCategoryId,
     required TextEditingController nameController,
+    required TextEditingController descriptionController,
+    required bool isVeg,
     required List<Map<String, TextEditingController>> variants,
     required String restaurantId,
     required Future<String?> Function() uploadImage,
@@ -555,6 +655,8 @@ class _MenuPageState extends State<MenuPage> {
                     "categoryId": selectedCategoryId,
                     "restaurantId": restaurantId,
                     "variants": variantList,
+                    "description": descriptionController.text.trim(),
+                    "isVeg": isVeg,
                     "isAvailable": true,
                     "createdAt": FieldValue.serverTimestamp(),
                   });
@@ -910,8 +1012,10 @@ class _MenuPageState extends State<MenuPage> {
     final data = doc.data() as Map<String, dynamic>;
 
     TextEditingController nameController = TextEditingController(text: data['name'] ?? '');
+    TextEditingController descriptionController = TextEditingController(text: data['description'] ?? '');
     String? selectedCategoryId = data['categoryId'];
     String? imageUrl = (data['image'] ?? '') as String?;
+    bool isVeg = data['isVeg'] ?? true;
     Uint8List? newImageBytes;
 
     List<Map<String, TextEditingController>> variantsControllers = [];
@@ -1156,6 +1260,85 @@ class _MenuPageState extends State<MenuPage> {
                                 prefixIcon: Icon(Icons.restaurant, color: colorScheme.onSurface.withOpacity(0.5)),
                               ),
                             ),
+                            SizedBox(height: kIsWeb ? 20 : 20.sp),
+                            Text("Description", style: TextStyle(fontSize: kIsWeb ? 14 : 16.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
+                            SizedBox(height: kIsWeb ? 8 : 8.sp),
+                            TextField(
+                              controller: descriptionController,
+                              maxLines: 3,
+                              decoration: InputDecoration(
+                                hintText: "Enter item description (optional)",
+                                filled: true,
+                                fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp), borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.2))),
+                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12), borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.2))),
+                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp), borderSide: BorderSide(color: colorScheme.primary)),
+                                prefixIcon: Padding(
+                                  padding: const EdgeInsets.only(bottom: 40),
+                                  child: Icon(Icons.description_outlined, color: colorScheme.onSurface.withOpacity(0.5)),
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: kIsWeb ? 20 : 20.sp),
+                            Text("Food Type", style: TextStyle(fontSize: kIsWeb ? 14 : 16.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
+                            SizedBox(height: kIsWeb ? 10 : 10.sp),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () => setStateDialog(() { isVeg = true; }),
+                                    child: AnimatedContainer(
+                                      duration: const Duration(milliseconds: 200),
+                                      padding: EdgeInsets.symmetric(vertical: kIsWeb ? 12 : 12.sp),
+                                      decoration: BoxDecoration(
+                                        color: isVeg ? const Color(0xFFE8F5E9) : colorScheme.surfaceVariant.withOpacity(0.3),
+                                        borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
+                                        border: Border.all(color: isVeg ? const Color(0xFF388E3C) : colorScheme.outline.withOpacity(0.3), width: isVeg ? 2 : 1),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Container(
+                                            width: 16, height: 16,
+                                            decoration: BoxDecoration(border: Border.all(color: const Color(0xFF388E3C), width: 2), borderRadius: BorderRadius.circular(3)),
+                                            child: Center(child: Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFF388E3C), shape: BoxShape.circle))),
+                                          ),
+                                          SizedBox(width: kIsWeb ? 8 : 8.sp),
+                                          Text("Veg", style: TextStyle(fontSize: kIsWeb ? 13 : 14.sp, fontWeight: FontWeight.w600, color: const Color(0xFF388E3C))),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: kIsWeb ? 12 : 12.sp),
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () => setStateDialog(() { isVeg = false; }),
+                                    child: AnimatedContainer(
+                                      duration: const Duration(milliseconds: 200),
+                                      padding: EdgeInsets.symmetric(vertical: kIsWeb ? 12 : 12.sp),
+                                      decoration: BoxDecoration(
+                                        color: !isVeg ? const Color(0xFFFFEBEE) : colorScheme.surfaceVariant.withOpacity(0.3),
+                                        borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
+                                        border: Border.all(color: !isVeg ? const Color(0xFFC62828) : colorScheme.outline.withOpacity(0.3), width: !isVeg ? 2 : 1),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Container(
+                                            width: 16, height: 16,
+                                            decoration: BoxDecoration(border: Border.all(color: const Color(0xFFC62828), width: 2), borderRadius: BorderRadius.circular(3)),
+                                            child: Center(child: Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFFC62828), shape: BoxShape.circle))),
+                                          ),
+                                          SizedBox(width: kIsWeb ? 8 : 8.sp),
+                                          Text("Non-Veg", style: TextStyle(fontSize: kIsWeb ? 13 : 14.sp, fontWeight: FontWeight.w600, color: const Color(0xFFC62828))),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                             SizedBox(height: kIsWeb ? 24 : 24.sp),
                             Row(
                               children: [
@@ -1297,6 +1480,8 @@ class _MenuPageState extends State<MenuPage> {
                                     "name": nameController.text.trim(),
                                     "categoryId": selectedCategoryId,
                                     "variants": updatedVariants,
+                                    "description": descriptionController.text.trim(),
+                                    "isVeg": isVeg,
                                     "image": finalImageUrl ?? imageUrl ?? '',
                                   });
                                   if (context.mounted) {
@@ -1529,6 +1714,7 @@ class _MenuPageState extends State<MenuPage> {
                           final String categoryId = (data['categoryId'] ?? '').toString();
                           final String categoryName = (categoryMap[categoryId] ?? '').toString();
                           final num firstPrice = variants.isNotEmpty ? (variants.first['price'] ?? 0) as num : 0;
+                          final bool isVeg = data['isVeg'] ?? true;
 
                           return Container(
                             decoration: BoxDecoration(
@@ -1614,27 +1800,73 @@ class _MenuPageState extends State<MenuPage> {
 
                                         const SizedBox(height: 5),
 
-                                        // ── Category badge — highlighted orange pill ──────
-                                        if (categoryName.isNotEmpty)
-                                          Container(
-                                            margin: const EdgeInsets.only(bottom: 5),
-                                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                                            decoration: BoxDecoration(
-                                              // Warm orange tint bg — same brand palette
-                                              color: const Color(0xFFFFF0E6),
-                                              borderRadius: BorderRadius.circular(20),
-                                              border: Border.all(color: const Color(0xFFE8622A).withOpacity(0.35)),
-                                            ),
-                                            child: Text(
-                                              categoryName,
-                                              style: const TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w600,
-                                                // Orange text — clearly visible & branded
-                                                color: Color(0xFFE8622A),
+                                        // ── Category + Veg/Non-Veg badges ────────────────
+                                        Row(
+                                          children: [
+                                            if (categoryName.isNotEmpty)
+                                              Container(
+                                                margin: const EdgeInsets.only(bottom: 5, right: 5),
+                                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFFFFF0E6),
+                                                  borderRadius: BorderRadius.circular(20),
+                                                  border: Border.all(color: const Color(0xFFE8622A).withOpacity(0.35)),
+                                                ),
+                                                child: Text(
+                                                  categoryName,
+                                                  style: const TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Color(0xFFE8622A),
+                                                  ),
+                                                ),
+                                              ),
+                                            Container(
+                                              margin: const EdgeInsets.only(bottom: 5),
+                                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: isVeg ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE),
+                                                borderRadius: BorderRadius.circular(20),
+                                                border: Border.all(
+                                                  color: isVeg ? const Color(0xFF388E3C).withOpacity(0.5) : const Color(0xFFC62828).withOpacity(0.5),
+                                                ),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Container(
+                                                    width: 9, height: 9,
+                                                    decoration: BoxDecoration(
+                                                      border: Border.all(
+                                                        color: isVeg ? const Color(0xFF388E3C) : const Color(0xFFC62828),
+                                                        width: 1.5,
+                                                      ),
+                                                      borderRadius: BorderRadius.circular(2),
+                                                    ),
+                                                    child: Center(
+                                                      child: Container(
+                                                        width: 4, height: 4,
+                                                        decoration: BoxDecoration(
+                                                          color: isVeg ? const Color(0xFF388E3C) : const Color(0xFFC62828),
+                                                          shape: BoxShape.circle,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    isVeg ? "Veg" : "Non-Veg",
+                                                    style: TextStyle(
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: isVeg ? const Color(0xFF388E3C) : const Color(0xFFC62828),
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
                                             ),
-                                          ),
+                                          ],
+                                        ),
 
                                         // ── Description ──────────────────────────────────
                                         if (description.isNotEmpty)

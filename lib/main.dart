@@ -138,8 +138,6 @@ class _MyAppState extends State<MyApp> {
               builder: (_) => CustomerMenuPage(restaurantId: id),
             );
           }
-
-          /// ✅ Splash only once
           if (routeName == '/' && !_splashShown) {
             _splashShown = true;
             return MaterialPageRoute(

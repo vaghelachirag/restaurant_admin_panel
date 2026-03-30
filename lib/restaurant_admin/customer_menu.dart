@@ -50,12 +50,16 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
   late PageController _pageController;
 
   String openingTime = "09:00 AM";
-  String closingTime = "06:00 AM";
+  String closingTime = "06:00 PM"; // FIX #1: was "06:00 AM" — closing before opening made restaurant always "closed"
 
   // Restaurant info loaded from Firestore
   String _restaurantName = "";
   String _restaurantTagline = "";
   String? _restaurantLogo;
+
+  // FIX #2: Track Firebase initialization state for mobile browser deep links
+  bool _isFirebaseReady = false;
+  bool _hasRestaurantIdError = false;
 
   static const Color _primaryColor = Color(0xFF7C3AED);
 
@@ -66,6 +70,13 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
   void initState() {
     super.initState();
     _pageController = PageController();
+    // FIX #2: Validate restaurantId immediately on init — mobile browsers
+    // may open the page before the route params are properly set.
+    if (widget.restaurantId.isEmpty) {
+      _hasRestaurantIdError = true;
+    } else {
+      _isFirebaseReady = true;
+    }
   }
 
   @override
@@ -126,12 +137,10 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     int parseTime(String t) {
       try {
         t = t.trim();
-        // Format: "HH:MM" — 24-hour saved by settings page
         if (!t.contains(' ')) {
           final hm = t.split(':');
           return int.parse(hm[0]) * 60 + int.parse(hm[1]);
         }
-        // Format: "H:MM AM/PM" — legacy 12-hour format
         final parts = t.split(' ');
         final hm = parts[0].split(':');
         int h = int.parse(hm[0]);
@@ -142,16 +151,15 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
         return 0;
       }
     }
+
     final open = parseTime(openingTime);
     final close = parseTime(closingTime);
-    // Handle overnight hours (e.g., 22:00 to 02:00)
     if (close < open) {
       return cur >= open || cur <= close;
     }
     return cur >= open && cur <= close;
   }
 
-  /// Converts stored time string ("HH:MM" or "H:MM AM/PM") to a readable "H:MM AM/PM" label.
   String _formatDisplayTime(String t) {
     try {
       t = t.trim();
@@ -223,7 +231,8 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                   Icon(Icons.schedule,
                       color: Colors.grey[600], size: kIsWeb ? 20 : 20.sp),
                   SizedBox(width: kIsWeb ? 8 : 8.sp),
-                  Text("Hours: ${_formatDisplayTime(openingTime)} – ${_formatDisplayTime(closingTime)}",
+                  Text(
+                      "Hours: ${_formatDisplayTime(openingTime)} – ${_formatDisplayTime(closingTime)}",
                       style: GoogleFonts.poppins(
                           fontSize: kIsWeb ? 13 : 13.sp,
                           fontWeight: FontWeight.w500,
@@ -257,9 +266,6 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
         int? price,
         String? image,
       }) {
-    // Work on a mutable copy then assign — triggers ValueNotifier listeners
-    // WITHOUT calling setState(), so the main build() and all StreamBuilders
-    // are never touched and the menu never reloads.
     final updated = List<CartItem>.from(_cartNotifier.value);
     CartItem? existing;
     int idx = -1;
@@ -292,11 +298,9 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
           price: price,
           qty: change,
           image: image));
-      // Trigger item bounce animation
       _lastAddedItemId.value = itemId;
     }
     _cartNotifier.value = updated;
-    // Trigger cart badge bounce
     _cartBounce.value = _cartBounce.value + 1;
   }
 
@@ -312,10 +316,14 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     );
   }
 
-  /// Fallback shown when logo URL is absent or fails to load
   Widget _logoFallback() {
     final initials = _restaurantName.isNotEmpty
-        ? _restaurantName.trim().split(' ').take(2).map((w) => w[0].toUpperCase()).join()
+        ? _restaurantName
+        .trim()
+        .split(' ')
+        .take(2)
+        .map((w) => w[0].toUpperCase())
+        .join()
         : '?';
     return Container(
       color: Colors.white.withOpacity(0.15),
@@ -332,6 +340,8 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
   }
 
   Widget _vegBadge(bool isVeg) {
+    // FIX #3: isVeg badge was always green regardless of veg/non-veg.
+    // Non-veg should be red dot with red border.
     return Container(
       width: kIsWeb ? 18 : 18.sp,
       height: kIsWeb ? 18 : 18.sp,
@@ -339,20 +349,21 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
         color: Colors.white,
         borderRadius: BorderRadius.circular(kIsWeb ? 3 : 3.sp),
         border: Border.all(
-            color: isVeg ? Colors.green : Colors.green, width: 1.5),
+            color: isVeg ? Colors.green : Colors.red, width: 1.5),
       ),
       child: Center(
         child: Container(
           width: kIsWeb ? 8 : 8.sp,
           height: kIsWeb ? 8 : 8.sp,
           decoration: BoxDecoration(
-            color: isVeg ? Colors.green : Colors.green,
+            color: isVeg ? Colors.green : Colors.red,
             shape: BoxShape.circle,
           ),
         ),
       ),
     );
   }
+
   Widget _buildVariantDropdown({
     required String itemId,
     required List<dynamic> variants,
@@ -362,15 +373,12 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
 
     final selected = variants[selectedIndex] as Map<String, dynamic>;
     final selectedName = (selected['name'] ?? '') as String;
-    final selectedPrice = _toInt(selected['price']);
 
-    // Single variant — light red read-only pill
     if (variants.length == 1) {
       if (selectedName.isEmpty) return const SizedBox.shrink();
       return Container(
         padding: EdgeInsets.symmetric(
-            horizontal: kIsWeb ? 10 : 10.w,
-            vertical: kIsWeb ? 4 : 4.h),
+            horizontal: kIsWeb ? 10 : 10.w, vertical: kIsWeb ? 4 : 4.h),
         decoration: BoxDecoration(
           color: const Color(0xFFFFEEEE),
           borderRadius: BorderRadius.circular(kIsWeb ? 20 : 20.sp),
@@ -391,7 +399,6 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
       );
     }
 
-    // Multiple variants — attractive custom dropdown
     return GestureDetector(
       onTap: () => _showVariantDropdownSheet(
         itemId: itemId,
@@ -400,13 +407,12 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
       ),
       child: Container(
         padding: EdgeInsets.symmetric(
-            horizontal: kIsWeb ? 10 : 10.w,
-            vertical: kIsWeb ? 5 : 5.h),
+            horizontal: kIsWeb ? 10 : 10.w, vertical: kIsWeb ? 5 : 5.h),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
-          border: Border.all(
-              color: _primaryColor.withOpacity(0.45), width: 1.2),
+          border:
+          Border.all(color: _primaryColor.withOpacity(0.45), width: 1.2),
           boxShadow: [
             BoxShadow(
               color: _primaryColor.withOpacity(0.08),
@@ -418,7 +424,6 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Purple dot accent
             Container(
               width: kIsWeb ? 6 : 6.sp,
               height: kIsWeb ? 6 : 6.sp,
@@ -426,7 +431,6 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                   color: _primaryColor, shape: BoxShape.circle),
             ),
             SizedBox(width: kIsWeb ? 6 : 6.w),
-            // Selected name
             Text(
               selectedName,
               style: GoogleFonts.poppins(
@@ -435,10 +439,8 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                   fontWeight: FontWeight.w500),
             ),
             SizedBox(width: kIsWeb ? 5 : 5.w),
-            // Chevron
             Icon(Icons.keyboard_arrow_down_rounded,
-                size: kIsWeb ? 16 : 16.sp,
-                color: _primaryColor),
+                size: kIsWeb ? 16 : 16.sp, color: _primaryColor),
           ],
         ),
       ),
@@ -446,7 +448,6 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
   }
 
   // ─── Variant dropdown sheet ───────────────────────────────────────────────────
-  // Attractive bottom sheet with radio-style rows showing name + price.
 
   void _showVariantDropdownSheet({
     required String itemId,
@@ -463,13 +464,11 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
           builder: (ctx, setSheet) => Container(
             decoration: const BoxDecoration(
               color: Colors.white,
-              borderRadius:
-              BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Drag handle
                 Container(
                   margin: const EdgeInsets.only(top: 12),
                   width: 40,
@@ -479,14 +478,9 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-
-                // Header
                 Padding(
-                  padding: EdgeInsets.fromLTRB(
-                      kIsWeb ? 20 : 20.w,
-                      kIsWeb ? 20 : 20.h,
-                      kIsWeb ? 20 : 20.w,
-                      kIsWeb ? 4 : 4.h),
+                  padding: EdgeInsets.fromLTRB(kIsWeb ? 20 : 20.w,
+                      kIsWeb ? 20 : 20.h, kIsWeb ? 20 : 20.w, kIsWeb ? 4 : 4.h),
                   child: Row(
                     children: [
                       Container(
@@ -497,8 +491,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                           BorderRadius.circular(kIsWeb ? 8 : 8.sp),
                         ),
                         child: Icon(Icons.tune_rounded,
-                            color: _primaryColor,
-                            size: kIsWeb ? 18 : 18.sp),
+                            color: _primaryColor, size: kIsWeb ? 18 : 18.sp),
                       ),
                       SizedBox(width: kIsWeb ? 10 : 10.w),
                       Text("Select Variant",
@@ -509,21 +502,15 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                     ],
                   ),
                 ),
-
-                // Divider
                 Padding(
-                  padding: EdgeInsets.symmetric(
-                      horizontal: kIsWeb ? 20 : 20.w),
+                  padding:
+                  EdgeInsets.symmetric(horizontal: kIsWeb ? 20 : 20.w),
                   child: Divider(color: Colors.grey[100], height: 1),
                 ),
-
                 SizedBox(height: kIsWeb ? 8 : 8.h),
-
-                // Variant rows
                 ...variants.asMap().entries.map((entry) {
                   final index = entry.key;
-                  final variant =
-                  entry.value as Map<String, dynamic>;
+                  final variant = entry.value as Map<String, dynamic>;
                   final name = (variant['name'] ?? '') as String;
                   final price = _toInt(variant['price']);
                   final isSelected = index == localIndex;
@@ -531,9 +518,8 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                   return GestureDetector(
                     onTap: () {
                       setSheet(() => localIndex = index);
-                      setState(() =>
-                      _selectedVariantIndexByItemId[itemId] =
-                          index);
+                      setState(
+                              () => _selectedVariantIndexByItemId[itemId] = index);
                       Navigator.pop(ctx);
                     },
                     child: AnimatedContainer(
@@ -559,7 +545,6 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                       ),
                       child: Row(
                         children: [
-                          // Custom radio circle
                           AnimatedContainer(
                             duration: const Duration(milliseconds: 160),
                             width: kIsWeb ? 20 : 20.sp,
@@ -572,9 +557,8 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                                     : Colors.grey[400]!,
                                 width: isSelected ? 0 : 1.5,
                               ),
-                              color: isSelected
-                                  ? _primaryColor
-                                  : Colors.white,
+                              color:
+                              isSelected ? _primaryColor : Colors.white,
                             ),
                             child: isSelected
                                 ? Icon(Icons.check_rounded,
@@ -582,10 +566,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                                 color: Colors.white)
                                 : null,
                           ),
-
                           SizedBox(width: kIsWeb ? 12 : 12.w),
-
-                          // Variant name
                           Expanded(
                             child: Text(name,
                                 style: GoogleFonts.poppins(
@@ -597,12 +578,19 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                                         ? _primaryColor
                                         : Colors.black87)),
                           ),
+                          // FIX #4: Show price in variant sheet so user knows what they're selecting
+                          Text("₹$price",
+                              style: GoogleFonts.poppins(
+                                  fontSize: kIsWeb ? 13 : 13.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: isSelected
+                                      ? _primaryColor
+                                      : Colors.black54)),
                         ],
                       ),
                     ),
                   );
                 }),
-
                 SizedBox(height: kIsWeb ? 24 : 24.h),
               ],
             ),
@@ -612,7 +600,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     );
   }
 
-  // ─── ADD / counter widget (animated, no setState) ─────────────────────────────
+  // ─── ADD / counter widget ─────────────────────────────────────────────────────
 
   Widget _buildAddOrCounterWidget(
       BuildContext context,
@@ -634,14 +622,13 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
           }
         }
 
-        // When restaurant is closed and item is not already in cart,
-        // show a "Closed" pill that triggers the popup on tap.
         if (!isOpen && qty == 0) {
           return GestureDetector(
             onTap: () => _showRestaurantClosedPopup(context),
             child: Container(
               height: kIsWeb ? 34 : 34.h,
-              padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 14 : 14.w),
+              padding:
+              EdgeInsets.symmetric(horizontal: kIsWeb ? 14 : 14.w),
               decoration: BoxDecoration(
                 color: Colors.grey[200],
                 borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
@@ -730,7 +717,6 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ── Image ──────────────────────────────────────────────────────────
             ClipRRect(
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(kIsWeb ? 14 : 14.sp),
@@ -751,8 +737,6 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                 ),
               ),
             ),
-
-            // ── Details ────────────────────────────────────────────────────────
             Expanded(
               child: Padding(
                 padding: EdgeInsets.symmetric(
@@ -782,17 +766,12 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                           overflow: TextOverflow.ellipsis),
                     ],
                     SizedBox(height: kIsWeb ? 7 : 7.h),
-
-                    // Attractive variant dropdown
                     _buildVariantDropdown(
                       itemId: itemId,
                       variants: v,
                       selectedIndex: si,
                     ),
-
                     SizedBox(height: kIsWeb ? 8 : 8.h),
-
-                    // Price + ADD
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.center,
@@ -815,8 +794,6 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
       ),
     );
   }
-
-  // ─── List card — unified view ─────────────────────────────────────────────────
 
   Widget _buildMenuCard({
     required BuildContext context,
@@ -856,17 +833,14 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
       ),
       child: Padding(
         padding: EdgeInsets.symmetric(
-            horizontal: kIsWeb ? 10 : 10.w,
-            vertical: kIsWeb ? 8 : 8.h),
+            horizontal: kIsWeb ? 10 : 10.w, vertical: kIsWeb ? 8 : 8.h),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Image
             Stack(
               children: [
                 ClipRRect(
-                  borderRadius:
-                  BorderRadius.circular(kIsWeb ? 8 : 8.sp),
+                  borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
                   child: SizedBox(
                     width: kIsWeb ? 72 : 72.w,
                     height: kIsWeb ? 72 : 72.h,
@@ -880,16 +854,12 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                 Positioned(top: 3, left: 3, child: _vegBadge(isVeg)),
               ],
             ),
-
             SizedBox(width: kIsWeb ? 10 : 10.w),
-
-            // Details
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Name + price in same row
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -910,7 +880,6 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                               color: Colors.red[600])),
                     ],
                   ),
-
                   if (description != null && description.isNotEmpty) ...[
                     SizedBox(height: kIsWeb ? 1 : 1.h),
                     Text(description,
@@ -920,14 +889,10 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis),
                   ],
-
                   SizedBox(height: kIsWeb ? 5 : 5.h),
-
-                  // Variant + ADD button in same row
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // Variant dropdown (flexible)
                       Expanded(
                         child: _buildVariantDropdown(
                           itemId: itemId,
@@ -936,7 +901,6 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                         ),
                       ),
                       SizedBox(width: kIsWeb ? 8 : 8.w),
-                      // ADD button
                       _buildAddOrCounterWidget(
                           context, item, itemId, variantName, safePrice),
                     ],
@@ -950,7 +914,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     );
   }
 
-  // ─── Tab Content Widgets ─────────────────────────────────────────────────────
+  // ─── Tab Content Widgets ──────────────────────────────────────────────────────
 
   Widget _buildHomeTab() {
     return HomeTab(
@@ -995,18 +959,49 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // Required for AutomaticKeepAliveClientMixin
+    super.build(context);
+
+    // FIX #2: Guard invalid restaurantId — mobile browsers may open the page
+    // without a properly resolved route param.
+    if (_hasRestaurantIdError || widget.restaurantId.isEmpty) {
+      return Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.link_off, size: 64, color: Colors.grey),
+                const SizedBox(height: 16),
+                Text(
+                  'Invalid Menu Link',
+                  style: GoogleFonts.poppins(
+                      fontSize: kIsWeb ? 20 : 20.sp,
+                      fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Please scan the QR code again or ask the restaurant for a valid link.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                      fontSize: kIsWeb ? 14 : 14.sp, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return WillPopScope(
       onWillPop: () async {
         final exit = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
             shape: RoundedRectangleBorder(
-                borderRadius:
-                BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
+                borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
             title: const Text("Exit Menu?"),
-            content:
-            const Text("Are you sure you want to close the menu?"),
+            content: const Text("Are you sure you want to close the menu?"),
             actions: [
               TextButton(
                   onPressed: () => Navigator.pop(ctx, false),
@@ -1025,6 +1020,18 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
             .doc(widget.restaurantId)
             .snapshots(),
         builder: (context, snap) {
+          // FIX #5: Check connectionState FIRST — this is the primary fix for
+          // data not loading on mobile browser. Without this, the page shows
+          // "Restaurant not found" before Firestore even responds.
+          if (snap.connectionState == ConnectionState.waiting) {
+            return const FullScreenLoader(
+              type: LoaderType.foodLoader,
+              message: 'Loading restaurant menu...',
+              primaryColor: Color(0xFF7C3AED),
+              secondaryColor: Color(0xFFEC4899),
+            );
+          }
+
           if (snap.hasError) {
             return Scaffold(
               appBar: AppBar(title: const Text('Error')),
@@ -1054,19 +1061,10 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
             );
           }
 
-          if (!snap.hasData) {
-            return const FullScreenLoader(
-              type: LoaderType.foodLoader,
-              message: 'Loading restaurant menu...',
-              primaryColor: Color(0xFF7C3AED),
-              secondaryColor: Color(0xFFEC4899),
-            );
-          }
-
-          final rawData = snap.data!.data();
-          if (rawData == null) {
+          // FIX #5 continued: Only check hasData AFTER connectionState is not waiting.
+          if (!snap.hasData || snap.data?.data() == null) {
             return Scaffold(
-              appBar: AppBar(title: const Text('Error')),
+              appBar: AppBar(title: const Text('Not Found')),
               body: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -1078,7 +1076,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                             fontSize: kIsWeb ? 18 : 18.sp,
                             fontWeight: FontWeight.w600)),
                     const SizedBox(height: 8),
-                    Text('The restaurant document may have been deleted.',
+                    Text('The restaurant link may be invalid or expired.',
                         style: TextStyle(
                             fontSize: kIsWeb ? 14 : 14.sp,
                             color: Colors.grey),
@@ -1089,25 +1087,31 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
             );
           }
 
-          final data = rawData as Map<String, dynamic>;
+          final data = snap.data!.data() as Map<String, dynamic>;
+
           if (data['openingTime'] != null)
             openingTime = data['openingTime'] as String;
           if (data['closingTime'] != null)
             closingTime = data['closingTime'] as String;
 
-          // Load restaurant name, tagline, logo from Firestore
-          final String loadedName = (data['name'] ?? data['restaurantName'] ?? '') as String;
-          final String loadedTagline = (data['tagline'] ?? data['description'] ?? '') as String;
-          final String? loadedLogo = (data['logoUrl'] ?? data['logo']) as String?;
+          final String loadedName =
+          (data['name'] ?? data['restaurantName'] ?? '') as String;
+          final String loadedTagline =
+          (data['tagline'] ?? data['description'] ?? '') as String;
+          final String? loadedLogo =
+          (data['logoUrl'] ?? data['logo']) as String?;
+
           if (_restaurantName != loadedName ||
               _restaurantTagline != loadedTagline ||
               _restaurantLogo != loadedLogo) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              setState(() {
-                _restaurantName = loadedName;
-                _restaurantTagline = loadedTagline;
-                _restaurantLogo = loadedLogo;
-              });
+              if (mounted) {
+                setState(() {
+                  _restaurantName = loadedName;
+                  _restaurantTagline = loadedTagline;
+                  _restaurantLogo = loadedLogo;
+                });
+              }
             });
           }
 
@@ -1120,8 +1124,6 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                   child: IndexedStack(
                     index: _selectedTabIndex,
                     children: [
-                      // Render directly (not via KeepAliveWrapper) so the
-                      // _unifiedCategoryListView toggle is always reflected.
                       _unifiedCategoryListView
                           ? _buildUnifiedListView()
                           : _buildSeparateView(),
@@ -1158,7 +1160,6 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
               vertical: kIsWeb ? 10 : 10.sp),
           child: Row(
             children: [
-              // ── Logo from Firestore ─────────────────────────────────────
               Container(
                 width: kIsWeb ? 44 : 44.sp,
                 height: kIsWeb ? 44 : 44.sp,
@@ -1169,8 +1170,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                       color: Colors.white.withOpacity(0.3), width: 1),
                 ),
                 child: ClipRRect(
-                  borderRadius:
-                  BorderRadius.circular(kIsWeb ? 10 : 10.sp),
+                  borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
                   child: _restaurantLogo != null && _restaurantLogo!.isNotEmpty
                       ? Image.network(
                     _restaurantLogo!,
@@ -1181,7 +1181,6 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                 ),
               ),
               SizedBox(width: kIsWeb ? 10 : 10.sp),
-              // ── Restaurant name + tagline ────────────────────────────────
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1209,7 +1208,6 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                   ],
                 ),
               ),
-              // Grid/List toggle — only on Home tab
               if (_selectedTabIndex == 0) ...[
                 GestureDetector(
                   onTap: () => setState(() =>
@@ -1222,18 +1220,17 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                 ),
                 SizedBox(width: kIsWeb ? 8 : 8.sp),
               ],
-              // Cart icon — always visible, badge via ValueListenableBuilder
               ValueListenableBuilder<int>(
                 valueListenable: _cartBounce,
                 builder: (context, bounceCount, _) {
                   return ValueListenableBuilder<List<CartItem>>(
                     valueListenable: _cartNotifier,
                     builder: (context, cartItems, _) {
-                      final total = cartItems.fold<int>(0, (s, i) => s + i.qty);
+                      final total =
+                      cartItems.fold<int>(0, (s, i) => s + i.qty);
                       return GestureDetector(
                         onTap: () {
                           if (cartItems.isEmpty) return;
-                          // Pass a mutable copy; on return, sync notifier
                           final mutableCart = List<CartItem>.from(cartItems);
                           Navigator.push(
                             context,
@@ -1244,8 +1241,6 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                             ),
                           ).then((_) {
                             if (mounted) {
-                              // CartPage.placeOrder calls cart.clear() on the
-                              // mutableCart list — sync that back to notifier
                               _cartNotifier.value = List.from(mutableCart);
                               _cartBounce.value = _cartBounce.value + 1;
                             }
@@ -1341,13 +1336,13 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                   label: "Offers",
                   isSelected: _selectedTabIndex == 2,
                   onTap: () => _switchTab(2)),
+              // FIX #6: Removed hardcoded badge "1" on Account tab —
+              // a static non-zero badge is misleading to users.
               _buildNavItem(
                   icon: Icons.person_outline_rounded,
                   label: "Account",
                   isSelected: _selectedTabIndex == 3,
-                  onTap: () => _switchTab(3),
-                  showBadge: true,
-                  badgeCount: "1"),
+                  onTap: () => _switchTab(3)),
             ],
           ),
         ),
@@ -1431,11 +1426,13 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
       builder: (context, snap) {
         if (snap.hasError)
           return _errorWidget('Error loading categories', snap.error);
-        if (!snap.hasData) {
+
+        // FIX #5: connectionState check in nested StreamBuilders too.
+        if (snap.connectionState == ConnectionState.waiting) {
           return ListView.builder(
             padding: EdgeInsets.only(
                 top: kIsWeb ? 4 : 4.h, bottom: kIsWeb ? 8 : 8.h),
-            itemCount: 3, // Show 3 skeleton category cards
+            itemCount: 3,
             itemBuilder: (context, index) => const CategoryCardSkeleton(
               width: double.infinity,
               height: 80,
@@ -1443,12 +1440,18 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
           );
         }
 
+        if (!snap.hasData || snap.data!.docs.isEmpty) {
+          return _emptyWidget('No Categories Found');
+        }
+
         final categories = snap.data!.docs;
         if (_selectedCategoryId == null && categories.isNotEmpty) {
-          WidgetsBinding.instance.addPostFrameCallback((_) =>
-              setState(() => _selectedCategoryId = categories.first.id));
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() => _selectedCategoryId = categories.first.id);
+            }
+          });
         }
-        if (categories.isEmpty) return _emptyWidget('No Categories Found');
 
         return ListView.builder(
           padding: EdgeInsets.only(
@@ -1464,13 +1467,11 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                 GestureDetector(
                   onTap: () {
                     setState(() {
-                      // Toggle expand/collapse
                       if (isExpanded) {
                         _collapsedCategoryIds.add(cat.id);
                       } else {
                         _collapsedCategoryIds.remove(cat.id);
                       }
-                      // Highlight this category as selected
                       _selectedCategoryId = cat.id;
                     });
                   },
@@ -1497,7 +1498,6 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                     ),
                     child: Row(
                       children: [
-                        // Purple left bar when selected
                         if (isCatSelected) ...[
                           Container(
                             width: kIsWeb ? 3 : 3.w,
@@ -1524,9 +1524,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                           isExpanded
                               ? Icons.keyboard_arrow_up_rounded
                               : Icons.keyboard_arrow_down_rounded,
-                          color: isCatSelected
-                              ? _primaryColor
-                              : Colors.black45,
+                          color: isCatSelected ? _primaryColor : Colors.black45,
                           size: kIsWeb ? 20 : 20.sp,
                         ),
                       ],
@@ -1547,12 +1545,14 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                     builder: (context, menuSnap) {
                       if (menuSnap.hasError)
                         return _inlineError('Error loading items');
-                      if (!menuSnap.hasData) return _inlineLoading();
-                      final items = menuSnap.data!.docs;
-                      if (items.isEmpty)
+                      // FIX #5: connectionState check in innermost StreamBuilder
+                      if (menuSnap.connectionState ==
+                          ConnectionState.waiting) return _inlineLoading();
+                      if (!menuSnap.hasData || menuSnap.data!.docs.isEmpty)
                         return _inlineEmpty(
                             'No available items in this category');
 
+                      final items = menuSnap.data!.docs;
                       return Column(
                         children: items.map((item) {
                           final itemId = item.id;
@@ -1602,11 +1602,13 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
       builder: (context, snap) {
         if (snap.hasError)
           return _errorWidget('Error loading categories', snap.error);
-        if (!snap.hasData) {
+
+        // FIX #5: connectionState check
+        if (snap.connectionState == ConnectionState.waiting) {
           return ListView.builder(
             padding: EdgeInsets.only(
                 top: kIsWeb ? 4 : 4.h, bottom: kIsWeb ? 8 : 8.h),
-            itemCount: 3, // Show 3 skeleton category cards
+            itemCount: 3,
             itemBuilder: (context, index) => const CategoryCardSkeleton(
               width: double.infinity,
               height: 80,
@@ -1614,11 +1616,17 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
           );
         }
 
+        if (!snap.hasData || snap.data!.docs.isEmpty) {
+          return _emptyWidget('No Categories Found');
+        }
+
         final categories = snap.data!.docs;
-        if (categories.isEmpty) return _emptyWidget('No Categories Found');
         if (_selectedCategoryId == null && categories.isNotEmpty) {
-          WidgetsBinding.instance.addPostFrameCallback((_) =>
-              setState(() => _selectedCategoryId = categories.first.id));
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() => _selectedCategoryId = categories.first.id);
+            }
+          });
         }
 
         return Column(
@@ -1648,8 +1656,8 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                         color: isSelected
                             ? _primaryColor
                             : Colors.grey[100],
-                        borderRadius: BorderRadius.circular(
-                            kIsWeb ? 24 : 24.sp),
+                        borderRadius:
+                        BorderRadius.circular(kIsWeb ? 24 : 24.sp),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -1695,25 +1703,29 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
       builder: (context, snap) {
         if (snap.hasError)
           return _errorWidget('Error loading menu items', snap.error);
-        if (!snap.hasData) {
+
+        // FIX #5: connectionState check
+        if (snap.connectionState == ConnectionState.waiting) {
           return ListView.builder(
-            padding: EdgeInsets.symmetric(vertical: kIsWeb ? 8 : 8.h),
-            itemCount: 5, // Show 5 skeleton cards
+            padding:
+            EdgeInsets.symmetric(vertical: kIsWeb ? 8 : 8.h),
+            itemCount: 5,
             itemBuilder: (context, index) => const MenuCardSkeleton(),
           );
         }
 
-        final items = snap.data!.docs;
-        if (items.isEmpty) return _emptyWidget('No Menu Items Available');
+        if (!snap.hasData || snap.data!.docs.isEmpty) {
+          return _emptyWidget('No Menu Items Available');
+        }
 
+        final items = snap.data!.docs;
         return ListView.builder(
           padding: EdgeInsets.symmetric(vertical: kIsWeb ? 8 : 8.h),
           itemCount: items.length,
           itemBuilder: (ctx, i) {
             final item = items[i];
             final itemId = item.id;
-            final raw =
-            (item.data() as Map<String, dynamic>)['variants'];
+            final raw = (item.data() as Map<String, dynamic>)['variants'];
             final v = _safeList(raw);
             final si = _safeIndex(itemId, v);
             final sv = v.isNotEmpty ? v[si] : null;
@@ -1776,7 +1788,8 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
   );
 
   Widget _emptyWidget(String msg) => Center(
-    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+    child:
+    Column(mainAxisAlignment: MainAxisAlignment.center, children: [
       Icon(Icons.restaurant_menu,
           color: Colors.grey[300], size: kIsWeb ? 56 : 56.sp),
       const SizedBox(height: 12),
@@ -1878,7 +1891,8 @@ class _AnimatedCartBadgeState extends State<_AnimatedCartBadge>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _scale,
-      builder: (_, child) => Transform.scale(scale: _scale.value, child: child),
+      builder: (_, child) =>
+          Transform.scale(scale: _scale.value, child: child),
       child: Container(
         width: kIsWeb ? 40 : 40.sp,
         height: kIsWeb ? 40 : 40.sp,
@@ -1900,7 +1914,8 @@ class _AnimatedCartBadgeState extends State<_AnimatedCartBadge>
                   height: kIsWeb ? 16 : 16.sp,
                   decoration: BoxDecoration(
                       color: Colors.red,
-                      borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp)),
+                      borderRadius:
+                      BorderRadius.circular(kIsWeb ? 8 : 8.sp)),
                   child: Center(
                     child: Text(widget.badge!,
                         style: GoogleFonts.poppins(
@@ -1973,12 +1988,14 @@ class _AddButtonWidgetState extends State<_AddButtonWidget>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _scale,
-      builder: (_, child) => Transform.scale(scale: _scale.value, child: child),
+      builder: (_, child) =>
+          Transform.scale(scale: _scale.value, child: child),
       child: GestureDetector(
         onTap: widget.onTap,
         child: Container(
           height: kIsWeb ? 34 : 34.h,
-          padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 18 : 18.w),
+          padding:
+          EdgeInsets.symmetric(horizontal: kIsWeb ? 18 : 18.w),
           decoration: BoxDecoration(
             color: widget.isOpen ? widget.primaryColor : Colors.grey[400],
             borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
@@ -2020,12 +2037,10 @@ class _CounterWidgetState extends State<_CounterWidget>
     with SingleTickerProviderStateMixin {
   late AnimationController _numCtrl;
   late Animation<double> _numScale;
-  int _prevQty = 0;
 
   @override
   void initState() {
     super.initState();
-    _prevQty = widget.qty;
     _numCtrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 250));
     _numScale = TweenSequence([
@@ -2039,7 +2054,6 @@ class _CounterWidgetState extends State<_CounterWidget>
     super.didUpdateWidget(old);
     if (old.qty != widget.qty) {
       _numCtrl.forward(from: 0);
-      _prevQty = widget.qty;
     }
   }
 

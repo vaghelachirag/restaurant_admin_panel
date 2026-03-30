@@ -79,8 +79,6 @@ class _CartPageState extends State<CartPage> {
     return total;
   }
 
-  // ── Place Order ─────────────────────────────────────────────────────────────
-
   Future<void> placeOrder({
     required bool enableGst,
     required double gstPct,
@@ -176,6 +174,11 @@ class _CartPageState extends State<CartPage> {
             body: Center(child: CircularProgressIndicator()),
           );
         }
+
+        if (restaurantSnapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
         final rawData = restaurantSnapshot.data!.data();
         if (rawData == null) {
           return const Scaffold(
@@ -184,7 +187,7 @@ class _CartPageState extends State<CartPage> {
         }
         final data = rawData as Map<String, dynamic>;
 
-        // ── Theme ──
+
         final theme = data['theme'] ?? {};
         final bgColor = _hexToColor(theme['backgroundColor'] ?? "#F8F9FA");
         final textColor = _hexToColor(theme['textColor'] ?? "#111827");

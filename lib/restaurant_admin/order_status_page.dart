@@ -2,7 +2,8 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-// ─── Data ────────────────────────────────────────────────────────────────────
+import '../widgets/professional_loader.dart';
+
 enum OrderStep { received, preparing, qualityCheck, readyForPickup }
 
 extension OrderStepExt on OrderStep {
@@ -46,7 +47,8 @@ extension OrderStepExt on OrderStep {
       'ready': OrderStep.readyForPickup,
       'completed': OrderStep.readyForPickup,
     };
-    final currentStep = statusMap[firestoreStatus.toLowerCase()] ?? OrderStep.received;
+    final currentStep =
+        statusMap[firestoreStatus.toLowerCase()] ?? OrderStep.received;
     return order.indexOf(this) <= order.indexOf(currentStep);
   }
 
@@ -57,7 +59,8 @@ extension OrderStepExt on OrderStep {
       'ready': OrderStep.readyForPickup,
       'completed': OrderStep.readyForPickup,
     };
-    return this == (statusMap[firestoreStatus.toLowerCase()] ?? OrderStep.received);
+    return this ==
+        (statusMap[firestoreStatus.toLowerCase()] ?? OrderStep.received);
   }
 }
 
@@ -133,7 +136,9 @@ class _OrderPlacedScreenState extends State<OrderPlacedScreen>
       CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
     );
 
-    Future.delayed(const Duration(milliseconds: 200), () {
+    // Always start animations immediately so status card is visible
+    // regardless of navigation source (direct open, deep link, customer menu, etc.)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _checkCtrl.forward();
         _cardCtrl.forward();
@@ -187,21 +192,37 @@ class _OrderPlacedScreenState extends State<OrderPlacedScreen>
             .doc(widget.orderId)
             .snapshots(),
         builder: (context, snapshot) {
-          // Loading state
-          if (!snapshot.hasData) {
-            return const Center(
-              child: CircularProgressIndicator(color: Color(0xFF6B4EFF)),
-            );
-          }
-
-          // Error state
+          // ── 1. Error state (check first so it's never swallowed) ──────────
           if (snapshot.hasError) {
             return Center(
               child: Text('Error: ${snapshot.error}'),
             );
           }
 
-          final data = snapshot.data!.data() as Map<String, dynamic>? ?? {};
+          // ── 2. Loading state (waiting OR no data yet) ─────────────────────
+          if (snapshot.connectionState == ConnectionState.waiting ||
+              !snapshot.hasData) {
+            return const FullScreenLoader(
+              type: LoaderType.foodLoader,
+              message: 'Loading your order...',
+              primaryColor: Color(0xFF7C3AED),
+              secondaryColor: Color(0xFFEC4899),
+            );
+          }
+
+          // ── 3. Order not found (invalid orderId from deep link) ───────────
+          if (!snapshot.data!.exists) {
+            return const Center(
+              child: Text(
+                'Order not found.',
+                style: TextStyle(fontSize: 16, color: Color(0xFF6B7280)),
+              ),
+            );
+          }
+
+          // ── 4. Data ready ─────────────────────────────────────────────────
+          final data =
+              snapshot.data!.data() as Map<String, dynamic>? ?? {};
           final token = (data['tokenNumber'] ?? 0).toString();
           final total = (data['totalAmount'] ?? 0).toDouble();
           final status = data['status'] as String? ?? 'pending';
@@ -250,10 +271,16 @@ class _OrderPlacedScreenState extends State<OrderPlacedScreen>
                           const SizedBox(height: 16),
 
                           // ── Card 2: Order Status (live from Firestore) ──
+                          // NOTE: opacity is clamped to min 1.0 so the status
+                          // card is always visible even when navigated from
+                          // the customer menu link (where animation may not
+                          // have run yet).
                           Transform.translate(
                             offset: Offset(0, _cardSlide.value * 1.3),
                             child: Opacity(
-                              opacity: _cardFade.value,
+                              opacity: _cardFade.value.clamp(0.0, 1.0) == 0.0
+                                  ? 1.0
+                                  : _cardFade.value,
                               child: _OrderStatusCard(status: status),
                             ),
                           ),
@@ -369,7 +396,7 @@ class _SuccessCard extends StatelessWidget {
           // Token number section
           Container(
             margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.symmetric(vertical: 20),
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 24),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
                 colors: [Color(0xFFF6881F), Color(0xFFE8532A)],
@@ -389,7 +416,7 @@ class _SuccessCard extends StatelessWidget {
                     letterSpacing: 1.4,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 Text(
                   tokenNumber,
                   style: const TextStyle(
@@ -400,6 +427,7 @@ class _SuccessCard extends StatelessWidget {
                     letterSpacing: 2,
                   ),
                 ),
+                const SizedBox(height: 4),
               ],
             ),
           ),
@@ -435,9 +463,7 @@ class _SuccessCard extends StatelessWidget {
   }
 }
 
-// ─── Order Status Card (live Firestore status) ────────────────────────────────
 class _OrderStatusCard extends StatelessWidget {
-  /// The current Firestore status string: 'pending' | 'preparing' | 'ready' | 'completed'
   final String status;
 
   const _OrderStatusCard({required this.status});
@@ -475,8 +501,8 @@ class _OrderStatusCard extends StatelessWidget {
               const Spacer(),
               // Live status badge
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 4),
+                padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: _statusBadgeBg(status),
                   borderRadius: BorderRadius.circular(20),
@@ -496,7 +522,8 @@ class _OrderStatusCard extends StatelessWidget {
           ...steps.map((step) => _StatusRow(
             step: step,
             isActive: step.isCurrent(status),
-            isDone: step.isActiveOrDone(status) && !step.isCurrent(status),
+            isDone:
+            step.isActiveOrDone(status) && !step.isCurrent(status),
           )),
         ],
       ),
@@ -547,11 +574,10 @@ class _OrderStatusCard extends StatelessWidget {
   }
 }
 
-// ─── Status Row ───────────────────────────────────────────────────────────────
 class _StatusRow extends StatelessWidget {
   final OrderStep step;
   final bool isActive; // currently in progress
-  final bool isDone;   // already completed
+  final bool isDone; // already completed
 
   const _StatusRow({
     required this.step,
@@ -709,7 +735,6 @@ class _ActionButtons extends StatelessWidget {
   }
 }
 
-// ─── Confetti Particle System ─────────────────────────────────────────────────
 class _ConfettiParticle {
   final double x;
   double y;
