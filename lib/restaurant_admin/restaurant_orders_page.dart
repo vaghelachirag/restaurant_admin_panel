@@ -1,6 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../uttils/session_manager.dart';
+import 'dart:async';
 
 class RestaurantOrdersPage extends StatefulWidget {
   final String restaurantId;
@@ -12,6 +15,23 @@ class RestaurantOrdersPage extends StatefulWidget {
 }
 
 class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
+
+  String? _playerId;
+  StreamSubscription<QuerySnapshot>? _newOrdersSubscription;
+  String? _currentUserRole;
+
+  @override
+  void initState() {
+    super.initState();
+    getPlayerId();
+  }
+
+  @override
+  void dispose() {
+    _newOrdersSubscription?.cancel();
+    super.dispose();
+  }
+
   String _selectedFilter = 'All';
 
   List<QueryDocumentSnapshot> _filterOrders(
@@ -77,6 +97,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
     final isDesktop = width >= 1024;
     final isTablet = width >= 768 && width < 1024;
 
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: StreamBuilder<QuerySnapshot>(
@@ -112,6 +133,49 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
 
   TextStyle _p(double size, FontWeight weight, Color color) {
     return GoogleFonts.poppins(fontSize: size, fontWeight: weight, color: color);
+  }
+
+  /// Fetches the OneSignal Player ID (push subscription ID) and saves it
+  /// to Firestore under restaurants/{restaurantId}/onesignalPlayerId.
+  /// Also listens for future subscription changes (e.g. re-subscribe).
+  Future<void> getPlayerId() async {
+    try {
+      final String? existingId = OneSignal.User.pushSubscription.id;
+      if (existingId != null && existingId.isNotEmpty) {
+        debugPrint("✅ OneSignal Player ID (immediate): $existingId");
+        setState(() => _playerId = existingId);
+        await _savePlayerIdToFirestore(existingId);
+      }
+
+      OneSignal.User.pushSubscription.addObserver((state) async {
+        final String? updatedId = state.current.id;
+        if (updatedId != null && updatedId.isNotEmpty && updatedId != _playerId) {
+          debugPrint("🔄 OneSignal Player ID (updated): $updatedId");
+          setState(() => _playerId = updatedId);
+          await _savePlayerIdToFirestore(updatedId);
+        }
+      });
+    } catch (e, stackTrace) {
+      debugPrint("❌ Error in getPlayerId: $e");
+      debugPrint(stackTrace.toString());
+    }
+  }
+
+  /// Persists the player ID to Firestore so the backend can send
+  /// targeted push notifications to this device/restaurant.
+  Future<void> _savePlayerIdToFirestore(String playerId) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('restaurants')
+          .doc(widget.restaurantId)
+          .set(
+        {'onesignalPlayerId': playerId},
+        SetOptions(merge: true), // merge: true so other fields are untouched
+      );
+      debugPrint("✅ Player ID saved to Firestore: $playerId");
+    } catch (e) {
+      debugPrint("❌ Failed to save Player ID to Firestore: $e");
+    }
   }
 
   Map<String, int> _buildStatusCounts(List<QueryDocumentSnapshot> allOrders) {

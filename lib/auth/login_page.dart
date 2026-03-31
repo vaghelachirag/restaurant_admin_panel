@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:restaurant_admin_panel/restaurant_admin/dashboard_page.dart';
 import '../core/constants/app_colors.dart';
-import '../restaurant_admin/restaurant_admin_page.dart';
+import '../restaurant_admin/restaurant_orders_page.dart'; // ✅ NEW
 import '../super_admin/restaurants_page.dart';
 import '../uttils/session_manager.dart';
 import 'auth_service.dart';
@@ -16,7 +16,6 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
@@ -26,7 +25,8 @@ class _LoginPageState extends State<LoginPage> {
   bool obscurePassword = true;
 
   Future<void> login() async {
-
+    emailController.text = "nilesh@gmail.com" ;
+    passwordController.text = "123456";
 
     setState(() {
       loading = true;
@@ -42,25 +42,21 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     if (userData != null) {
-
       String role = userData['role'];
       String? restaurantId = userData['restaurantId'];
 
-      await SessionManager.saveLogin(role: role, restaurantId: restaurantId,);
+      await SessionManager.saveLogin(role: role, restaurantId: restaurantId);
 
       if (!mounted) return;
 
       if (role == "super_admin") {
-
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (_) => const RestaurantListPage(),
           ),
         );
-
       } else if (role == "admin") {
-
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -69,15 +65,21 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
         );
-
+      } else if (role == "manager") {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => RestaurantOrdersPage(restaurantId: restaurantId!),),
+        );
+      } else {
+        // Fallback for unknown roles
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Unknown role. Access denied.")),
+        );
       }
-
     } else {
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Login Failed")),
       );
-
     }
   }
 
@@ -114,7 +116,8 @@ class _LoginPageState extends State<LoginPage> {
                     height: kIsWeb ? 80 : 80.w,
                     decoration: BoxDecoration(
                       color: AppColors.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(kIsWeb ? 20 : 20.r),
+                      borderRadius:
+                      BorderRadius.circular(kIsWeb ? 20 : 20.r),
                     ),
                     child: Icon(
                       Icons.restaurant_menu_rounded,
@@ -122,9 +125,9 @@ class _LoginPageState extends State<LoginPage> {
                       color: AppColors.primary,
                     ),
                   ),
-                  
+
                   SizedBox(height: kIsWeb ? 24 : 24.h),
-                  
+
                   Text(
                     "Restaurant Admin",
                     style: TextStyle(
@@ -133,9 +136,9 @@ class _LoginPageState extends State<LoginPage> {
                       color: AppColors.black,
                     ),
                   ),
-                  
+
                   SizedBox(height: kIsWeb ? 8 : 8.h),
-                  
+
                   Text(
                     "Sign in to manage your restaurant",
                     style: TextStyle(
@@ -143,9 +146,9 @@ class _LoginPageState extends State<LoginPage> {
                       color: Colors.grey[600],
                     ),
                   ),
-                  
+
                   SizedBox(height: kIsWeb ? 40 : 40.h),
-                  
+
                   // Email Field
                   TextField(
                     controller: emailController,
@@ -163,12 +166,15 @@ class _LoginPageState extends State<LoginPage> {
                         size: kIsWeb ? 20 : 20.w,
                       ),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.r),
+                        borderRadius:
+                        BorderRadius.circular(kIsWeb ? 12 : 12.r),
                         borderSide: BorderSide(color: Colors.grey[300]!),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.r),
-                        borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                        borderRadius:
+                        BorderRadius.circular(kIsWeb ? 12 : 12.r),
+                        borderSide: const BorderSide(
+                            color: AppColors.primary, width: 2),
                       ),
                       contentPadding: EdgeInsets.symmetric(
                         horizontal: kIsWeb ? 16 : 16.w,
@@ -176,9 +182,9 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                   ),
-                  
+
                   SizedBox(height: kIsWeb ? 20 : 20.h),
-                  
+
                   // Password Field
                   TextField(
                     controller: passwordController,
@@ -197,7 +203,9 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          obscurePassword ? Icons.visibility_off : Icons.visibility,
+                          obscurePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
                           color: Colors.grey[600],
                           size: kIsWeb ? 20 : 20.w,
                         ),
@@ -208,12 +216,15 @@ class _LoginPageState extends State<LoginPage> {
                         },
                       ),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.r),
+                        borderRadius:
+                        BorderRadius.circular(kIsWeb ? 12 : 12.r),
                         borderSide: BorderSide(color: Colors.grey[300]!),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.r),
-                        borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                        borderRadius:
+                        BorderRadius.circular(kIsWeb ? 12 : 12.r),
+                        borderSide: const BorderSide(
+                            color: AppColors.primary, width: 2),
                       ),
                       contentPadding: EdgeInsets.symmetric(
                         horizontal: kIsWeb ? 16 : 16.w,
@@ -221,9 +232,9 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                   ),
-                  
+
                   SizedBox(height: kIsWeb ? 32 : 32.h),
-                  
+
                   // Login Button
                   SizedBox(
                     width: double.infinity,
@@ -235,35 +246,37 @@ class _LoginPageState extends State<LoginPage> {
                         foregroundColor: AppColors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.r),
+                          borderRadius:
+                          BorderRadius.circular(kIsWeb ? 12 : 12.r),
                         ),
-                        disabledBackgroundColor: AppColors.primary.withOpacity(0.6),
+                        disabledBackgroundColor:
+                        AppColors.primary.withOpacity(0.6),
                       ),
                       child: loading
                           ? SizedBox(
-                              width: kIsWeb ? 20 : 20.w,
-                              height: kIsWeb ? 20 : 20.w,
-                              child: const CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color: AppColors.white,
-                              ),
-                            )
+                        width: kIsWeb ? 20 : 20.w,
+                        height: kIsWeb ? 20 : 20.w,
+                        child: const CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: AppColors.white,
+                        ),
+                      )
                           : Text(
-                              "Sign In",
-                              style: TextStyle(
-                                fontSize: kIsWeb ? 16 : 16.sp,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                        "Sign In",
+                        style: TextStyle(
+                          fontSize: kIsWeb ? 16 : 16.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ),
-                  
+
                   SizedBox(height: kIsWeb ? 24 : 24.h),
-                  
+
                   // Additional Info
                   Center(
                     child: Text(
-                      "Admin & Super Admin Access",
+                      "Admin, Manager & Super Admin Access",
                       style: TextStyle(
                         fontSize: kIsWeb ? 12 : 12.sp,
                         color: Colors.grey[500],

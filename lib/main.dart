@@ -9,14 +9,16 @@ import 'package:restaurant_admin_panel/uttils/session_manager.dart';
 import 'auth/login_page.dart';
 import 'firebase_options.dart';
 import 'restaurant_admin/customer_menu.dart';
+import 'restaurant_admin/restaurant_orders_page.dart';
 import 'super_admin/restaurants_page.dart';
 import 'widgets/splash_screen.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 
 /// 🔍 Extract restaurantId from URL like: /#/menu/{id}
 String? _getMenuRestaurantIdFromInitialUrl() {
   if (!kIsWeb) return null;
 
-  final hash = Uri.base.fragment; // e.g. /menu/abc123
+  final hash = Uri.base.fragment;
   final uri = Uri.tryParse(hash);
   if (uri == null) return null;
 
@@ -34,13 +36,25 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // ✅ OneSignal Init
+  OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
+
+  OneSignal.initialize("1dbbdcbd-590f-475c-88d0-7c6d953d63ca");
+
+  OneSignal.Notifications.requestPermission(true);
+
+  OneSignal.Notifications.addForegroundWillDisplayListener((event) {
+    event.notification.display();
+  });
+
+
   final menuRestaurantId = _getMenuRestaurantIdFromInitialUrl();
 
   bool loggedIn = false;
   String? role;
   String? restaurantId;
 
-  /// ✅ Only check session if NOT menu link
+
   if (menuRestaurantId == null) {
     loggedIn = await SessionManager.isLoggedIn();
     role = await SessionManager.getRole();
@@ -76,7 +90,6 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   bool _splashShown = false;
 
-  /// 🎯 Decide admin target page
   Widget get _targetPage {
     if (!widget.loggedIn) return const LoginPage();
 
@@ -84,12 +97,17 @@ class _MyAppState extends State<MyApp> {
       return const RestaurantListPage();
     }
 
-    if (widget.restaurantId == null) return const LoginPage();
+    if (widget.role == 'manager') {
+      if (widget.restaurantId == null) return const LoginPage();
+      return RestaurantOrdersPage(
+        restaurantId: widget.restaurantId!
+      );
+    }
 
+    if (widget.restaurantId == null) return const LoginPage();
     return DashboardPage(restaurantId: widget.restaurantId!);
   }
 
-  /// 🎨 Common App Wrapper
   Widget _buildApp({required Widget home}) {
     return ScreenUtilInit(
       designSize: const Size(1440, 900),
@@ -116,7 +134,7 @@ class _MyAppState extends State<MyApp> {
       );
     }
 
-    /// 🔥 CASE 2: Admin App Flow
+    /// 🔥 CASE 2: Admin / Manager App Flow
     return ScreenUtilInit(
       designSize: const Size(1440, 900),
       minTextAdapt: true,
@@ -130,7 +148,6 @@ class _MyAppState extends State<MyApp> {
           final routeName = settings.name ?? '/';
           final uri = Uri.parse(routeName);
 
-          /// ✅ Handle in-app menu navigation
           if (uri.pathSegments.length == 2 &&
               uri.pathSegments.first == 'menu') {
             final id = uri.pathSegments[1];

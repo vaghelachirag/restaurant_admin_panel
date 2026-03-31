@@ -15,6 +15,7 @@ import 'category_page.dart';
 import 'customer_menu.dart';
 import 'menu_page.dart';
 import 'qr_download_io.dart' if (dart.library.html) 'qr_download_web.dart' as qr_download;
+import 'manager_page.dart';
 import 'settings_page.dart';
 
 
@@ -72,6 +73,7 @@ const _sItems = [
   _SItem(Icons.restaurant_outlined,        "Menu Items"),
   _SItem(Icons.storefront_outlined,        "Customer Menu"),
   _SItem(Icons.language_outlined,          "Menu Link"),
+  _SItem(Icons.manage_accounts_outlined,   "Managers"),
   _SItem(Icons.settings_outlined,          "Settings"),
 ];
 
@@ -384,6 +386,8 @@ class _DashboardPageState extends State<DashboardPage> {
       case 4:
         return CustomerMenuPage(restaurantId: widget.restaurantId);
       case 6:
+        return ManagerPage(restaurantId: widget.restaurantId);
+      case 7:
         return SettingsPage(restaurantId: widget.restaurantId);
       case 0:
       default:
@@ -508,8 +512,6 @@ class _Sidebar extends StatelessWidget {
           ),
 
           const Divider(color: Color(0xFFEEEEEE), height: 1, thickness: 1),
-
-          // ── Logout ─────────────────────────────────────────────────────
           InkWell(
             onTap: onLogout,
             child: Padding(
@@ -529,9 +531,6 @@ class _Sidebar extends StatelessWidget {
   }
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// MOBILE TOP BAR
-// ════════════════════════════════════════════════════════════════════════════
 class _MobileBar extends StatelessWidget {
   final VoidCallback onLogout;
   const _MobileBar({required this.onLogout});
@@ -583,9 +582,6 @@ class _MobileBar extends StatelessWidget {
   }
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// STAT CARDS  (live Firestore)
-// ════════════════════════════════════════════════════════════════════════════
 class _CardData {
   final String label, value, trend;
   final bool up;
@@ -724,9 +720,6 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// SALES CHART  (fl_chart)
-// ════════════════════════════════════════════════════════════════════════════
 class _SalesChart extends StatelessWidget {
   final List<FlSpot> spots;
   final bool isMobile;

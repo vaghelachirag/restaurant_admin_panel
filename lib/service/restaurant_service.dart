@@ -12,7 +12,6 @@ class RestaurantService {
       String adminPassword,
       ) async {
 
-    /// 1️⃣ Create restaurant
     DocumentReference restaurantRef =
     await FirebaseFirestore.instance.collection('restaurants').add({
       "name": name,
@@ -32,7 +31,6 @@ class RestaurantService {
 
     String uid = credential.user!.uid;
 
-    /// 3️⃣ Save user with restaurantId
     await FirebaseFirestore.instance.collection('users').doc(uid).set({
       "email": adminEmail,
       "role": "admin",
