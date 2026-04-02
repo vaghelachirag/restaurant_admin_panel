@@ -1101,19 +1101,13 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
           final String? loadedLogo =
           (data['logoUrl'] ?? data['logo']) as String?;
 
-          if (_restaurantName != loadedName ||
-              _restaurantTagline != loadedTagline ||
-              _restaurantLogo != loadedLogo) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                setState(() {
-                  _restaurantName = loadedName;
-                  _restaurantTagline = loadedTagline;
-                  _restaurantLogo = loadedLogo;
-                });
-              }
-            });
-          }
+          // Assign directly — the StreamBuilder already rebuilds this subtree
+          // whenever Firestore emits. Calling setState here would cause a second
+          // full rebuild on every snapshot, making every child StreamBuilder
+          // re-subscribe and flash/blink the menu.
+          _restaurantName = loadedName;
+          _restaurantTagline = loadedTagline;
+          _restaurantLogo = loadedLogo;
 
           return Scaffold(
             backgroundColor: const Color(0xFFF8F9FA),
@@ -1693,6 +1687,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     if (_selectedCategoryId == null) return _emptyWidget('Select a Category');
 
     return StreamBuilder<QuerySnapshot>(
+      key: ValueKey(_selectedCategoryId),
       stream: FirebaseFirestore.instance
           .collection("menu_items")
           .where("restaurantId", isEqualTo: widget.restaurantId)

@@ -33,6 +33,34 @@
             </intent-filter>
         </activity>
 
+        <!--
+            ════════════════════════════════════════════════════════
+            OneSignal — small (status-bar) icon
+            Must be a WHITE + TRANSPARENT PNG (no colour).
+            Place it at:
+              android/app/src/main/res/drawable/ic_stat_onesignal_default.png
+            ════════════════════════════════════════════════════════
+        -->
+        <meta-data
+            android:name="com.onesignal.NotificationIcon"
+            android:resource="@drawable/ic_stat_onesignal_default" />
+
+        <!-- Brand accent colour shown behind the small icon -->
+        <meta-data
+            android:name="com.onesignal.NotificationAccentColor"
+            android:value="FFFF5722" />
+
+        <!--
+            ════════════════════════════════════════════════════════
+            Default notification channel used by OneSignal.
+            The channel ID here must match android_channel_id
+            sent from index.js  →  "new_orders_channel"
+            ════════════════════════════════════════════════════════
+        -->
+        <meta-data
+            android:name="com.onesignal.NotificationChannelId"
+            android:value="new_orders_channel" />
+
         <!-- Don't delete the meta-data below. Flutter needs this. -->
         <meta-data
             android:name="flutterEmbedding"
