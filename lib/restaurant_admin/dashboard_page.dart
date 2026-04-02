@@ -11,6 +11,8 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:restaurant_admin_panel/restaurant_admin/restaurant_orders_page.dart';
 
 import '../uttils/session_manager.dart';
+import '../data/models/restaurant_model.dart';
+import '../service/restaurant_service.dart';
 import 'category_page.dart';
 import 'customer_menu.dart';
 import 'menu_page.dart';
@@ -91,6 +93,8 @@ class _DashboardPageState extends State<DashboardPage> {
   int _newOrderCount = 0;
   Timer? _timer;
   int _selectedIndex = 0;
+  RestaurantModel? _restaurant;
+  bool _isLoading = true;
 
   final List<FlSpot> _salesSpots = const [
     FlSpot(0, 4000), FlSpot(1, 3000), FlSpot(2, 5100),
@@ -101,6 +105,7 @@ class _DashboardPageState extends State<DashboardPage> {
   void initState() {
     super.initState();
     _listenOrders();
+    _loadRestaurantData();
   }
 
   @override
@@ -120,6 +125,24 @@ class _DashboardPageState extends State<DashboardPage> {
         if (c.type == DocumentChangeType.added) _onNewOrder();
       }
     });
+  }
+
+  Future<void> _loadRestaurantData() async {
+    try {
+      final restaurant = await RestaurantService().fetchRestaurant(widget.restaurantId);
+      if (mounted) {
+        setState(() {
+          _restaurant = restaurant;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   void _onNewOrder() {
@@ -363,12 +386,16 @@ class _DashboardPageState extends State<DashboardPage> {
       body: SafeArea(
         child: isMobile
             ? Column(children: [
-          _MobileBar(onLogout: _logout),
+          _MobileBar(onLogout: _logout, restaurant: _restaurant, isLoading: _isLoading),
           Expanded(child: _buildSelectedContent(isMobile: true)),
         ])
             : Row(children: [
           _Sidebar(
-              selected: _selectedIndex, onTap: _nav, onLogout: _logout),
+              selected: _selectedIndex, 
+              onTap: _nav, 
+              onLogout: _logout,
+              restaurant: _restaurant,
+              isLoading: _isLoading),
           Expanded(child: _buildSelectedContent(isMobile: false)),
         ]),
       ),
@@ -423,8 +450,14 @@ class _Sidebar extends StatelessWidget {
   final int selected;
   final ValueChanged<int> onTap;
   final VoidCallback onLogout;
+  final RestaurantModel? restaurant;
+  final bool isLoading;
   const _Sidebar(
-      {required this.selected, required this.onTap, required this.onLogout});
+      {required this.selected, 
+      required this.onTap, 
+      required this.onLogout,
+      this.restaurant,
+      required this.isLoading});
 
   @override
   Widget build(BuildContext context) {
@@ -449,15 +482,33 @@ class _Sidebar extends StatelessWidget {
                   color: _C.orange,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.storefront_rounded,
-                    color: Colors.white, size: 22),
+                child: isLoading 
+                    ? const Icon(Icons.storefront_rounded, color: Colors.white, size: 22)
+                    : (restaurant?.logoUrl != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              restaurant!.logoUrl!,
+                              width: 44,
+                              height: 44,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Icon(Icons.storefront_rounded,
+                                    color: Colors.white, size: 22);
+                              },
+                            ),
+                          )
+                        : const Icon(Icons.storefront_rounded,
+                            color: Colors.white, size: 22)),
               ),
               const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Restaurant",
-                      style: _p(15, FontWeight.w700, _C.textDark)),
+                  Text(isLoading ? "Restaurant" : (restaurant?.name ?? "Restaurant"),
+                      style: _p(15, FontWeight.w700, _C.textDark),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis),
                   Text("Admin Panel",
                       style: _p(11, FontWeight.w400, _C.textLight)),
                 ],
@@ -533,7 +584,13 @@ class _Sidebar extends StatelessWidget {
 
 class _MobileBar extends StatelessWidget {
   final VoidCallback onLogout;
-  const _MobileBar({required this.onLogout});
+  final RestaurantModel? restaurant;
+  final bool isLoading;
+  const _MobileBar({
+    required this.onLogout,
+    this.restaurant,
+    required this.isLoading,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -551,14 +608,33 @@ class _MobileBar extends StatelessWidget {
           height: 38,
           decoration: BoxDecoration(
               color: _C.orange, borderRadius: BorderRadius.circular(10)),
-          child: const Icon(Icons.storefront_rounded,
-              color: Colors.white, size: 20),
+          child: isLoading 
+              ? const Icon(Icons.storefront_rounded, color: Colors.white, size: 20)
+              : (restaurant?.logoUrl != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.network(
+                        restaurant!.logoUrl!,
+                        width: 38,
+                        height: 38,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(Icons.storefront_rounded,
+                              color: Colors.white, size: 20);
+                        },
+                      ),
+                    )
+                  : const Icon(Icons.storefront_rounded,
+                      color: Colors.white, size: 20)),
         ),
         const SizedBox(width: 10),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Restaurant", style: _p(14, FontWeight.w700, _C.textDark)),
+            Text(isLoading ? "Restaurant" : (restaurant?.name ?? "Restaurant"), 
+                style: _p(14, FontWeight.w700, _C.textDark),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis),
             Text("Admin Panel", style: _p(10, FontWeight.w400, _C.textLight)),
           ],
         ),

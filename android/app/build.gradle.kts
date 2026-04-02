@@ -1,9 +1,7 @@
 plugins {
     id("com.android.application")
-    // FlutterFire Configuration
     id("com.google.gms.google-services")
     id("kotlin-android")
-    // Flutter Gradle Plugin
     id("dev.flutter.flutter-gradle-plugin")
 }
 
@@ -24,7 +22,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.restaurant_admin_panel"
-        minSdk = flutter.minSdkVersion   // 🔥 Important for many plugins
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -38,7 +36,6 @@ android {
 }
 
 dependencies {
-    // ✅ Required for flutter_local_notifications
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }
 

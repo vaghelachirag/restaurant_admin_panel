@@ -1732,7 +1732,6 @@ class _MenuPageState extends State<MenuPage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // ── Food image (top ~58 flex) ─────────────────
                                 Expanded(
                                   flex: 58,
                                   child: ClipRRect(
@@ -1783,7 +1782,7 @@ class _MenuPageState extends State<MenuPage> {
                                               borderRadius: BorderRadius.circular(6),
                                               child: Padding(
                                                 padding: const EdgeInsets.all(2),
-                                                child: Icon(Icons.edit_outlined, size: 16, color: Colors.grey[500]),
+                                                child: Icon(Icons.edit_outlined, size: 30, color: Colors.grey[500]),
                                               ),
                                             ),
                                             const SizedBox(width: 6),
@@ -1792,15 +1791,12 @@ class _MenuPageState extends State<MenuPage> {
                                               borderRadius: BorderRadius.circular(6),
                                               child: const Padding(
                                                 padding: EdgeInsets.all(2),
-                                                child: Icon(Icons.delete_outline, size: 16, color: Color(0xFFEF4444)),
+                                                child: Icon(Icons.delete_outline, size: 30, color: Color(0xFFEF4444)),
                                               ),
                                             ),
                                           ],
                                         ),
-
                                         const SizedBox(height: 5),
-
-                                        // ── Category + Veg/Non-Veg badges ────────────────
                                         Row(
                                           children: [
                                             if (categoryName.isNotEmpty)
@@ -1867,8 +1863,6 @@ class _MenuPageState extends State<MenuPage> {
                                             ),
                                           ],
                                         ),
-
-                                        // ── Description ──────────────────────────────────
                                         if (description.isNotEmpty)
                                           Flexible(
                                             child: Text(
@@ -1882,10 +1876,7 @@ class _MenuPageState extends State<MenuPage> {
                                               ),
                                             ),
                                           ),
-
                                         const Spacer(),
-
-                                        // ── Price in INR ─────────────────────────────────
                                         Text(
                                           '₹${firstPrice.toStringAsFixed(2)}',
                                           style: const TextStyle(
