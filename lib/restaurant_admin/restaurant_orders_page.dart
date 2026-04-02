@@ -1,10 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
-
 import '../uttils/session_manager.dart';
+import '../widgets/WebAudioStub.dart';
 
 class RestaurantOrdersPage extends StatefulWidget {
   final String restaurantId;
@@ -19,6 +20,41 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
   String? _playerId;
   StreamSubscription<QuerySnapshot>? _newOrdersSubscription;
   String? _currentUserRole;
+
+  // ── Pagination ──────────────────────────────────────────────────────────────
+  static const int _pageSize = 10;
+  int _currentPage = 1; // 1-based
+
+  Set<String> _knownOrderIds = {};
+  bool _isFirstSnapshot = true;
+  void _playNewOrderSound() {
+    if (!kIsWeb) return;
+    try {
+      final audio = AudioElement('assets/sounds/new_order.mp3');
+      audio.play();
+    } catch (e) {
+      debugPrint('🔇 Could not play new-order sound: $e');
+    }
+  }
+
+  /// Called on every Firestore snapshot. Detects truly-new orders and plays sound.
+  void _handleNewOrders(List<QueryDocumentSnapshot> docs) {
+    if (_isFirstSnapshot) {
+      // Seed the known-set without playing sound on page open.
+      _knownOrderIds = docs.map((d) => d.id).toSet();
+      _isFirstSnapshot = false;
+      return;
+    }
+
+    final incoming = docs.map((d) => d.id).toSet();
+    final newIds = incoming.difference(_knownOrderIds);
+
+    if (newIds.isNotEmpty) {
+      _playNewOrderSound();
+    }
+
+    _knownOrderIds = incoming;
+  }
 
   @override
   void initState() {
@@ -44,6 +80,18 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
       return status.toLowerCase() == filter.toLowerCase();
     }).toList();
   }
+
+  /// Returns the slice of [orders] for the current page.
+  List<QueryDocumentSnapshot> _paginateOrders(
+      List<QueryDocumentSnapshot> orders) {
+    final start = (_currentPage - 1) * _pageSize;
+    final end = (start + _pageSize).clamp(0, orders.length);
+    if (start >= orders.length) return [];
+    return orders.sublist(start, end);
+  }
+
+  int _totalPages(int totalItems) =>
+      (totalItems / _pageSize).ceil().clamp(1, 9999);
 
   String _getTimeAgo(Timestamp? timestamp) {
     if (timestamp == null) return '0m ago';
@@ -132,7 +180,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
     );
 
     if (confirmed == true) {
-       await SessionManager.logout(); // clear stored session
+      await SessionManager.logout(); // clear stored session
       if (mounted) {
         Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
       }
@@ -145,39 +193,63 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
     final isDesktop = width >= 1024;
     final isTablet = width >= 768 && width < 1024;
 
-    return SafeArea(child: Scaffold(
-      backgroundColor: Colors.white,
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection("orders")
-            .where("restaurantId", isEqualTo: widget.restaurantId)
-            .orderBy("createdAt", descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    return SafeArea(
+        child: Scaffold(
+          backgroundColor: Colors.white,
+          body: StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection("orders")
+                .where("restaurantId", isEqualTo: widget.restaurantId)
+                .orderBy("createdAt", descending: true)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-          final allOrders = snapshot.data!.docs;
-          final filteredOrders = _filterOrders(allOrders, _selectedFilter);
-          final counts = _buildStatusCounts(allOrders);
+              final allOrders = snapshot.data!.docs;
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(isDesktop, isTablet, counts),
-              const SizedBox(height: 20),
-              _buildFilterTabs(counts, isDesktop, isTablet),
-              const SizedBox(height: 10),
-              Expanded(
-                child: _buildOrdersGrid(
-                    filteredOrders, width, isDesktop, isTablet),
-              ),
-            ],
-          );
-        },
-      ),
-    ));
+              // ── Sound detection (web only, runs on every snapshot) ────────────
+              // Deferred to post-frame to avoid setState-during-build.
+              if (kIsWeb) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _handleNewOrders(allOrders);
+                });
+              }
+
+              final filteredOrders = _filterOrders(allOrders, _selectedFilter);
+              final counts = _buildStatusCounts(allOrders);
+
+              // Clamp current page whenever filtered list changes
+              final totalPages = _totalPages(filteredOrders.length);
+              if (_currentPage > totalPages) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) setState(() => _currentPage = 1);
+                });
+              }
+
+              final pageOrders = _paginateOrders(filteredOrders);
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeader(isDesktop, isTablet, counts),
+                  const SizedBox(height: 20),
+                  _buildFilterTabs(counts, isDesktop, isTablet),
+                  const SizedBox(height: 10),
+                  Expanded(
+                    child: _buildOrdersGrid(
+                        pageOrders, width, isDesktop, isTablet),
+                  ),
+                  // Pagination bar
+                  if (filteredOrders.isNotEmpty)
+                    _buildPaginationBar(
+                        filteredOrders.length, isDesktop, isTablet),
+                ],
+              );
+            },
+          ),
+        ));
   }
 
   TextStyle _p(double size, FontWeight weight, Color color) {
@@ -249,7 +321,6 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
   Widget _buildHeader(
       bool isDesktop, bool isTablet, Map<String, int> counts) {
     final sidePadding = isDesktop ? 24.0 : (isTablet ? 20.0 : 14.0);
-    final today = DateTime.now();
     final totalToday = counts['All'] ?? 0;
 
     return Container(
@@ -287,48 +358,59 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
                 ),
               ),
 
-              // Status summary pills — mobile/tablet only, scrollable so they never overflow
-              if (!isDesktop)
-                SingleChildScrollView(
+              // Status summary pills — all screen sizes, always scrollable
+          /*    Flexible(
+                child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _buildStatusPill('${counts['Pending'] ?? 0}', 'Pending',
-                          const Color(0xFFB45309), const Color(0xFFFEF3C7)),
+                      _buildStatusPill(
+                          '${counts['Pending'] ?? 0}',
+                          'Pending',
+                          const Color(0xFFB45309),
+                          const Color(0xFFFEF3C7)),
                       const SizedBox(width: 6),
-                      _buildStatusPill('${counts['Preparing'] ?? 0}', 'Preparing',
-                          const Color(0xFF1D4ED8), const Color(0xFFDBEAFE)),
+                      _buildStatusPill(
+                          '${counts['Preparing'] ?? 0}',
+                          'Preparing',
+                          const Color(0xFF1D4ED8),
+                          const Color(0xFFDBEAFE)),
                       const SizedBox(width: 6),
-                      _buildStatusPill('${counts['Ready'] ?? 0}', 'Ready',
-                          const Color(0xFF065F46), const Color(0xFFD1FAE5)),
+                      _buildStatusPill(
+                          '${counts['Ready'] ?? 0}',
+                          'Ready',
+                          const Color(0xFF065F46),
+                          const Color(0xFFD1FAE5)),
                       const SizedBox(width: 6),
-                      _buildStatusPill('${counts['Served'] ?? 0}', 'Served',
-                          const Color(0xFF6B21A8), const Color(0xFFF3E8FF)),
+                      _buildStatusPill(
+                          '${counts['Served'] ?? 0}',
+                          'Served',
+                          const Color(0xFF6B21A8),
+                          const Color(0xFFF3E8FF)),
                       const SizedBox(width: 10),
                     ],
                   ),
                 ),
-
-              // Logout button — mobile/tablet only (hidden on desktop/web)
-              if (!isDesktop)
-                GestureDetector(
-                  onTap: _handleLogout,
-                  child: Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF5F5F5),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFEEEEEE)),
-                    ),
-                    child: const Icon(
-                      Icons.logout_rounded,
-                      size: 18,
-                      color: Color(0xFF444444),
-                    ),
-                  ),
-                ),
+              ),*/
+              !kIsWeb
+              ? GestureDetector(
+              onTap: _handleLogout,
+              child: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+              color: const Color(0xFFF5F5F5),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFEEEEEE)),
+              ),
+              child: const Icon(
+              Icons.logout_rounded,
+              size: 18,
+              color: Color(0xFF444444),
+              ),
+              ),
+              ) : const SizedBox.shrink(),
             ],
           ),
         ],
@@ -378,7 +460,10 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
               padding: const EdgeInsets.only(right: 6),
               child: InkWell(
                 borderRadius: BorderRadius.circular(999),
-                onTap: () => setState(() => _selectedFilter = label),
+                onTap: () => setState(() {
+                  _selectedFilter = label;
+                  _currentPage = 1; // reset to first page on filter change
+                }),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
                   padding:
@@ -421,18 +506,107 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
     );
   }
 
+  // ── Pagination bar ──────────────────────────────────────────────────────────
+
+  Widget _buildPaginationBar(
+      int totalItems, bool isDesktop, bool isTablet) {
+    final sidePadding = isDesktop ? 24.0 : (isTablet ? 20.0 : 14.0);
+    final totalPages = _totalPages(totalItems);
+    final start = ((_currentPage - 1) * _pageSize + 1).clamp(1, totalItems);
+    final end = (_currentPage * _pageSize).clamp(1, totalItems);
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(sidePadding, 8, sidePadding, 12),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Color(0xFFF0F0F0))),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              'Showing $start–$end of $totalItems',
+              style: _p(11, FontWeight.w400, const Color(0xFF9E9E9E)),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          _PageBtn(
+            icon: Icons.chevron_left_rounded,
+            enabled: _currentPage > 1,
+            onTap: () => setState(() => _currentPage--),
+          ),
+          const SizedBox(width: 4),
+          ..._buildPageNumbers(totalPages),
+          const SizedBox(width: 4),
+          _PageBtn(
+            icon: Icons.chevron_right_rounded,
+            enabled: _currentPage < totalPages,
+            onTap: () => setState(() => _currentPage++),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildPageNumbers(int totalPages) {
+    int start = (_currentPage - 2).clamp(1, totalPages);
+    int end = (start + 4).clamp(1, totalPages);
+    start = (end - 4).clamp(1, totalPages);
+
+    return List.generate(end - start + 1, (i) {
+      final page = start + i;
+      final isSelected = page == _currentPage;
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(6),
+          onTap: () => setState(() => _currentPage = page),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            width: 30,
+            height: 30,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? const Color(0xFFE8622A)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: isSelected
+                    ? const Color(0xFFE8622A)
+                    : const Color(0xFFDDDDDD),
+              ),
+            ),
+            child: Text(
+              '$page',
+              style: _p(
+                12,
+                isSelected ? FontWeight.w700 : FontWeight.w400,
+                isSelected ? Colors.white : const Color(0xFF555555),
+              ),
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
+  // ── Order grid ──────────────────────────────────────────────────────────────
+
   Widget _buildOrdersGrid(
-      List<QueryDocumentSnapshot> filteredOrders,
+      List<QueryDocumentSnapshot> pageOrders,
       double width,
       bool isDesktop,
       bool isTablet,
       ) {
-    if (filteredOrders.isEmpty) {
+    if (pageOrders.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.receipt_long_outlined, size: 64, color: Colors.grey[400]),
+            Icon(Icons.receipt_long_outlined,
+                size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
               'No $_selectedFilter orders',
@@ -445,54 +619,74 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
 
     final sidePadding = isDesktop ? 24.0 : (isTablet ? 20.0 : 14.0);
     final availableWidth = width - (sidePadding * 2);
-    final desiredCardWidth = isDesktop ? 335.0 : (isTablet ? 320.0 : availableWidth);
-    final crossAxisCount = (availableWidth / desiredCardWidth).floor().clamp(1, 4);
+    final desiredCardWidth =
+    isDesktop ? 335.0 : (isTablet ? 320.0 : availableWidth);
+    final crossAxisCount =
+    (availableWidth / desiredCardWidth).floor().clamp(1, 4);
 
-    // Use ListView for single-column, custom multi-column layout for wider screens
+    // Single-column → simple ListView (no horizontal scroll possible)
     if (crossAxisCount == 1) {
       return ListView.separated(
         padding: EdgeInsets.fromLTRB(sidePadding, 4, sidePadding, 24),
-        itemCount: filteredOrders.length,
+        itemCount: pageOrders.length,
         separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
-          final order = filteredOrders[index];
+          final order = pageOrders[index];
           final data = order.data() as Map<String, dynamic>;
           return _buildOrderCard(order, data);
         },
       );
     }
 
-    // Multi-column: build rows manually so each card sizes to its content
-    final cardWidth = (availableWidth - ((crossAxisCount - 1) * 14)) / crossAxisCount;
-    final rows = <Widget>[];
-    for (int i = 0; i < filteredOrders.length; i += crossAxisCount) {
-      final rowItems = filteredOrders.skip(i).take(crossAxisCount).toList();
-      rows.add(
-        IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: rowItems.asMap().entries.map((e) {
-              final order = e.value;
-              final data = order.data() as Map<String, dynamic>;
-              return [
-                if (e.key > 0) const SizedBox(width: 14),
-                SizedBox(width: cardWidth, child: _buildOrderCard(order, data)),
-              ];
-            }).expand((w) => w).toList(),
+    // Multi-column desktop/tablet layout.
+    // ── FIX: LayoutBuilder derives card widths from the actual rendered
+    //    constraints so cards never overflow horizontally on web when the
+    //    browser window is resized. Cards use Expanded instead of a fixed
+    //    SizedBox so they fill available space correctly.
+    return LayoutBuilder(builder: (context, constraints) {
+      final usable = constraints.maxWidth - (sidePadding * 2);
+      final gapTotal = (crossAxisCount - 1) * 14.0;
+      // cardWidth is computed but not directly used — Expanded handles sizing.
+      // It's kept here for reference / future use.
+      // ignore: unused_local_variable
+      final cardWidth = (usable - gapTotal) / crossAxisCount;
+
+      final rows = <Widget>[];
+      for (int i = 0; i < pageOrders.length; i += crossAxisCount) {
+        final rowItems = pageOrders.skip(i).take(crossAxisCount).toList();
+        rows.add(
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: rowItems.asMap().entries.map((e) {
+                final order = e.value;
+                final data = order.data() as Map<String, dynamic>;
+                return [
+                  if (e.key > 0) const SizedBox(width: 14),
+                  // Expanded fills the row proportionally — no fixed width
+                  // that could cause overflow when the window narrows.
+                  Expanded(child: _buildOrderCard(order, data)),
+                ];
+              }).expand((w) => w).toList(),
+            ),
           ),
+        );
+      }
+
+      return SingleChildScrollView(
+        // primary: false prevents this vertical scroll view from competing
+        // with Flutter Web's root scrollable, which was causing an unwanted
+        // horizontal scrollbar to appear on the page.
+        primary: false,
+        padding: EdgeInsets.fromLTRB(sidePadding, 4, sidePadding, 24),
+        child: Column(
+          children: rows
+              .expand((r) => [r, const SizedBox(height: 14)])
+              .toList()
+            ..removeLast(),
         ),
       );
-    }
-
-    return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(sidePadding, 4, sidePadding, 24),
-      child: Column(
-        children: rows
-            .expand((r) => [r, const SizedBox(height: 14)])
-            .toList()
-          ..removeLast(),
-      ),
-    );
+    });
   }
 
   Widget _buildOrderCard(
@@ -507,7 +701,6 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
     (data["orderNumber"] ?? "#${1000 + order.id.hashCode.abs() % 1000}")
         .toString();
 
-    // Determine order type
     final orderType = (data["orderType"] ?? "").toString().toLowerCase();
     final isDineIn = orderType == "dine in" ||
         orderType == "dine-in" ||
@@ -538,9 +731,8 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,   // ← shrink-wrap to content
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Row 1: Order type label + chips | time + order#
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -552,75 +744,83 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
                     children: [
                       Text(
                         isDineIn
-                            ? (tableNumber.isNotEmpty ? 'Table $tableNumber' : 'Dine In')
+                            ? (tableNumber.isNotEmpty
+                            ? 'Table $tableNumber'
+                            : 'Dine In')
                             : 'Takeaway',
-                        style: _p(14, FontWeight.w700, const Color(0xFF232323)),
+                        style:
+                        _p(14, FontWeight.w700, const Color(0xFF232323)),
                       ),
                       if (isDineIn)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE8F5E9),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            'Dine In',
-                            style: _p(10, FontWeight.w600, const Color(0xFF2E7D32)),
-                          ),
-                        ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 7, vertical: 2),
                         decoration: BoxDecoration(
                           color: _getStatusPillBg(status),
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
                           _toTitle(status),
-                          style: _p(10, FontWeight.w600, _getStatusPillText(status)),
+                          style: _p(10, FontWeight.w600,
+                              _getStatusPillText(status)),
                         ),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 6),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.access_time, size: 12, color: Colors.grey[500]),
-                        const SizedBox(width: 3),
-                        Text(
-                          _getTimeAgo(createdAt),
-                          style: _p(11, FontWeight.w400, const Color(0xFF8B8B8B)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 1),
-                    Text(
-                      orderNumber.startsWith('#') ? orderNumber : '#$orderNumber',
-                      style: _p(11, FontWeight.w400, const Color(0xFF8B8B8B)),
-                    ),
-                  ],
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 90),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.access_time,
+                              size: 12, color: Colors.grey[500]),
+                          const SizedBox(width: 3),
+                          Flexible(
+                            child: Text(
+                              _getTimeAgo(createdAt),
+                              style: _p(11, FontWeight.w400,
+                                  const Color(0xFF8B8B8B)),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        orderNumber.startsWith('#')
+                            ? orderNumber
+                            : '#$orderNumber',
+                        style:
+                        _p(11, FontWeight.w400, const Color(0xFF8B8B8B)),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
 
             const SizedBox(height: 5),
 
-            // Takeaway only: show customer/person name
             if (!isDineIn)
               Row(
                 children: [
-                  Icon(Icons.person_outline, size: 13, color: Colors.grey[500]),
+                  Icon(Icons.person_outline,
+                      size: 13, color: Colors.grey[500]),
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
                       customerName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: _p(12, FontWeight.w400, const Color(0xFF757575)),
+                      style:
+                      _p(12, FontWeight.w400, const Color(0xFF757575)),
                     ),
                   ),
                 ],
@@ -628,7 +828,6 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
 
             const SizedBox(height: 10),
 
-            // Items — no Expanded, natural height
             ...displayedItems.map((item) {
               final itemName = (item['name'] ?? '').toString();
               final quantity = (item['qty'] ?? 1).toString();
@@ -644,13 +843,15 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
                         '${quantity}x $itemName${variant.isNotEmpty ? ' ($variant)' : ''}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: _p(11.5, FontWeight.w500, const Color(0xFF2F2F2F)),
+                        style: _p(
+                            11.5, FontWeight.w500, const Color(0xFF2F2F2F)),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       '₹${price.toStringAsFixed(2)}',
-                      style: _p(11.5, FontWeight.w500, const Color(0xFF505050)),
+                      style: _p(
+                          11.5, FontWeight.w500, const Color(0xFF505050)),
                     ),
                   ],
                 ),
@@ -662,7 +863,8 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Text(
                   '+$extraCount more item${extraCount > 1 ? 's' : ''}',
-                  style: _p(11, FontWeight.w500, const Color(0xFF969696)),
+                  style:
+                  _p(11, FontWeight.w500, const Color(0xFF969696)),
                 ),
               ),
 
@@ -670,7 +872,6 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
             Container(height: 1, color: const Color(0xFFF0F0F0)),
             const SizedBox(height: 10),
 
-            // Bottom row: total | action button (no Details)
             Row(
               children: [
                 Text(
@@ -686,13 +887,15 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
                         FirebaseFirestore.instance
                             .collection("orders")
                             .doc(order.id)
-                            .update({"status": _getNextStatusValue(status)});
+                            .update(
+                            {"status": _getNextStatusValue(status)});
                       },
                       style: ElevatedButton.styleFrom(
                         elevation: 0,
                         backgroundColor: btnBg,
                         foregroundColor: btnFg,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        padding:
+                        const EdgeInsets.symmetric(horizontal: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -751,5 +954,48 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
       default:
         return const Color(0xFF374151);
     }
+  }
+}
+
+// ── Helper widget: a single prev/next arrow button ──────────────────────────
+
+class _PageBtn extends StatelessWidget {
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  const _PageBtn({
+    required this.icon,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(6),
+      onTap: enabled ? onTap : null,
+      child: Container(
+        width: 30,
+        height: 30,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: enabled
+                ? const Color(0xFFDDDDDD)
+                : const Color(0xFFEEEEEE),
+          ),
+          color: Colors.white,
+        ),
+        child: Icon(
+          icon,
+          size: 18,
+          color: enabled
+              ? const Color(0xFF444444)
+              : const Color(0xFFCCCCCC),
+        ),
+      ),
+    );
   }
 }
