@@ -29,7 +29,12 @@ class CustomerMenuPage extends StatefulWidget {
 
 class _CustomerMenuPageState extends State<CustomerMenuPage>
     with AutomaticKeepAliveClientMixin {
-  String? _selectedCategoryId;
+  // Using ValueNotifier so category selection NEVER triggers a full setState/build()
+  // which would cause StreamBuilders to re-subscribe and flash/blink the menu.
+  final ValueNotifier<String?> _selectedCategoryIdNotifier = ValueNotifier(null);
+  String? get _selectedCategoryId => _selectedCategoryIdNotifier.value;
+  set _selectedCategoryId(String? v) => _selectedCategoryIdNotifier.value = v;
+
   final Map<String, int> _selectedVariantIndexByItemId = {};
   bool _unifiedCategoryListView = true;
   final Set<String> _collapsedCategoryIds = {};
@@ -50,7 +55,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
   late PageController _pageController;
 
   String openingTime = "09:00 AM";
-  String closingTime = "06:00 PM"; // FIX #1: was "06:00 AM" — closing before opening made restaurant always "closed"
+  String closingTime = "06:00 PM";
 
   // Restaurant info loaded from Firestore
   String _restaurantName = "";
@@ -61,7 +66,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
   bool _isFirebaseReady = false;
   bool _hasRestaurantIdError = false;
 
-  static const Color _primaryColor = Color(0xFF7C3AED);
+  static const Color _primaryColor = Color(0xFFE24B4A);
 
   @override
   bool get wantKeepAlive => true;
@@ -85,6 +90,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     _cartNotifier.dispose();
     _lastAddedItemId.dispose();
     _cartBounce.dispose();
+    _selectedCategoryIdNotifier.dispose();
     super.dispose();
   }
 
@@ -313,6 +319,37 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
         child: Icon(Icons.fastfood_rounded,
             color: Colors.grey[300], size: kIsWeb ? 36 : 36.sp),
       ),
+    );
+  }
+
+  /// Shows a grey shimmer while the image loads, then fades in the real image.
+  /// Falls back to [_imagePlaceholder] on error.
+  Widget _networkImage(String url, {BoxFit fit = BoxFit.cover}) {
+    return Image.network(
+      url,
+      fit: fit,
+      // Show placeholder while loading
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child; // fully loaded
+        return Container(
+          color: const Color(0xFFEEEEEE),
+          child: Center(
+            child: SizedBox(
+              width: kIsWeb ? 20 : 20.sp,
+              height: kIsWeb ? 20 : 20.sp,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.grey[400],
+                value: loadingProgress.expectedTotalBytes != null
+                    ? loadingProgress.cumulativeBytesLoaded /
+                    loadingProgress.expectedTotalBytes!
+                    : null,
+              ),
+            ),
+          ),
+        );
+      },
+      errorBuilder: (_, __, ___) => _imagePlaceholder(),
     );
   }
 
@@ -728,9 +765,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                   fit: StackFit.expand,
                   children: [
                     item['image'] != null
-                        ? Image.network(item['image'],
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _imagePlaceholder())
+                        ? _networkImage(item['image'] as String)
                         : _imagePlaceholder(),
                     Positioned(top: 8, left: 8, child: _vegBadge(isVeg)),
                   ],
@@ -845,9 +880,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                     width: kIsWeb ? 72 : 72.w,
                     height: kIsWeb ? 72 : 72.h,
                     child: item['image'] != null
-                        ? Image.network(item['image'],
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _imagePlaceholder())
+                        ? _networkImage(item['image'] as String)
                         : _imagePlaceholder(),
                   ),
                 ),
@@ -1166,11 +1199,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
                   child: _restaurantLogo != null && _restaurantLogo!.isNotEmpty
-                      ? Image.network(
-                    _restaurantLogo!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _logoFallback(),
-                  )
+                      ? _networkImage(_restaurantLogo!, fit: BoxFit.cover)
                       : _logoFallback(),
                 ),
               ),
@@ -1625,58 +1654,71 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
 
         return Column(
           children: [
-            SizedBox(
-              height: kIsWeb ? 56 : 56.h,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: EdgeInsets.symmetric(
-                    horizontal: kIsWeb ? 16 : 16.w,
-                    vertical: kIsWeb ? 8 : 8.h),
-                itemCount: categories.length,
-                itemBuilder: (ctx, i) {
-                  final cat = categories[i];
-                  final isSelected = cat.id == _selectedCategoryId;
-                  return GestureDetector(
-                    onTap: () =>
-                        setState(() => _selectedCategoryId = cat.id),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      margin:
-                      EdgeInsets.only(right: kIsWeb ? 10 : 10.w),
-                      padding: EdgeInsets.symmetric(
-                          horizontal: kIsWeb ? 18 : 18.w,
-                          vertical: kIsWeb ? 8 : 8.h),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? _primaryColor
-                            : Colors.grey[100],
-                        borderRadius:
-                        BorderRadius.circular(kIsWeb ? 24 : 24.sp),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(cat['name'] ?? "Category",
-                              style: GoogleFonts.poppins(
-                                  fontSize: kIsWeb ? 13 : 13.sp,
-                                  fontWeight: FontWeight.w500,
-                                  color: isSelected
-                                      ? Colors.white
-                                      : Colors.black87)),
-                          if (isSelected) ...[
-                            SizedBox(width: kIsWeb ? 5 : 5.w),
-                            Icon(Icons.check,
-                                size: kIsWeb ? 14 : 14.sp,
-                                color: Colors.white),
-                          ],
-                        ],
-                      ),
-                    ),
-                  );
-                },
+            // ValueListenableBuilder: only the chips row rebuilds on selection change
+            ValueListenableBuilder<String?>(
+              valueListenable: _selectedCategoryIdNotifier,
+              builder: (context, selectedCatId, _) {
+                return SizedBox(
+                  height: kIsWeb ? 56 : 56.h,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: EdgeInsets.symmetric(
+                        horizontal: kIsWeb ? 16 : 16.w,
+                        vertical: kIsWeb ? 8 : 8.h),
+                    itemCount: categories.length,
+                    itemBuilder: (ctx, i) {
+                      final cat = categories[i];
+                      final isSelected = cat.id == selectedCatId;
+                      return GestureDetector(
+                        onTap: () =>
+                        _selectedCategoryIdNotifier.value = cat.id,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          margin:
+                          EdgeInsets.only(right: kIsWeb ? 10 : 10.w),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: kIsWeb ? 18 : 18.w,
+                              vertical: kIsWeb ? 8 : 8.h),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? _primaryColor
+                                : Colors.grey[100],
+                            borderRadius:
+                            BorderRadius.circular(kIsWeb ? 24 : 24.sp),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(cat['name'] ?? "Category",
+                                  style: GoogleFonts.poppins(
+                                      fontSize: kIsWeb ? 13 : 13.sp,
+                                      fontWeight: FontWeight.w500,
+                                      color: isSelected
+                                          ? Colors.white
+                                          : Colors.black87)),
+                              if (isSelected) ...[
+                                SizedBox(width: kIsWeb ? 5 : 5.w),
+                                Icon(Icons.check,
+                                    size: kIsWeb ? 14 : 14.sp,
+                                    color: Colors.white),
+                              ],
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+            // ValueListenableBuilder: only the items list rebuilds on selection change
+            Expanded(
+              child: ValueListenableBuilder<String?>(
+                valueListenable: _selectedCategoryIdNotifier,
+                builder: (context, selectedCatId, _) =>
+                    _buildMenuItemsList(),
               ),
             ),
-            Expanded(child: _buildMenuItemsList()),
           ],
         );
       },

@@ -36,6 +36,8 @@ class _CartPageState extends State<CartPage> {
 
   String orderType = "Dine In";
 
+  Map<String, dynamic>? _cachedRestaurantData;
+
   int getTotal() {
     int total = 0;
     for (var item in widget.cart) {
@@ -44,24 +46,16 @@ class _CartPageState extends State<CartPage> {
     return total;
   }
 
-  // ── Firestore value parsers ─────────────────────────────────────────────────
-
-  /// Safely parses a value stored as String, int, or double → double.
   double _parseDouble(dynamic raw) {
     if (raw == null) return 0.0;
     if (raw is num) return raw.toDouble();
     return double.tryParse(raw.toString().trim()) ?? 0.0;
   }
 
-  // ── Tax & charge calculations ───────────────────────────────────────────────
-
-  /// GST amount on subtotal (uses `gstPercentage` field).
   double getGSTAmount(double gstPct) => getTotal() * gstPct / 100;
 
-  /// SGST amount on subtotal (uses `cessPercentage` field).
   double getSGSTAmount(double sgstPct) => getTotal() * sgstPct / 100;
 
-  /// Grand total = subtotal + (GST if enabled) + (SGST if enabled) + (packaging if enabled).
   double getFinalTotal({
     required bool enableGst,
     required double gstPct,
@@ -169,23 +163,22 @@ class _CartPageState extends State<CartPage> {
             ),
           );
         }
-        if (!restaurantSnapshot.hasData) {
+
+        if (restaurantSnapshot.hasData) {
+          final rawData = restaurantSnapshot.data!.data();
+          if (rawData != null) {
+            _cachedRestaurantData = rawData as Map<String, dynamic>;
+          }
+        }
+
+        // Show loader only on the very first load (no cached data yet).
+        if (_cachedRestaurantData == null) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
 
-        if (restaurantSnapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final rawData = restaurantSnapshot.data!.data();
-        if (rawData == null) {
-          return const Scaffold(
-            body: Center(child: Text('Restaurant not found')),
-          );
-        }
-        final data = rawData as Map<String, dynamic>;
+        final data = _cachedRestaurantData!;
 
 
         final theme = data['theme'] ?? {};
@@ -195,7 +188,7 @@ class _CartPageState extends State<CartPage> {
         final cardInfoColor =
         _hexToColor(theme['cardInfoColor'] ?? "#6B7280");
 
-        // ── GST / SGST / Packaging from Firestore (exact field names) ─────────
+
         final bool   enableGst      = data['enableGst']      == true;
         final double gstPct         = _parseDouble(data['gstPercentage']);   // e.g. "9" → 9.0
         final double sgstPct        = _parseDouble(data['cessPercentage']);  // e.g. "9" → 9.0
@@ -487,7 +480,6 @@ class _CartPageState extends State<CartPage> {
                   },
                 ),
 
-                // ── Order Type ────────────────────────────────────────
                 Padding(
                   padding: EdgeInsets.fromLTRB(
                     kIsWeb ? 16 : 16.w,
@@ -551,9 +543,16 @@ class _CartPageState extends State<CartPage> {
                   ),
                 ),
 
-                // ── Customer Information (Parcel only) ────────────────
-                if (orderType == "Parcel")
-                  Padding(
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 220),
+                  transitionBuilder: (child, animation) => SizeTransition(
+                    sizeFactor: animation,
+                    axisAlignment: -1,
+                    child: FadeTransition(opacity: animation, child: child),
+                  ),
+                  child: orderType == "Parcel"
+                      ? Padding(
+                    key: const ValueKey('parcel-info'),
                     padding: EdgeInsets.fromLTRB(
                       kIsWeb ? 16 : 16.w,
                       kIsWeb ? 4 : 4.h,
@@ -630,9 +629,10 @@ class _CartPageState extends State<CartPage> {
                         ],
                       ),
                     ),
-                  ),
+                  )
+                      : const SizedBox.shrink(key: ValueKey('dine-in-empty')),
+                ),
 
-                /// ── ORDER SUMMARY ─────────────────────────────────────
                 Padding(
                   padding: EdgeInsets.fromLTRB(
                     kIsWeb ? 16 : 16.w,
@@ -679,7 +679,7 @@ class _CartPageState extends State<CartPage> {
                         ),
                         SizedBox(height: kIsWeb ? 10 : 10.h),
 
-                        // ── GST row (only when GST is enabled) ──────────────
+
                         if (enableGst && gstPct > 0) ...[
                           _SummaryRow(
                             label:
@@ -748,7 +748,7 @@ class _CartPageState extends State<CartPage> {
             ),
           ),
 
-          /// ── BOTTOM BAR ──────────────────────────────────────────────────
+
           bottomNavigationBar: widget.cart.isEmpty
               ? null
               : Container(
