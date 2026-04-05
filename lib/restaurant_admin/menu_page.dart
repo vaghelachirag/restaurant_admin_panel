@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import '../../uttils/responsive.dart';
 import '../services/localization_service.dart';
+import '../utils/snackbar_helper.dart';
 
 class MenuPage extends StatefulWidget {
   final String restaurantId;
@@ -503,14 +504,7 @@ class _MenuPageState extends State<MenuPage> {
                             child: ElevatedButton(
                               onPressed: () async {
                                 if (selectedCategoryId == null || nameController.text.isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content:  Text(AppLocalizations.of(context).pleaseFillAllRequiredFields),
-                                      backgroundColor: colorScheme.error,
-                                      behavior: SnackBarBehavior.floating,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
-                                    ),
-                                  );
+                                  SnackBarHelper.showError(context, AppLocalizations.of(context).pleaseFillAllRequiredFields);
                                   return;
                                 }
                                 setState(() { _isAddingMenuItem = true; });
@@ -533,23 +527,9 @@ class _MenuPageState extends State<MenuPage> {
                                   });
                                   Navigator.pop(context);
                                   setState(() { _selectedCategoryId = selectedCategoryId; });
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content:  Text(AppLocalizations.of(context).menuItemAddedSuccess),
-                                      backgroundColor: colorScheme.primary,
-                                      behavior: SnackBarBehavior.floating,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
-                                    ),
-                                  );
+                                  SnackBarHelper.showSuccess(context, AppLocalizations.of(context).menuItemAddedSuccess);
                                 } catch (e) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text("${AppLocalizations.of(context).errorAddingMenuItem}: $e"),
-                                      backgroundColor: colorScheme.error,
-                                      behavior: SnackBarBehavior.floating,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
-                                    ),
-                                  );
+                                  SnackBarHelper.showError(context, "${AppLocalizations.of(context).errorAddingMenuItem}: $e");
                                 } finally {
                                   setState(() { _isAddingMenuItem = false; });
                                 }
@@ -629,18 +609,13 @@ class _MenuPageState extends State<MenuPage> {
               ),
             ),
           ),
-          SizedBox(width: kIsWeb ? 10 : 10),
+          SizedBox(width: kIsWeb ? 12 : 12.sp),
           Expanded(
             flex: 2,
             child: ElevatedButton(
               onPressed: isLoading ? null : () async {
                 if (selectedCategoryId == null || nameController.text.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content:  Text(AppLocalizations.of(context).pleaseFillAllRequiredFields),
-                    backgroundColor: colorScheme.error,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
-                  ));
+                  SnackBarHelper.showError(context, AppLocalizations.of(context).pleaseFillAllRequiredFields);
                   return;
                 }
                 setLoading(true);
@@ -652,7 +627,7 @@ class _MenuPageState extends State<MenuPage> {
                   }
                   await FirebaseFirestore.instance.collection("menu_items").add({
                     "name": nameController.text,
-                    "image": imageUrl,
+                    "image": imageUrl ?? '',
                     "categoryId": selectedCategoryId,
                     "restaurantId": restaurantId,
                     "variants": variantList,
@@ -662,48 +637,29 @@ class _MenuPageState extends State<MenuPage> {
                     "createdAt": FieldValue.serverTimestamp(),
                   });
                   Navigator.pop(context);
-                  setState(() { _selectedCategoryId = selectedCategoryId; });
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content:  Text(AppLocalizations.of(context).menuItemAddedSuccess),
-                    backgroundColor: colorScheme.primary,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
-                  ));
+                  SnackBarHelper.showSuccess(context, AppLocalizations.of(context).menuItemAddedSuccess);
                 } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text("${AppLocalizations.of(context).errorAddingMenuItem}: $e"),
-                    backgroundColor: colorScheme.error,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
-                  ));
+                  SnackBarHelper.showError(context, "${AppLocalizations.of(context).errorAddingMenuItem}: $e");
                 } finally {
                   setLoading(false);
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: colorScheme.primary,
-                foregroundColor: colorScheme.onPrimary,
-                padding: EdgeInsets.symmetric(vertical: kIsWeb ? 12 : 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
-                ),
+                backgroundColor: const Color(0xFF070B2D),
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: kIsWeb ? 14 : 12.sp),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12)),
               ),
               child: isLoading
                   ? Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  SizedBox(
-                    width: 16, height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(colorScheme.onPrimary),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(AppLocalizations.of(context).addingMenuItem, style: TextStyle(fontWeight: FontWeight.w600, fontSize: kIsWeb ? 14 : 14.sp)),
+                  SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                  SizedBox(width: 8),
+                  Text(AppLocalizations.of(context).addingMenuItem, style: TextStyle(fontWeight: FontWeight.w600)),
                 ],
               )
-                  : Text("Save Menu Item", style: TextStyle(fontWeight: FontWeight.w600, fontSize: kIsWeb ? 14 : 14.sp)),
+                  : const Text("Add Menu Item", style: TextStyle(fontWeight: FontWeight.w600)),
             ),
           ),
         ],
@@ -978,21 +934,11 @@ class _MenuPageState extends State<MenuPage> {
               try {
                 await FirebaseFirestore.instance.collection("menu_items").doc(id).delete();
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content:  Text(AppLocalizations.of(context).menuItemDeletedSuccess),
-                    backgroundColor: colorScheme.primary,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
-                  ));
+                  SnackBarHelper.showSuccess(context, AppLocalizations.of(context).menuItemDeletedSuccess);
                 }
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text("${AppLocalizations.of(context).errorDeletingMenuItem}: $e"),
-                    backgroundColor: colorScheme.error,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
-                  ));
+                  SnackBarHelper.showError(context, "${AppLocalizations.of(context).errorDeletingMenuItem}: $e");
                 }
               }
             },
@@ -1445,12 +1391,7 @@ class _MenuPageState extends State<MenuPage> {
                             child: ElevatedButton(
                               onPressed: isEditing ? null : () async {
                                 if (selectedCategoryId == null || nameController.text.trim().isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                    content: Text(AppLocalizations.of(context).pleaseFillAllRequiredFields),
-                                    backgroundColor: colorScheme.error,
-                                    behavior: SnackBarBehavior.floating,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
-                                  ));
+                                  SnackBarHelper.showError(context, AppLocalizations.of(context).pleaseFillAllRequiredFields);
                                   return;
                                 }
                                 setState(() { _isEditingMenuItem = true; });
@@ -1487,12 +1428,7 @@ class _MenuPageState extends State<MenuPage> {
                                   });
                                   if (context.mounted) {
                                     Navigator.pop(context);
-                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                      content:  Text(AppLocalizations.of(context).menuItemUpdatedSuccess),
-                                      backgroundColor: colorScheme.primary,
-                                      behavior: SnackBarBehavior.floating,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
-                                    ));
+                                    SnackBarHelper.showSuccess(context, AppLocalizations.of(context).menuItemUpdatedSuccess);
                                   }
                                 } finally {
                                   setState(() { _isEditingMenuItem = false; });

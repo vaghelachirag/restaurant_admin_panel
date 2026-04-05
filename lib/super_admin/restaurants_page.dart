@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../uttils/session_manager.dart';
+
 class RestaurantListPage extends StatefulWidget {
   const RestaurantListPage({super.key});
 
@@ -49,9 +51,16 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
       ),
     );
     if (confirmed == true) {
+      // 1️⃣ Clear all local session data first
+      await SessionManager.logout();
+      // 2️⃣ Sign out from Firebase
       await FirebaseAuth.instance.signOut();
+      // 3️⃣ Navigate to login, removing the entire back-stack
       if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/login');
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          '/login',
+              (route) => false, // removes every route beneath
+        );
       }
     }
   }

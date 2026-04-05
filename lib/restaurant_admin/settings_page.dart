@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import '../core/constants/app_colors.dart';
 import '../services/localization_service.dart';
 import '../widgets/language_switcher.dart';
+import '../utils/snackbar_helper.dart';
 
 class SettingsPage extends StatefulWidget {
   final String restaurantId;
@@ -202,44 +203,11 @@ class _SettingsPageState extends State<SettingsPage> {
       }, SetOptions(merge: true));
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content:  Row(
-              children: [
-                Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
-                SizedBox(width: 8),
-                Text(AppLocalizations.of(context).settingsSavedSuccess,
-                    style: TextStyle(fontSize: 14)),
-              ],
-            ),
-            backgroundColor: const Color(0xFF22C55E),
-            behavior: SnackBarBehavior.floating,
-            shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
+        SnackBarHelper.showSuccess(context, AppLocalizations.of(context).settingsSavedSuccess);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error_outline, color: Colors.white, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                    child: Text(AppLocalizations.of(context).errorSavingSettings.replaceAll('{error}', e.toString()),
-                        style: const TextStyle(fontSize: 14))),
-              ],
-            ),
-            backgroundColor: const Color(0xFFEF4444),
-            behavior: SnackBarBehavior.floating,
-            shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
+        SnackBarHelper.showError(context, AppLocalizations.of(context).errorSavingSettings.replaceAll('{error}', e.toString()));
       }
     }
   }

@@ -62,7 +62,7 @@ void main() async {
   OneSignal.initialize("1dbbdcbd-590f-475c-88d0-7c6d953d63ca");
 
   OneSignal.Notifications.requestPermission(true);
- //
+  //
 
   if (kIsWeb) {
     // Running on Web
@@ -146,7 +146,7 @@ class _MyAppState extends State<MyApp> {
     if (widget.role == 'manager') {
       if (widget.restaurantId == null) return const LoginPage();
       return RestaurantOrdersPage(
-        restaurantId: widget.restaurantId!
+          restaurantId: widget.restaurantId!
       );
     }
 
@@ -215,6 +215,7 @@ class _MyAppState extends State<MyApp> {
             final routeName = settings.name ?? '/';
             final uri = Uri.parse(routeName);
 
+            // ── /menu/{id} — customer-facing menu ──────────────────────────
             if (uri.pathSegments.length == 2 &&
                 uri.pathSegments.first == 'menu') {
               final id = uri.pathSegments[1];
@@ -222,6 +223,16 @@ class _MyAppState extends State<MyApp> {
                 builder: (_) => CustomerMenuPage(restaurantId: id),
               );
             }
+
+            // ── /login — always lands on a fresh LoginPage ─────────────────
+            if (routeName == '/login') {
+              return MaterialPageRoute(
+                builder: (_) => const LoginPage(),
+                settings: settings,
+              );
+            }
+
+            // ── / — show splash once, then route by session ─────────────────
             if (routeName == '/' && !_splashShown) {
               _splashShown = true;
               return MaterialPageRoute(

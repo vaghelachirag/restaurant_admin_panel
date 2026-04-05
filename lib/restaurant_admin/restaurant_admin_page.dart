@@ -13,6 +13,7 @@ import 'package:restaurant_admin_panel/restaurant_admin/restaurant_orders_page.d
 
 import '../uttils/responsive.dart';
 import '../uttils/session_manager.dart';
+import '../utils/snackbar_helper.dart';
 import 'category_page.dart';
 import 'customer_menu.dart';
 import 'menu_page.dart';
@@ -59,23 +60,7 @@ class _RestaurantAdminPanelState extends State<RestaurantAdminPanel> {
       if (newOrderCount > 0) {
         playNewOrderSound();
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.notifications_active, color: Colors.white),
-                 SizedBox(width: 10.w
-                 ),
-                Text("$newOrderCount New Orders Received"),
-              ],
-            ),
-            backgroundColor: Colors.green.shade600,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        );
+        SnackBarHelper.showInfo(context, "$newOrderCount New Orders Received");
 
         newOrderCount = 0;
       }
@@ -131,41 +116,11 @@ class _RestaurantAdminPanelState extends State<RestaurantAdminPanel> {
       await qr_download.saveQrBytesToPlatform(byteData, filename);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 8),
-                Text(kIsWeb ? "QR Code downloaded!" : "QR Code saved to device!"),
-              ],
-            ),
-            backgroundColor: Colors.green.shade500,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        );
+        SnackBarHelper.showSuccess(context, kIsWeb ? "QR Code downloaded!" : "QR Code saved to device!");
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error, color: Colors.white),
-                const SizedBox(width: 8),
-                Text("Error generating QR: $e"),
-              ],
-            ),
-            backgroundColor: Colors.red.shade500,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        );
+        SnackBarHelper.showError(context, "Error generating QR: $e");
       }
     }
   }
@@ -305,22 +260,7 @@ class _RestaurantAdminPanelState extends State<RestaurantAdminPanel> {
                       child: OutlinedButton.icon(
                         onPressed: () {
                           Clipboard.setData(ClipboardData(text: link));
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Row(
-                                children: [
-                                  const Icon(Icons.check_circle, color: Colors.white),
-                                   SizedBox(width: 8.w),
-                                  const Text("Link copied to clipboard!"),
-                                ],
-                              ),
-                              backgroundColor: Colors.green.shade500,
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          );
+                          SnackBarHelper.showSuccess(context, "Link copied to clipboard!");
                         },
                         icon:  Icon(Icons.copy, size: 18.sp),
                         label: const Text("Copy Link"),
@@ -372,22 +312,7 @@ class _RestaurantAdminPanelState extends State<RestaurantAdminPanel> {
                           child: OutlinedButton.icon(
                             onPressed: () {
                               Clipboard.setData(ClipboardData(text: link));
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Row(
-                                    children: [
-                                      const Icon(Icons.check_circle, color: Colors.white),
-                                       SizedBox(width: 8.w),
-                                      const Text("Link copied to clipboard!"),
-                                    ],
-                                  ),
-                                  backgroundColor: Colors.green.shade500,
-                                  behavior: SnackBarBehavior.floating,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12.sp),
-                                  ),
-                                ),
-                              );
+                              SnackBarHelper.showSuccess(context, "Link copied to clipboard!");
                             },
                             icon:  Icon(Icons.copy, size: 18.sp),
                             label: const Text("Copy Link"),
@@ -499,13 +424,7 @@ class _RestaurantAdminPanelState extends State<RestaurantAdminPanel> {
                 
                 // Show error message
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error during logout: $e'),
-                      backgroundColor: Colors.red,
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
+                  SnackBarHelper.showError(context, 'Error during logout: $e');
                 }
               }
             },

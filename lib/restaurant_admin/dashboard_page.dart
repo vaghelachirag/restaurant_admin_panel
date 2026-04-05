@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:restaurant_admin_panel/restaurant_admin/restaurant_orders_page.dart';
 
 import '../uttils/session_manager.dart';
@@ -518,15 +519,17 @@ class _Sidebar extends StatelessWidget {
                     color: Colors.white, size: 22)),
               ),
               const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(isLoading ? AppLocalizations.of(context).restaurant : (restaurant?.name ?? AppLocalizations.of(context).restaurant),
-                      style: _p(15, FontWeight.w700, _C.textDark),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis),
-                  Text(AppLocalizations.of(context).adminPanel, style: _p(11, FontWeight.w400, _C.textLight)),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(isLoading ? AppLocalizations.of(context).restaurant : (restaurant?.name ?? AppLocalizations.of(context).restaurant),
+                        style: _p(15, FontWeight.w700, _C.textDark),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis),
+                    Text(AppLocalizations.of(context).adminPanel, style: _p(11, FontWeight.w400, _C.textLight)),
+                  ],
+                ),
               ),
             ]),
           ),
@@ -578,6 +581,9 @@ class _Sidebar extends StatelessWidget {
             ),
           ),
 
+          // ── Download APK button ────────────────────────────────────────
+          const _ApkDownloadButton(),
+
           const Divider(color: Color(0xFFEEEEEE), height: 1, thickness: 1),
           InkWell(
             onTap: onLogout,
@@ -593,6 +599,139 @@ class _Sidebar extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─── APK Download Button ─────────────────────────────────────────────────────
+class _ApkDownloadButton extends StatefulWidget {
+  const _ApkDownloadButton();
+
+  @override
+  State<_ApkDownloadButton> createState() => _ApkDownloadButtonState();
+}
+
+class _ApkDownloadButtonState extends State<_ApkDownloadButton> {
+  bool _loading = false;
+
+  Future<void> _downloadApk() async {
+    setState(() => _loading = true);
+    try {
+      // Fetch latest APK info from Firestore: collection "app_releases", doc "latest"
+      // Expected fields: apkUrl (String), version (String, optional)
+      final doc = await FirebaseFirestore.instance
+          .collection('app_releases')
+          .doc('latest')
+          .get();
+
+      if (!doc.exists || doc.data() == null) {
+        _showError('No APK release found. Please upload a release first.');
+        return;
+      }
+
+      final data = doc.data()!;
+      final String? apkUrl = data['apkUrl'] as String?;
+
+      if (apkUrl == null || apkUrl.trim().isEmpty) {
+        _showError('APK URL is missing in the release document.');
+        return;
+      }
+
+      final uri = Uri.parse(apkUrl);
+      if (!await canLaunchUrl(uri)) {
+        _showError('Cannot open the download link.');
+        return;
+      }
+
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+
+      final version = data['version'] as String?;
+      _showSuccess(version != null
+          ? 'Downloading v$version…'
+          : 'Download started!');
+    } catch (e) {
+      _showError('Download failed: $e');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _showError(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Row(children: [
+        const Icon(Icons.error_rounded, color: Colors.white, size: 16),
+        const SizedBox(width: 8),
+        Expanded(child: Text(msg, style: GoogleFonts.poppins(color: Colors.white, fontSize: 12))),
+      ]),
+      backgroundColor: _C.red,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      margin: const EdgeInsets.all(14),
+    ));
+  }
+
+  void _showSuccess(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Row(children: [
+        const Icon(Icons.download_done_rounded, color: Colors.white, size: 16),
+        const SizedBox(width: 8),
+        Expanded(child: Text(msg, style: GoogleFonts.poppins(color: Colors.white, fontSize: 12))),
+      ]),
+      backgroundColor: _C.green,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      margin: const EdgeInsets.all(14),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: InkWell(
+        onTap: _loading ? null : _downloadApk,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          decoration: BoxDecoration(
+            color: _C.orangeLight,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: _C.orange.withOpacity(0.25)),
+          ),
+          child: Row(children: [
+            _loading
+                ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(_C.orange),
+              ),
+            )
+                : const Icon(Icons.android_rounded, color: _C.orange, size: 20),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _loading ? 'Fetching…' : 'Download App',
+                    style: _p(13, FontWeight.w600, _C.orange),
+                  ),
+                  Text(
+                    'Latest APK',
+                    style: _p(10, FontWeight.w400, _C.orange.withOpacity(0.7)),
+                  ),
+                ],
+              ),
+            ),
+            if (!_loading)
+              const Icon(Icons.download_rounded, color: _C.orange, size: 16),
+          ]),
+        ),
       ),
     );
   }

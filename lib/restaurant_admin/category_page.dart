@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../uttils/responsive.dart';
 import '../services/localization_service.dart';
+import '../utils/snackbar_helper.dart';
 
 class CategoryPage extends StatefulWidget {
   final String restaurantId;
@@ -235,9 +236,9 @@ class _CategoryPageState extends State<CategoryPage> {
                               });
 
                               Navigator.pop(context);
-                              _showSuccess(context, AppLocalizations.of(context).categoryAddedSuccess, colorScheme);
+                              SnackBarHelper.showSuccess(context, AppLocalizations.of(context).categoryAddedSuccess);
                             } catch (e) {
-                              _showError(context, "${AppLocalizations.of(context).errorAddingCategory}: $e", colorScheme);
+                              SnackBarHelper.showError(context, "${AppLocalizations.of(context).errorAddingCategory}: $e");
                             }
                           },
                           style: ElevatedButton.styleFrom(
@@ -517,11 +518,7 @@ class _CategoryPageState extends State<CategoryPage> {
 
                         if (context.mounted) {
                           Navigator.pop(context);
-                          _showSuccess(
-                            context,
-                            AppLocalizations.of(context).categoryUpdatedSuccess,
-                            colorScheme,
-                          );
+                          SnackBarHelper.showSuccess(context, AppLocalizations.of(context).categoryUpdatedSuccess);
                         }
                       } else {
                         /// ➕ Add
@@ -538,20 +535,12 @@ class _CategoryPageState extends State<CategoryPage> {
 
                         if (context.mounted) {
                           Navigator.pop(context);
-                          _showSuccess(
-                            context,
-                            AppLocalizations.of(context).categoryAddedSuccess,
-                            colorScheme,
-                          );
+                          SnackBarHelper.showSuccess(context, AppLocalizations.of(context).categoryAddedSuccess);
                         }
                       }
                     } catch (e) {
                       if (context.mounted) {
-                        _showError(
-                          context,
-                          "${categoryId != null ? AppLocalizations.of(context).errorUpdatingCategory : AppLocalizations.of(context).errorAddingCategory}: $e",
-                          colorScheme,
-                        );
+                        SnackBarHelper.showError(context, "${categoryId != null ? AppLocalizations.of(context).errorUpdatingCategory : AppLocalizations.of(context).errorAddingCategory}: $e");
                       }
                     } finally {
                       setLoading(false);
@@ -1080,9 +1069,9 @@ class _CategoryPageState extends State<CategoryPage> {
                               });
 
                               Navigator.pop(context);
-                              _showSuccess(context, AppLocalizations.of(context).categoryUpdatedSuccess, colorScheme);
+                              SnackBarHelper.showSuccess(context, AppLocalizations.of(context).categoryUpdatedSuccess);
                             } catch (e) {
-                              _showError(context, "${AppLocalizations.of(context).errorUpdatingCategory}: $e", colorScheme);
+                              SnackBarHelper.showError(context, "${AppLocalizations.of(context).errorUpdatingCategory}: $e");
                             }
                           },
                           style: ElevatedButton.styleFrom(
