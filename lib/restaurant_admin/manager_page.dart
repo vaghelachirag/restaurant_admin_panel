@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../services/localization_service.dart';
+
 
 class _C {
   static const bg          = Color(0xFFFFF3EE);
@@ -101,7 +103,7 @@ class _ManagerPageState extends State<ManagerPage> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(isEdit ? "Edit Manager" : "Add Manager",
+                    child: Text(isEdit ? AppLocalizations.of(context).editManager : AppLocalizations.of(context).addManager,
                         style: _p(17, FontWeight.w700, _C.textDark)),
                   ),
                   GestureDetector(
@@ -113,49 +115,49 @@ class _ManagerPageState extends State<ManagerPage> {
                 const SizedBox(height: 24),
 
                 // Name field
-                _label("Manager Name"),
+                _label(AppLocalizations.of(context).managerName),
                 const SizedBox(height: 6),
                 _field(
                   controller: nameCtrl,
-                  hint: "Enter full name",
+                  hint: AppLocalizations.of(context).enterFullName,
                   icon: Icons.person_outline_rounded,
                   validator: (v) =>
-                  v == null || v.trim().isEmpty ? "Name is required" : null,
+                  v == null || v.trim().isEmpty ? AppLocalizations.of(context).nameRequired : null,
                 ),
                 const SizedBox(height: 16),
 
                 // Email field
-                _label("Email Address"),
+                _label(AppLocalizations.of(context).emailAddress),
                 const SizedBox(height: 6),
                 _field(
                   controller: emailCtrl,
-                  hint: "Enter email address",
+                  hint: AppLocalizations.of(context).enterEmailAddress,
                   icon: Icons.email_outlined,
                   enabled: !isEdit, // can't change email after creation
                   keyboardType: TextInputType.emailAddress,
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty) return "Email is required";
+                    if (v == null || v.trim().isEmpty) return AppLocalizations.of(context).emailRequired;
                     final emailReg = RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$');
-                    if (!emailReg.hasMatch(v.trim())) return "Enter a valid email";
+                    if (!emailReg.hasMatch(v.trim())) return AppLocalizations.of(context).enterValidEmail;
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
 
                 // Password field (only shown on add; for edit it's optional)
-                _label(isEdit ? "New Password (leave blank to keep)" : "Password"),
+                _label(isEdit ? AppLocalizations.of(context).newPasswordOptional : AppLocalizations.of(context).password),
                 const SizedBox(height: 6),
                 _field(
                   controller: passCtrl,
-                  hint: isEdit ? "Enter new password (optional)" : "Enter password",
+                  hint: isEdit ? AppLocalizations.of(context).enterNewPasswordOptional : AppLocalizations.of(context).enterPassword,
                   icon: Icons.lock_outline_rounded,
                   obscure: true,
                   validator: (v) {
                     if (!isEdit && (v == null || v.trim().isEmpty)) {
-                      return "Password is required";
+                      return AppLocalizations.of(context).passwordRequired;
                     }
                     if (v != null && v.isNotEmpty && v.length < 6) {
-                      return "Password must be at least 6 characters";
+                      return AppLocalizations.of(context).passwordMinLength;
                     }
                     return null;
                   },
@@ -164,7 +166,7 @@ class _ManagerPageState extends State<ManagerPage> {
 
                 // Active toggle
                 Row(children: [
-                  Text("Status", style: _p(13, FontWeight.w500, _C.textMid)),
+                  Text(AppLocalizations.of(context).status, style: _p(13, FontWeight.w500, _C.textMid)),
                   const Spacer(),
                   GestureDetector(
                     onTap: () => setDlg(() => isActive = !isActive),
@@ -193,7 +195,7 @@ class _ManagerPageState extends State<ManagerPage> {
                   ),
                   const SizedBox(width: 10),
                   Text(
-                    isActive ? "Active" : "Inactive",
+                    isActive ? AppLocalizations.of(context).active : AppLocalizations.of(context).inactive,
                     style: _p(13, FontWeight.w600,
                         isActive ? _C.green : _C.textLight),
                   ),
@@ -211,7 +213,7 @@ class _ManagerPageState extends State<ManagerPage> {
                             color: const Color(0xFFF2F2F2),
                             borderRadius: BorderRadius.circular(10)),
                         child: Center(
-                          child: Text("Cancel",
+                          child: Text(AppLocalizations.of(context).cancel,
                               style: _p(13, FontWeight.w600, _C.textMid)),
                         ),
                       ),
@@ -269,7 +271,7 @@ class _ManagerPageState extends State<ManagerPage> {
                                 color: Colors.white),
                           )
                               : Text(
-                            isEdit ? "Save Changes" : "Add Manager",
+                            isEdit ? AppLocalizations.of(context).saveChanges : AppLocalizations.of(context).addManager,
                             style:
                             _p(13, FontWeight.w600, Colors.white),
                           ),
@@ -319,7 +321,7 @@ class _ManagerPageState extends State<ManagerPage> {
     }
 
     if (mounted) {
-      _snack("Manager added successfully!", _C.green,
+      _snack(AppLocalizations.of(context).managerAddedSuccess, _C.green,
           icon: Icons.check_circle_rounded);
     }
   }
@@ -354,7 +356,7 @@ class _ManagerPageState extends State<ManagerPage> {
         if (email != null) {
           await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
           if (mounted) {
-            _snack("Password reset email sent to manager.", _C.orange,
+            _snack(AppLocalizations.of(context).passwordResetEmailSent, _C.orange,
                 icon: Icons.email_rounded);
           }
         }
@@ -362,7 +364,7 @@ class _ManagerPageState extends State<ManagerPage> {
     }
 
     if (mounted) {
-      _snack("Manager updated!", _C.green, icon: Icons.check_circle_rounded);
+      _snack(AppLocalizations.of(context).managerUpdated, _C.green, icon: Icons.check_circle_rounded);
     }
   }
 
@@ -374,7 +376,7 @@ class _ManagerPageState extends State<ManagerPage> {
         .update({'isActive': !current});
     if (mounted) {
       _snack(
-        !current ? "Manager activated." : "Manager deactivated.",
+        !current ? AppLocalizations.of(context).managerActivated : AppLocalizations.of(context).managerDeactivated,
         !current ? _C.green : _C.textMid,
         icon: !current
             ? Icons.check_circle_rounded
@@ -409,11 +411,11 @@ class _ManagerPageState extends State<ManagerPage> {
                   color: _C.red, size: 26),
             ),
             const SizedBox(height: 14),
-            Text("Delete Manager?",
+            Text(AppLocalizations.of(context).deleteManager,
                 style: _p(17, FontWeight.w700, _C.textDark)),
             const SizedBox(height: 8),
             Text(
-              "Are you sure you want to delete \"$name\"? This action cannot be undone.",
+              AppLocalizations.of(context).deleteManagerConfirmation.replaceAll('{name}', name),
               textAlign: TextAlign.center,
               style: _p(12, FontWeight.w400, _C.textMid),
             ),
@@ -428,7 +430,7 @@ class _ManagerPageState extends State<ManagerPage> {
                         color: const Color(0xFFF2F2F2),
                         borderRadius: BorderRadius.circular(10)),
                     child: Center(
-                        child: Text("Cancel",
+                        child: Text(AppLocalizations.of(context).cancel,
                             style: _p(13, FontWeight.w600, _C.textMid))),
                   ),
                 ),
@@ -443,7 +445,7 @@ class _ManagerPageState extends State<ManagerPage> {
                         color: _C.red,
                         borderRadius: BorderRadius.circular(10)),
                     child: Center(
-                        child: Text("Delete",
+                        child: Text(AppLocalizations.of(context).delete,
                             style: _p(13, FontWeight.w600, Colors.white))),
                   ),
                 ),
@@ -457,7 +459,7 @@ class _ManagerPageState extends State<ManagerPage> {
     if (ok != true) return;
     await FirebaseFirestore.instance.collection('users').doc(docId).delete();
     if (mounted) {
-      _snack("Manager deleted.", _C.red, icon: Icons.delete_rounded);
+      _snack(AppLocalizations.of(context).managerDeleted, _C.red, icon: Icons.delete_rounded);
     }
   }
 
@@ -465,13 +467,13 @@ class _ManagerPageState extends State<ManagerPage> {
   String _authError(FirebaseAuthException e) {
     switch (e.code) {
       case 'email-already-in-use':
-        return 'This email is already registered.';
+        return AppLocalizations.of(context).emailAlreadyRegistered;
       case 'invalid-email':
-        return 'Invalid email address.';
+        return AppLocalizations.of(context).invalidEmailAddress;
       case 'weak-password':
-        return 'Password must be at least 6 characters.';
+        return AppLocalizations.of(context).passwordWeak;
       default:
-        return e.message ?? 'An error occurred.';
+        return e.message ?? AppLocalizations.of(context).errorOccurred;
     }
   }
 
@@ -493,9 +495,9 @@ class _ManagerPageState extends State<ManagerPage> {
           ),
           child: Row(children: [
             Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text("Managers",
+              Text(AppLocalizations.of(context).managersTitle,
                   style: _p(isMobile ? 20 : 22, FontWeight.w700, _C.textDark)),
-              Text("Manage your restaurant managers",
+              Text(AppLocalizations.of(context).manageManagers,
                   style: _p(12, FontWeight.w400, _C.textLight)),
             ]),
             const Spacer(),
@@ -512,7 +514,7 @@ class _ManagerPageState extends State<ManagerPage> {
                       color: Colors.white, size: 18),
                   const SizedBox(width: 8),
                   if (!isMobile)
-                    Text("Add Manager",
+                    Text(AppLocalizations.of(context).addManager,
                         style: _p(13, FontWeight.w600, Colors.white)),
                 ]),
               ),
@@ -537,7 +539,7 @@ class _ManagerPageState extends State<ManagerPage> {
 
               if (snap.hasError) {
                 return Center(
-                    child: Text("Error loading managers",
+                    child: Text(AppLocalizations.of(context).errorLoadingManagers,
                         style: _p(14, FontWeight.w500, _C.red)));
               }
 
@@ -557,10 +559,10 @@ class _ManagerPageState extends State<ManagerPage> {
                             color: _C.orange, size: 40),
                       ),
                       const SizedBox(height: 16),
-                      Text("No Managers Yet",
+                      Text(AppLocalizations.of(context).noManagersYet,
                           style: _p(16, FontWeight.w700, _C.textDark)),
                       const SizedBox(height: 6),
-                      Text("Tap Add Manager to get started.",
+                      Text(AppLocalizations.of(context).tapAddManagerToStart,
                           style: _p(13, FontWeight.w400, _C.textLight)),
                     ],
                   ),
@@ -772,7 +774,7 @@ class _DesktopTable extends StatelessWidget {
                               : Icons.toggle_off_rounded,
                           color: active ? _C.green : _C.textLight,
                           tooltip:
-                          active ? "Deactivate" : "Activate",
+                          active ? AppLocalizations.of(context).deactivate : AppLocalizations.of(context).activate,
                           onTap: () => onToggle(doc),
                         ),
                         const SizedBox(width: 4),
@@ -780,7 +782,7 @@ class _DesktopTable extends StatelessWidget {
                         _IconBtn(
                           icon: Icons.edit_outlined,
                           color: _C.orange,
-                          tooltip: "Edit",
+                          tooltip: AppLocalizations.of(context).edit,
                           onTap: () => onEdit(doc),
                         ),
                         const SizedBox(width: 4),
@@ -788,7 +790,7 @@ class _DesktopTable extends StatelessWidget {
                         _IconBtn(
                           icon: Icons.delete_outline_rounded,
                           color: _C.red,
-                          tooltip: "Delete",
+                          tooltip: AppLocalizations.of(context).delete,
                           onTap: () => onDelete(doc),
                         ),
                       ]),

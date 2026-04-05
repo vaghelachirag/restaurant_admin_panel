@@ -1,0 +1,127 @@
+{
+  "app_name": "रेस्टोरेंट एडमिन पैनल",
+  "login": {
+    "title": "लॉगिन",
+    "email": "ईमेल",
+    "password": "पासवर्ड",
+    "login_button": "लॉगिन करें",
+    "forgot_password": "पासवर्ड भूल गए?",
+    "dont_have_account": "खाता नहीं है?",
+    "sign_up": "साइन अप करें"
+  },
+  "dashboard": {
+    "name": "Dashboard",
+    "title": "डैशबोर्ड",
+    "total_orders": "कुल ऑर्डर",
+    "total_revenue": "कुल राजस्व",
+    "pending_orders": "लंबित ऑर्डर",
+    "completed_orders": "पूर्ण ऑर्डर",
+    "today": "आज",
+    "this_week": "इस सप्ताह",
+    "this_month": "इस महीने",
+    "new_order": "नया ऑर्डर",
+    "received": "प्राप्त",
+    "qr_saved": "QR सहेज गया!",
+    "error": "त्रुटि",
+    "menu_qr_link": "मेनू QR और लिंक",
+    "copy_link": "लिंक कॉपी करें",
+    "copied": "कॉपी किया गया!",
+    "download_qr": "QR डाउनलोड करें",
+    "sign_out_question": "साइन आउट करें?",
+    "sign_out_description": "पैनल तक पहुँचने के लिए फिर से साइन इन करना होगा।",
+    "cancel": "रद्द करें",
+    "sign_out": "साइन आउट",
+    "logout_error": "लॉगआउट त्रुटि",
+    "restaurant": "रेस्टोरेंट",
+    "admin_panel": "एडमिन पैनल",
+    "logout": "लॉगआउट",
+    "categories": "श्रेणियां",
+    "menu_items": "मेनू आइटम",
+    "orders": "ऑर्डर",
+    "from_yesterday": "कल से",
+    "sales_details": "बिक्री विवरण"
+  },
+  "menu": {
+    "title": "मेनू",
+    "categories": "श्रेणियां",
+    "items": "आइटम",
+    "add_item": "आइटम जोड़ें",
+    "edit_item": "आइटम संपादित करें",
+    "delete_item": "आइटम हटाएं",
+    "item_name": "आइटम का नाम",
+    "price": "मूल्य",
+    "description": "विवरण",
+    "category": "श्रेणी",
+    "available": "उपलब्ध",
+    "not_available": "अनुपलब्ध"
+  },
+  "orders": {
+    "title": "ऑर्डर",
+    "pending": "लंबित",
+    "preparing": "तैयार हो रहा है",
+    "ready": "तैयार",
+    "completed": "पूर्ण",
+    "cancelled": "रद्द",
+    "order_id": "ऑर्डर ID",
+    "orders": "ऑर्डर",
+    "customer": "ग्राहक",
+    "items": "आइटम",
+    "total": "कुल",
+    "status": "स्थिति",
+    "time": "समय",
+    "mark_ready": "तैयार के रूप में चिह्नित करें",
+    "mark_completed": "पूर्ण के रूप में चिह्नित करें",
+    "cancel_order": "ऑर्डर रद्द करें"
+  },
+  "settings": {
+    "title": "सेटिंग्स",
+    "profile": "प्रोफ़ाइल",
+    "restaurant_info": "रेस्टोरेंट जानकारी",
+    "notifications": "सूचनाएं",
+    "language": "भाषा",
+    "logout": "लॉगआउट",
+    "save": "सेव करें",
+    "cancel": "रद्द करें"
+  },
+  "restaurant": {
+    "name": "रेस्टोरेंट का नाम",
+    "address": "पता",
+    "phone": "फोन",
+    "email": "ईमेल",
+    "opening_hours": "खुलने का समय",
+    "cuisine_type": "व्यंजन प्रकार"
+  },
+  "common": {
+    "and": "और",
+    "yes": "हां",
+    "no": "नहीं",
+    "ok": "ठीक है",
+    "cancel": "रद्द करें",
+    "save": "सेव करें",
+    "delete": "हटाएं",
+    "edit": "संपादित करें",
+    "add": "जोड़ें",
+    "search": "खोजें",
+    "filter": "फ़िल्टर",
+    "loading": "लोड हो रहा है...",
+    "error": "त्रुटि",
+    "success": "सफलता",
+    "warning": "चेतावनी",
+    "info": "जानकारी"
+  },
+  "categories": {
+    "title": "श्रेणियां"
+  },
+  "menu_items": {
+    "title": "मेनू आइटम"
+  },
+  "customer_menu": {
+    "title": "ग्राहक मेनू"
+  },
+  "menu_link": {
+    "title": "मेनू लिंक"
+  },
+  "managers": {
+    "title": "प्रबंधक"
+  }
+}

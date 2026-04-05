@@ -6,6 +6,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import '../core/constants/app_colors.dart';
+import '../services/localization_service.dart';
+import '../widgets/language_switcher.dart';
 
 class SettingsPage extends StatefulWidget {
   final String restaurantId;
@@ -44,6 +46,9 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _isUploadingLogo = false;
   final String _imgBBApiKey = "a923bc17d28cd6fe1be417700456eb69";
 
+  // Localization Service
+  final LocalizationService _localizationService = LocalizationService();
+
   // Responsive helpers
   bool get _isWeb => kIsWeb || MediaQuery.of(context).size.width > 768;
   double get _contentMaxWidth => 860;
@@ -52,10 +57,12 @@ class _SettingsPageState extends State<SettingsPage> {
   void initState() {
     super.initState();
     _loadRestaurantInfo();
+    _localizationService.addListener(_onLanguageChanged);
   }
 
   @override
   void dispose() {
+    _localizationService.removeListener(_onLanguageChanged);
     _restaurantNameController.dispose();
     _addressController.dispose();
     _contactNumberController.dispose();
@@ -68,6 +75,12 @@ class _SettingsPageState extends State<SettingsPage> {
       c.dispose();
     }
     super.dispose();
+  }
+
+  void _onLanguageChanged() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   Future<void> _loadRestaurantInfo() async {
@@ -191,11 +204,11 @@ class _SettingsPageState extends State<SettingsPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Row(
+            content:  Row(
               children: [
                 Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
                 SizedBox(width: 8),
-                Text("Restaurant information saved successfully!",
+                Text(AppLocalizations.of(context).settingsSavedSuccess,
                     style: TextStyle(fontSize: 14)),
               ],
             ),
@@ -216,7 +229,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 const Icon(Icons.error_outline, color: Colors.white, size: 18),
                 const SizedBox(width: 8),
                 Expanded(
-                    child: Text("Error: $e",
+                    child: Text(AppLocalizations.of(context).errorSavingSettings.replaceAll('{error}', e.toString()),
                         style: const TextStyle(fontSize: 14))),
               ],
             ),
@@ -259,6 +272,8 @@ class _SettingsPageState extends State<SettingsPage> {
                         _buildOperatingHoursSection(),
                         SizedBox(height: _isWeb ? 20 : 18.h),
                         _buildBillingSettingsSection(),
+                        SizedBox(height: _isWeb ? 20 : 18.h),
+                        _buildLanguageSettingsSection(),
                         SizedBox(height: _isWeb ? 20 : 18.h),
                         _buildAdditionalNotesSection(),
                         SizedBox(height: _isWeb ? 28 : 24.h),
@@ -312,7 +327,7 @@ class _SettingsPageState extends State<SettingsPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Restaurant Settings",
+                AppLocalizations.of(context).restaurantSettings,
                 style: TextStyle(
                   fontSize: _isWeb ? 22 : 18.sp,
                   fontWeight: FontWeight.w700,
@@ -322,7 +337,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               const SizedBox(height: 2),
               Text(
-                "Manage your restaurant information",
+                AppLocalizations.of(context).manageRestaurantInfo,
                 style: TextStyle(
                   fontSize: _isWeb ? 14 : 12.sp,
                   color: const Color(0xFF6B7280),
@@ -403,7 +418,7 @@ class _SettingsPageState extends State<SettingsPage> {
     return _buildSectionCard(
       icon: Icons.storefront_outlined,
       iconColor: const Color(0xFFC4622D),
-      title: "Restaurant Logo",
+      title: AppLocalizations.of(context).restaurantLogo,
       children: [
         _isWeb
             ? Row(
@@ -491,7 +506,7 @@ class _SettingsPageState extends State<SettingsPage> {
             color: const Color(0xFF9CA3AF)),
         SizedBox(height: _isWeb ? 6 : 4.h),
         Text(
-          "No Logo",
+          AppLocalizations.of(context).noLogo,
           style: TextStyle(
             fontSize: _isWeb ? 11 : 10.sp,
             color: const Color(0xFF9CA3AF),
@@ -506,7 +521,7 @@ class _SettingsPageState extends State<SettingsPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          hasLogo ? "Update Restaurant Logo" : "Upload Restaurant Logo",
+          hasLogo ? AppLocalizations.of(context).updateLogo : AppLocalizations.of(context).uploadLogo,
           style: TextStyle(
             fontSize: _isWeb ? 14 : 13.sp,
             fontWeight: FontWeight.w600,
@@ -515,7 +530,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         SizedBox(height: _isWeb ? 4 : 4.h),
         Text(
-          "This logo appears on bills and the customer menu. Use a square image for best results (PNG or JPG, max 512×512px).",
+          AppLocalizations.of(context).logoDescription,
           style: TextStyle(
             fontSize: _isWeb ? 12 : 11.sp,
             color: const Color(0xFF6B7280),
@@ -548,7 +563,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         color: Color(0xFFC4622D), size: 16),
                     const SizedBox(width: 6),
                     Text(
-                      hasLogo ? "Change Logo" : "Upload Logo",
+                      hasLogo ? AppLocalizations.of(context).changeLogo : "Upload Logo",
                       style: TextStyle(
                         fontSize: _isWeb ? 13 : 12.sp,
                         fontWeight: FontWeight.w600,
@@ -584,7 +599,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           color: Color(0xFFEF4444), size: 16),
                       const SizedBox(width: 6),
                       Text(
-                        "Remove",
+                        AppLocalizations.of(context).removeLogo,
                         style: TextStyle(
                           fontSize: _isWeb ? 13 : 12.sp,
                           fontWeight: FontWeight.w600,
@@ -616,7 +631,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     size: 13, color: Color(0xFFC4622D)),
                 const SizedBox(width: 5),
                 Text(
-                  "New logo will be saved when you tap Save",
+                  AppLocalizations.of(context).logoPendingUpload,
                   style: TextStyle(
                     fontSize: _isWeb ? 11 : 10.sp,
                     color: const Color(0xFFC4622D),
@@ -636,24 +651,24 @@ class _SettingsPageState extends State<SettingsPage> {
     return _buildSectionCard(
       icon: Icons.info_outline_rounded,
       iconColor: AppColors.primary,
-      title: "Restaurant Information",
+      title: AppLocalizations.of(context).restaurantInformation,
       children: [
         _buildField(
-          label: "Restaurant Name",
+          label: AppLocalizations.of(context).restaurantName,
           controller: _restaurantNameController,
           icon: Icons.restaurant_menu_outlined,
           hint: "Enter restaurant name",
         ),
         SizedBox(height: _isWeb ? 16 : 14.h),
         _buildField(
-          label: "Address",
+          label: AppLocalizations.of(context).address,
           controller: _addressController,
           icon: Icons.location_on_outlined,
           hint: "Enter restaurant address",
         ),
         SizedBox(height: _isWeb ? 16 : 14.h),
         _buildField(
-          label: "Contact Number",
+          label: AppLocalizations.of(context).contactNumber,
           controller: _contactNumberController,
           icon: Icons.phone_outlined,
           hint: "Enter contact number",
@@ -661,7 +676,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         SizedBox(height: _isWeb ? 16 : 14.h),
         _buildField(
-          label: "WhatsApp Number",
+          label: AppLocalizations.of(context).whatsappNumber,
           controller: _whatsappNumberController,
           icon: Icons.chat_bubble_outline_rounded,
           hint: "Enter WhatsApp number",
@@ -669,7 +684,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         SizedBox(height: _isWeb ? 16 : 14.h),
         _buildField(
-          label: "GST Number",
+          label: AppLocalizations.of(context).gstNumber,
           controller: _gstNumberController,
           icon: Icons.receipt_long_outlined,
           hint: "Enter GST number",
@@ -683,21 +698,21 @@ class _SettingsPageState extends State<SettingsPage> {
     return _buildSectionCard(
       icon: Icons.schedule_outlined,
       iconColor: const Color(0xFF10B981),
-      title: "Operating Hours",
+      title: AppLocalizations.of(context).operatingHours,
       children: [
         _isWeb
             ? Row(
           children: [
-            Expanded(child: _buildTimePickerTile("Opening Time", 'opening')),
+            Expanded(child: _buildTimePickerTile(AppLocalizations.of(context).openingTime, 'opening')),
             const SizedBox(width: 16),
-            Expanded(child: _buildTimePickerTile("Closing Time", 'closing')),
+            Expanded(child: _buildTimePickerTile(AppLocalizations.of(context).closingTime, 'closing')),
           ],
         )
             : Column(
           children: [
-            _buildTimePickerTile("Opening Time", 'opening'),
+            _buildTimePickerTile(AppLocalizations.of(context).openingTime, 'opening'),
             SizedBox(height: 12.h),
-            _buildTimePickerTile("Closing Time", 'closing'),
+            _buildTimePickerTile(AppLocalizations.of(context).closingTime, 'closing'),
           ],
         ),
       ],
@@ -759,11 +774,11 @@ class _SettingsPageState extends State<SettingsPage> {
     return _buildSectionCard(
       icon: Icons.account_balance_wallet_outlined,
       iconColor: const Color(0xFF8B5CF6),
-      title: "Billing Settings",
+      title: AppLocalizations.of(context).billingSettings,
       children: [
         _buildToggleRow(
-          title: "Enable GST",
-          description: "Apply GST on all orders.",
+          title: AppLocalizations.of(context).enableGst,
+          description: AppLocalizations.of(context).enableGstDescription,
           value: _enableGst,
           onChanged: (v) => setState(() => _enableGst = v),
         ),
@@ -775,28 +790,28 @@ class _SettingsPageState extends State<SettingsPage> {
               Expanded(
                   child: _buildPercentField(
                       controller: _gstPercentageController,
-                      label: "GST %")),
+                      label: AppLocalizations.of(context).gstPercentage)),
               const SizedBox(width: 16),
               Expanded(
                   child: _buildPercentField(
                       controller: _cessPercentageController,
-                      label: "Cess %")),
+                      label: AppLocalizations.of(context).cessPercentage)),
             ],
           )
               : Column(
             children: [
               _buildPercentField(
-                  controller: _gstPercentageController, label: "GST %"),
+                  controller: _gstPercentageController, label: AppLocalizations.of(context).gstPercentage),
               SizedBox(height: 12.h),
               _buildPercentField(
-                  controller: _cessPercentageController, label: "Cess %"),
+                  controller: _cessPercentageController, label: AppLocalizations.of(context).cessPercentage),
             ],
           ),
         ],
         SizedBox(height: _isWeb ? 16 : 14.h),
         _buildToggleRow(
-          title: "Enable Packaging Charge",
-          description: "Add packaging charge for parcel orders.",
+          title: AppLocalizations.of(context).enablePackagingCharge,
+          description: AppLocalizations.of(context).enablePackagingChargeDescription,
           value: _enablePackagingCharge,
           onChanged: (v) => setState(() => _enablePackagingCharge = v),
         ),
@@ -804,7 +819,7 @@ class _SettingsPageState extends State<SettingsPage> {
           SizedBox(height: _isWeb ? 16 : 14.h),
           _buildCurrencyField(
               controller: _packagingChargeController,
-              label: "Packaging Charge"),
+              label: AppLocalizations.of(context).packagingCharge),
         ],
       ],
     );
@@ -815,7 +830,7 @@ class _SettingsPageState extends State<SettingsPage> {
     return _buildSectionCard(
       icon: Icons.note_alt_outlined,
       iconColor: const Color(0xFFF97316),
-      title: "Additional Notes",
+      title: AppLocalizations.of(context).additionalNotes,
       children: [
         ..._noteControllers.asMap().entries.map((entry) {
           return Padding(
@@ -841,7 +856,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     color: Color(0xFFF97316), size: 18),
                 const SizedBox(width: 8),
                 Text(
-                  "Add Note",
+                  AppLocalizations.of(context).addNote,
                   style: TextStyle(
                     fontSize: _isWeb ? 14 : 13.sp,
                     fontWeight: FontWeight.w600,
@@ -856,6 +871,215 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  // ─── Language Settings ─────────────────────────────────────────────────────
+  Widget _buildLanguageSettingsSection() {
+    final currentLanguage = _localizationService.currentLanguageCode;
+    
+    return _buildSectionCard(
+      icon: Icons.language_outlined,
+      iconColor: const Color(0xFF06B6D4),
+      title: AppLocalizations.of(context).languageSettings,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              AppLocalizations.of(context).appLanguage,
+              style: TextStyle(
+                fontSize: _isWeb ? 14 : 13.sp,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF374151),
+              ),
+            ),
+            SizedBox(height: _isWeb ? 8 : 6.h),
+            Text(
+              AppLocalizations.of(context).languageDescription,
+              style: TextStyle(
+                fontSize: _isWeb ? 12 : 11.sp,
+                color: const Color(0xFF6B7280),
+                height: 1.5,
+              ),
+            ),
+            SizedBox(height: _isWeb ? 16 : 14.h),
+            
+            // Language options
+            ...LocalizationService.supportedLocales.map((locale) {
+              final languageCode = locale.languageCode;
+              final isSelected = languageCode == currentLanguage;
+              final languageName = LocalizationService.languageNames[languageCode] ?? languageCode;
+              
+              return GestureDetector(
+                onTap: () async {
+                  debugPrint('Language tapped: $languageCode');
+                  await _localizationService.changeLanguage(languageCode);
+                  debugPrint('Language changed to: ${_localizationService.currentLanguageCode}');
+                  setState(() {}); // Refresh the UI
+                  
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Row(
+                          children: [
+                            const Icon(Icons.check_circle, color: Colors.white, size: 18),
+                            const SizedBox(width: 8),
+                            Text(AppLocalizations.of(context).languageChanged.replaceAll('{language}', languageName)),
+                          ],
+                        ),
+                        backgroundColor: const Color(0xFF06B6D4),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        margin: const EdgeInsets.all(16),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                },
+                child: Container(
+                  margin: EdgeInsets.only(bottom: _isWeb ? 12 : 10.h),
+                  padding: EdgeInsets.all(_isWeb ? 16 : 14.w),
+                  decoration: BoxDecoration(
+                    color: isSelected ? const Color(0xFFECFDF5) : const Color(0xFFFAFAFA),
+                    borderRadius: BorderRadius.circular(_isWeb ? 10 : 8.r),
+                    border: Border.all(
+                      color: isSelected ? const Color(0xFF06B6D4) : const Color(0xFFE5E7EB),
+                      width: isSelected ? 2 : 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      // Language icon/flag representation
+                      Container(
+                        width: _isWeb ? 40 : 36.w,
+                        height: _isWeb ? 40 : 36.w,
+                        decoration: BoxDecoration(
+                          color: isSelected ? const Color(0xFF06B6D4).withOpacity(0.1) : const Color(0xFFF3F4F6),
+                          borderRadius: BorderRadius.circular(_isWeb ? 8 : 6.r),
+                        ),
+                        child: Center(
+                          child: Text(
+                            _getLanguageFlag(languageCode),
+                            style: TextStyle(
+                              fontSize: _isWeb ? 20 : 18.sp,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: _isWeb ? 12 : 10.w),
+                      
+                      // Language name
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              languageName,
+                              style: TextStyle(
+                                fontSize: _isWeb ? 15 : 14.sp,
+                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                                color: isSelected ? const Color(0xFF06B6D4) : const Color(0xFF111827),
+                              ),
+                            ),
+                            SizedBox(height: _isWeb ? 2 : 2.h),
+                            Text(
+                              _getLanguageNativeName(languageCode),
+                              style: TextStyle(
+                                fontSize: _isWeb ? 12 : 11.sp,
+                                color: const Color(0xFF6B7280),
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      // Selection indicator
+                      if (isSelected)
+                        Container(
+                          width: _isWeb ? 24 : 20.w,
+                          height: _isWeb ? 24 : 20.w,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF06B6D4),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.check,
+                            color: Colors.white,
+                            size: 14,
+                          ),
+                        )
+                      else
+                        Container(
+                          width: _isWeb ? 24 : 20.w,
+                          height: _isWeb ? 24 : 20.w,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF3F4F6),
+                            borderRadius: BorderRadius.circular(_isWeb ? 6 : 4.r),
+                            border: Border.all(color: const Color(0xFFD1D5DB)),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+            
+            SizedBox(height: _isWeb ? 8 : 6.h),
+            Container(
+              padding: EdgeInsets.all(_isWeb ? 12 : 10.w),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(_isWeb ? 8 : 6.r),
+                border: Border.all(color: const Color(0xFFBFDBFE)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, size: 16, color: Color(0xFF1E40AF)),
+                  SizedBox(width: _isWeb ? 8 : 6.w),
+                  Expanded(
+                    child: Text(
+                      AppLocalizations.of(context).languagePreferenceSaved,
+                      style: TextStyle(
+                        fontSize: _isWeb ? 11 : 10.sp,
+                        color: const Color(0xFF1E40AF),
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  String _getLanguageFlag(String languageCode) {
+    switch (languageCode) {
+      case 'en':
+        return '🇬🇧';
+      case 'hi':
+        return '🇮🇳';
+      case 'gu':
+        return '🇮🇳';
+      default:
+        return '🌐';
+    }
+  }
+
+  String _getLanguageNativeName(String languageCode) {
+    switch (languageCode) {
+      case 'en':
+        return 'English';
+      case 'hi':
+        return 'हिंदी';
+      case 'gu':
+        return 'ગુજરાતી';
+      default:
+        return languageCode.toUpperCase();
+    }
+  }
+
   // ─── Save Button ──────────────────────────────────────────────────────────
   Widget _buildSaveButton() {
     return SizedBox(
@@ -864,8 +1088,8 @@ class _SettingsPageState extends State<SettingsPage> {
       child: ElevatedButton.icon(
         onPressed: _saveRestaurantInfo,
         icon: const Icon(Icons.save_outlined, size: 18, color: Colors.white),
-        label: const Text(
-          "Save Restaurant Information",
+        label: Text(
+          AppLocalizations.of(context).saveSettings,
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,

@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
 import '../uttils/session_manager.dart';
 import '../widgets/WebAudioStub.dart';
+import '../services/localization_service.dart';
 
 class RestaurantOrdersPage extends StatefulWidget {
   final String restaurantId;
@@ -20,6 +21,8 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
   String? _playerId;
   StreamSubscription<QuerySnapshot>? _newOrdersSubscription;
   String? _currentUserRole;
+  
+  final LocalizationService _localizationService = LocalizationService();
 
   // ── Pagination ──────────────────────────────────────────────────────────────
   static const int _pageSize = 10;
@@ -60,24 +63,31 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
   void initState() {
     super.initState();
     getPlayerId();
+    _localizationService.addListener(_onLanguageChanged);
+  }
+
+  void _onLanguageChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _localizationService.removeListener(_onLanguageChanged);
     _newOrdersSubscription?.cancel();
     super.dispose();
   }
 
   String _selectedFilter = 'All';
+  String _selectedFilterKey = 'All'; // Store the English key for filtering
 
   List<QueryDocumentSnapshot> _filterOrders(
-      List<QueryDocumentSnapshot> orders, String filter) {
-    if (filter == 'All') return orders;
+      List<QueryDocumentSnapshot> orders, String filterKey) {
+    if (filterKey == 'All') return orders;
 
     return orders.where((doc) {
       final data = doc.data() as Map<String, dynamic>;
       final status = (data["status"] ?? "pending").toString().toLowerCase();
-      return status.toLowerCase() == filter.toLowerCase();
+      return status.toLowerCase() == filterKey.toLowerCase();
     }).toList();
   }
 
@@ -110,17 +120,18 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
   }
 
   String _getNextStatus(String currentStatus) {
+    final loc = AppLocalizations.of(context);
     switch (currentStatus.toLowerCase()) {
       case 'pending':
-        return 'Mark as Preparing';
+        return loc.markAsPreparing;
       case 'preparing':
-        return 'Mark as Ready';
+        return loc.markAsReady;
       case 'ready':
-        return 'Mark as Served';
+        return loc.markAsServed;
       case 'served':
-        return 'Mark as Completed';
+        return loc.markAsCompleted;
       default:
-        return 'Mark as Preparing';
+        return loc.markAsPreparing;
     }
   }
 
@@ -141,23 +152,24 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
 
   /// Shows a confirmation dialog and logs the user out
   Future<void> _handleLogout() async {
+    final loc = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
-          'Logout',
+          loc.ordersLogout,
           style: _p(18, FontWeight.w600, const Color(0xFF1C1C1C)),
         ),
         content: Text(
-          'Are you sure you want to logout?',
+          loc.logoutConfirmation,
           style: _p(14, FontWeight.w400, const Color(0xFF555555)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
             child: Text(
-              'Cancel',
+              loc.cancel,
               style: _p(14, FontWeight.w500, const Color(0xFF555555)),
             ),
           ),
@@ -171,7 +183,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
               ),
             ),
             child: Text(
-              'Logout',
+              loc.ordersLogout,
               style: _p(14, FontWeight.w600, Colors.white),
             ),
           ),
@@ -217,7 +229,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
                 });
               }
 
-              final filteredOrders = _filterOrders(allOrders, _selectedFilter);
+              final filteredOrders = _filterOrders(allOrders, _selectedFilterKey);
               final counts = _buildStatusCounts(allOrders);
 
               // Clamp current page whenever filtered list changes
@@ -300,6 +312,8 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
   }
 
   Map<String, int> _buildStatusCounts(List<QueryDocumentSnapshot> allOrders) {
+    final loc = AppLocalizations.of(context);
+    
     int countStatus(String status) {
       return allOrders.where((doc) {
         final data = doc.data() as Map<String, dynamic>;
@@ -309,19 +323,20 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
     }
 
     return {
-      'All': allOrders.length,
-      'Pending': countStatus('pending'),
-      'Preparing': countStatus('preparing'),
-      'Ready': countStatus('ready'),
-      'Served': countStatus('served'),
-      'Completed': countStatus('completed'),
+      loc.all: allOrders.length,
+      loc.pending: countStatus('pending'),
+      loc.preparing: countStatus('preparing'),
+      loc.ready: countStatus('ready'),
+      loc.served: countStatus('served'),
+      loc.completed: countStatus('completed'),
     };
   }
 
   Widget _buildHeader(
       bool isDesktop, bool isTablet, Map<String, int> counts) {
+    final loc = AppLocalizations.of(context);
     final sidePadding = isDesktop ? 24.0 : (isTablet ? 20.0 : 14.0);
-    final totalToday = counts['All'] ?? 0;
+    final totalToday = counts[loc.all] ?? 0;
 
     return Container(
       padding: EdgeInsets.fromLTRB(
@@ -343,7 +358,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Orders',
+                      loc.ordersTitle,
                       style: _p(
                         isDesktop ? 24 : (isTablet ? 38 : 30),
                         FontWeight.w200,
@@ -351,7 +366,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
                       ),
                     ),
                     Text(
-                      'Today — $totalToday orders',
+                      loc.todayOrders.replaceAll('{count}', totalToday.toString()),
                       style: _p(12, FontWeight.w400, const Color(0xFF9E9E9E)),
                     ),
                   ],
@@ -438,13 +453,14 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
 
   Widget _buildFilterTabs(
       Map<String, int> counts, bool isDesktop, bool isTablet) {
-    final labels = [
-      'All',
-      'Pending',
-      'Preparing',
-      'Ready',
-      'Served',
-      'Completed'
+    final loc = AppLocalizations.of(context);
+    final filterLabels = [
+      {'key': 'All', 'label': loc.all},
+      {'key': 'Pending', 'label': loc.pending},
+      {'key': 'Preparing', 'label': loc.preparing},
+      {'key': 'Ready', 'label': loc.ready},
+      {'key': 'Served', 'label': loc.served},
+      {'key': 'Completed', 'label': loc.completed}
     ];
     final sidePadding = isDesktop ? 24.0 : (isTablet ? 20.0 : 14.0);
 
@@ -453,8 +469,10 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
-          children: labels.map((label) {
-            final selected = _selectedFilter == label;
+          children: filterLabels.map((filterData) {
+            final key = filterData['key']!;
+            final label = filterData['label']!;
+            final selected = _selectedFilterKey == key;
             final text = '$label (${counts[label] ?? 0})';
             return Padding(
               padding: const EdgeInsets.only(right: 6),
@@ -462,6 +480,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
                 borderRadius: BorderRadius.circular(999),
                 onTap: () => setState(() {
                   _selectedFilter = label;
+                  _selectedFilterKey = key;
                   _currentPage = 1; // reset to first page on filter change
                 }),
                 child: AnimatedContainer(
@@ -510,6 +529,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
 
   Widget _buildPaginationBar(
       int totalItems, bool isDesktop, bool isTablet) {
+    final loc = AppLocalizations.of(context);
     final sidePadding = isDesktop ? 24.0 : (isTablet ? 20.0 : 14.0);
     final totalPages = _totalPages(totalItems);
     final start = ((_currentPage - 1) * _pageSize + 1).clamp(1, totalItems);
@@ -525,7 +545,10 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
         children: [
           Expanded(
             child: Text(
-              'Showing $start–$end of $totalItems',
+              loc.showingResults
+                  .replaceAll('{start}', start.toString())
+                  .replaceAll('{end}', end.toString())
+                  .replaceAll('{total}', totalItems.toString()),
               style: _p(11, FontWeight.w400, const Color(0xFF9E9E9E)),
               overflow: TextOverflow.ellipsis,
             ),
@@ -601,6 +624,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
       bool isTablet,
       ) {
     if (pageOrders.isEmpty) {
+      final loc = AppLocalizations.of(context);
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -609,7 +633,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
                 size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
-              'No $_selectedFilter orders',
+              loc.noOrders.replaceAll('{filter}', _selectedFilter.toLowerCase()),
               style: _p(16, FontWeight.w500, const Color(0xFF777777)),
             ),
           ],
@@ -691,6 +715,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
 
   Widget _buildOrderCard(
       QueryDocumentSnapshot order, Map<String, dynamic> data) {
+    final loc = AppLocalizations.of(context);
     final tableNumber = (data["tableNumber"] ?? "").toString();
     final status = (data["status"] ?? "pending").toString();
     final customerName = (data["customerName"] ?? "Guest").toString();
@@ -745,9 +770,9 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
                       Text(
                         isDineIn
                             ? (tableNumber.isNotEmpty
-                            ? 'Table $tableNumber'
-                            : 'Dine In')
-                            : 'Takeaway',
+                            ? '${loc.table} $tableNumber'
+                            : loc.dineIn)
+                            : loc.takeaway,
                         style:
                         _p(14, FontWeight.w700, const Color(0xFF232323)),
                       ),
@@ -816,7 +841,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      customerName,
+                      customerName == 'Guest' ? loc.guest : customerName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style:
@@ -862,7 +887,9 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Text(
-                  '+$extraCount more item${extraCount > 1 ? 's' : ''}',
+                  loc.moreItems
+                      .replaceAll('{count}', extraCount.toString())
+                      .replaceAll('{plural}', extraCount > 1 ? 's' : ''),
                   style:
                   _p(11, FontWeight.w500, const Color(0xFF969696)),
                 ),

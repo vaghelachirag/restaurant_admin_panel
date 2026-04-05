@@ -8,6 +8,8 @@ import '../restaurant_admin/dashboard_page.dart';
 import '../restaurant_admin/restaurant_orders_page.dart';
 import '../super_admin/restaurants_page.dart';
 import '../uttils/session_manager.dart';
+import '../services/localization_service.dart';
+import '../widgets/language_switcher.dart';
 import 'auth_service.dart';
 
 class LoginPage extends StatefulWidget {
@@ -60,9 +62,10 @@ class _LoginPageState extends State<LoginPage>
   }
 
   Future<void> login() async {
+    final l10n = AppLocalizations.of(context);
     if (emailController.text.trim().isEmpty ||
         passwordController.text.trim().isEmpty) {
-      _showSnack("Please enter email and password.");
+      _showSnack("${l10n.email} ${l10n.and} ${l10n.password}");
       return;
     }
 
@@ -103,14 +106,15 @@ class _LoginPageState extends State<LoginPage>
           ),
         );
       } else {
-        _showSnack("Unknown role");
+        _showSnack(l10n.error);
       }
     } else {
-      _showSnack("Invalid email or password. Please try again.");
+      _showSnack(l10n.error);
     }
   }
 
   void _showSnack(String msg) {
+    final l10n = AppLocalizations.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg,
@@ -274,14 +278,14 @@ class _LoginPageState extends State<LoginPage>
                             const SizedBox(height: 36),
                             _webTextField(
                               controller: emailController,
-                              label: "Email address",
+                              label: AppLocalizations.of(context).email,
                               icon: Icons.email_outlined,
                               keyboardType: TextInputType.emailAddress,
                             ),
                             const SizedBox(height: 16),
                             _webTextField(
                               controller: passwordController,
-                              label: "Password",
+                              label: AppLocalizations.of(context).password,
                               icon: Icons.lock_outline,
                               obscure: obscurePassword,
                               suffix: IconButton(
@@ -322,7 +326,7 @@ class _LoginPageState extends State<LoginPage>
                                   ),
                                 )
                                     : Text(
-                                  "Sign In",
+                                  AppLocalizations.of(context).loginButton,
                                   style: GoogleFonts.inter(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w600,
@@ -332,6 +336,8 @@ class _LoginPageState extends State<LoginPage>
                               ),
                             ),
                             const SizedBox(height: 24),
+                            const LanguageSwitcher(),
+                            const SizedBox(height: 16),
                             Center(
                               child: Text(
                                 "Admin • Manager • Super Admin",
@@ -479,7 +485,7 @@ class _LoginPageState extends State<LoginPage>
                         // Email field
                         _mobileTextField(
                           controller: emailController,
-                          label: "Email address",
+                          label: AppLocalizations.of(context).email,
                           icon: Icons.email_outlined,
                           keyboardType: TextInputType.emailAddress,
                         ),
@@ -488,7 +494,7 @@ class _LoginPageState extends State<LoginPage>
                         // Password field
                         _mobileTextField(
                           controller: passwordController,
-                          label: "Password",
+                          label: AppLocalizations.of(context).password,
                           icon: Icons.lock_outline,
                           obscure: obscurePassword,
                           suffix: IconButton(
@@ -532,7 +538,7 @@ class _LoginPageState extends State<LoginPage>
                               ),
                             )
                                 : Text(
-                              "Sign In",
+                              AppLocalizations.of(context).loginButton,
                               style: GoogleFonts.inter(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -541,7 +547,9 @@ class _LoginPageState extends State<LoginPage>
                             ),
                           ),
                         ),
-                        const SizedBox(height: 28),
+                        const SizedBox(height: 20),
+                        const LanguageSwitcher(),
+                        const SizedBox(height: 12),
 
                         // Footer text
                         Center(

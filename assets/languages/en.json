@@ -1,0 +1,123 @@
+{
+  "app_name": "Restaurant Admin Panel",
+  "login": {
+    "title": "Login",
+    "email": "Email",
+    "password": "Password",
+    "login_button": "Login",
+    "forgot_password": "Forgot Password?",
+    "dont_have_account": "Don't have an account?",
+    "sign_up": "Sign Up"
+  },
+  "dashboard": {
+    "name": "Dashboard",
+    "title": "Dashboard",
+    "total_orders": "Total Orders",
+    "total_revenue": "Total Revenue",
+    "pending_orders": "Pending Orders",
+    "completed_orders": "Completed Orders",
+    "today": "Today",
+    "this_week": "This Week",
+    "this_month": "This Month",
+    "new_order": "New Order",
+    "received": "Received",
+    "qr_saved": "QR saved!",
+    "error": "Error",
+    "copy_link": "Copy Link",
+    "copied": "Copied!",
+    "download_qr": "Download QR",
+    "sign_out_question": "Sign Out?",
+    "sign_out_description": "You'll need to sign in again to access the panel.",
+    "cancel": "Cancel",
+    "sign_out": "Sign Out",
+    "logout_error": "Logout error",
+    "restaurant": "Restaurant",
+    "admin_panel": "Admin Panel",
+    "logout": "Logout",
+    "categories": "Categories",
+    "menu_items": "Menu Items",
+    "orders": "Orders",
+    "from_yesterday": "from yesterday",
+    "sales_details": "Sales Details"
+  },
+  "menu": {
+    "items": "Items",
+    "add_item": "Add Item",
+    "edit_item": "Edit Item",
+    "delete_item": "Delete Item",
+    "item_name": "Item Name",
+    "price": "Price",
+    "description": "Description",
+    "category": "Category",
+    "available": "Available",
+    "not_available": "Not Available"
+  },
+  "orders": {
+    "title": "Orders",
+    "pending": "Pending",
+    "preparing": "Preparing",
+    "ready": "Ready",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "order_id": "Order ID",
+    "customer": "Customer",
+    "items": "Items",
+    "total": "Total",
+    "status": "Status",
+    "time": "Time",
+    "mark_ready": "Mark as Ready",
+    "mark_completed": "Mark as Completed",
+    "cancel_order": "Cancel Order"
+  },
+  "settings": {
+    "title": "Settings",
+    "profile": "Profile",
+    "restaurant_info": "Restaurant Information",
+    "notifications": "Notifications",
+    "language": "Language",
+    "logout": "Logout",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "restaurant": {
+    "name": "Restaurant Name",
+    "address": "Address",
+    "phone": "Phone",
+    "email": "Email",
+    "opening_hours": "Opening Hours",
+    "cuisine_type": "Cuisine Type"
+  },
+  "common": {
+    "and": "and",
+    "yes": "Yes",
+    "no": "No",
+    "ok": "OK",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "search": "Search",
+    "filter": "Filter",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "warning": "Warning",
+    "info": "Information"
+  },
+  "categories": {
+    "title": "Categories"
+  },
+  "menu_items": {
+    "title": "Menu Items"
+  },
+  "customer_menu": {
+    "title": "Customer Menu"
+  },
+  "menu_link": {
+    "title": "Menu Link"
+  },
+  "managers": {
+    "title": "Managers"
+  }
+}

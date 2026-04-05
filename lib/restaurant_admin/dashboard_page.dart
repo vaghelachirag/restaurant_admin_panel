@@ -13,13 +13,13 @@ import 'package:restaurant_admin_panel/restaurant_admin/restaurant_orders_page.d
 import '../uttils/session_manager.dart';
 import '../data/models/restaurant_model.dart';
 import '../service/restaurant_service.dart';
+import '../services/localization_service.dart';
 import 'category_page.dart';
 import 'customer_menu.dart';
 import 'menu_page.dart';
 import 'qr_download_io.dart' if (dart.library.html) 'qr_download_web.dart' as qr_download;
 import 'manager_page.dart';
 import 'settings_page.dart';
-
 
 // ─── Design Tokens (matched exactly from Figma screenshot) ──────────────────
 class _C {
@@ -64,22 +64,24 @@ TextStyle _p(double size, FontWeight weight, Color color) =>
 // ─── Sidebar items ───────────────────────────────────────────────────────────
 class _SItem {
   final IconData icon;
-  final String label;
-  const _SItem(this.icon, this.label);
+  final String key;
+  const _SItem(this.icon, this.key);
 }
 
-const _sItems = [
-  _SItem(Icons.space_dashboard_outlined,   "Dashboard"),
-  _SItem(Icons.shopping_bag_outlined,      "Orders"),
-  _SItem(Icons.folder_open_outlined,       "Categories"),
-  _SItem(Icons.restaurant_outlined,        "Menu Items"),
-  _SItem(Icons.storefront_outlined,        "Customer Menu"),
-  _SItem(Icons.language_outlined,          "Menu Link"),
-  _SItem(Icons.manage_accounts_outlined,   "Managers"),
-  _SItem(Icons.settings_outlined,          "Settings"),
-];
+List<_SItem> _getSidebarItems(BuildContext context) {
+  final localizations = AppLocalizations.of(context);
+  return [
+    _SItem(Icons.space_dashboard_outlined,   localizations.translate("dashboard.title")),
+    _SItem(Icons.shopping_bag_outlined,      localizations.translate("orders.title")),
+    _SItem(Icons.folder_open_outlined,       localizations.translate("categories.title")),
+    _SItem(Icons.restaurant_outlined,        localizations.translate("menu_items.title")),
+    _SItem(Icons.storefront_outlined,        localizations.translate("customer_menu.title")),
+    _SItem(Icons.language_outlined,          localizations.translate("menu_link.title")),
+    _SItem(Icons.manage_accounts_outlined,   localizations.translate("managers.title")),
+    _SItem(Icons.settings_outlined,          localizations.translate("settings.title")),
+  ];
+}
 
-// ════════════════════════════════════════════════════════════════════════════
 class DashboardPage extends StatefulWidget {
   final String restaurantId;
   const DashboardPage({super.key, required this.restaurantId});
@@ -96,6 +98,8 @@ class _DashboardPageState extends State<DashboardPage> {
   RestaurantModel? _restaurant;
   bool _isLoading = true;
 
+  final LocalizationService _localizationService = LocalizationService();
+
   final List<FlSpot> _salesSpots = const [
     FlSpot(0, 4000), FlSpot(1, 3000), FlSpot(2, 5100),
     FlSpot(3, 2700), FlSpot(4, 6900), FlSpot(5, 7700), FlSpot(6, 5600),
@@ -106,10 +110,16 @@ class _DashboardPageState extends State<DashboardPage> {
     super.initState();
     _listenOrders();
     _loadRestaurantData();
+    _localizationService.addListener(_onLanguageChanged);
+  }
+
+  void _onLanguageChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _localizationService.removeListener(_onLanguageChanged);
     _timer?.cancel();
     _audio.dispose();
     super.dispose();
@@ -150,10 +160,16 @@ class _DashboardPageState extends State<DashboardPage> {
     _timer?.cancel();
     _timer = Timer(const Duration(seconds: 3), () async {
       if (!mounted || _newOrderCount == 0) return;
+      final loc = AppLocalizations.of(context);
+      final count = _newOrderCount;
       await _audio.stop();
       await _audio.play(AssetSource('sounds/new_order.mp3'));
-      _snack("$_newOrderCount New Order${_newOrderCount > 1 ? 's' : ''} Received",
-          Icons.notifications_active_rounded, _C.green);
+      if (!mounted) return;
+      _snack(
+        "$count ${loc.newOrder}${count > 1 ? 's' : ''} ${loc.received}",
+        Icons.notifications_active_rounded,
+        _C.green,
+      );
       _newOrderCount = 0;
     });
   }
@@ -196,9 +212,9 @@ class _DashboardPageState extends State<DashboardPage> {
       final bytes = img?.buffer.asUint8List();
       if (bytes == null) throw Exception('Failed to generate QR');
       await qr_download.saveQrBytesToPlatform(bytes, 'menu_qr_${widget.restaurantId}.png');
-      if (mounted) _snack("QR saved!", Icons.check_circle_rounded, _C.green);
+      if (mounted) _snack(AppLocalizations.of(context).copied, Icons.check_circle_rounded, _C.green);
     } catch (e) {
-      if (mounted) _snack("Error: $e", Icons.error_rounded, _C.red);
+      if (mounted) _snack("${AppLocalizations.of(context).error}: $e", Icons.error_rounded, _C.red);
     }
   }
 
@@ -229,7 +245,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     child: const Icon(Icons.qr_code_2_rounded, color: _C.orange, size: 22),
                   ),
                   const SizedBox(width: 12),
-                  Expanded(child: Text("Menu QR & Link",
+                  Expanded(child: Text(AppLocalizations.of(context).menuQrLink,
                       style: _p(17, FontWeight.w700, _C.textDark))),
                   GestureDetector(
                     onTap: () => Navigator.pop(ctx),
@@ -271,13 +287,13 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
                 const SizedBox(height: 16),
                 Row(children: [
-                  Expanded(child: _qrBtn("Copy Link", Icons.copy_rounded,
+                  Expanded(child: _qrBtn(AppLocalizations.of(context).copyLink, Icons.copy_rounded,
                       _C.orangeLight, _C.orange, () {
                         Clipboard.setData(ClipboardData(text: _link));
-                        _snack("Copied!", Icons.check_circle_rounded, _C.orange);
+                        _snack(AppLocalizations.of(context).copied, Icons.check_circle_rounded, _C.orange);
                       })),
                   const SizedBox(width: 12),
-                  Expanded(child: _qrBtn("Download QR", Icons.download_rounded,
+                  Expanded(child: _qrBtn(AppLocalizations.of(context).downloadQr, Icons.download_rounded,
                       _C.orange, Colors.white, _downloadQR)),
                 ]),
               ]),
@@ -328,9 +344,9 @@ class _DashboardPageState extends State<DashboardPage> {
               child: const Icon(Icons.logout_rounded, color: _C.red, size: 24),
             ),
             const SizedBox(height: 14),
-            Text("Sign Out?", style: _p(17, FontWeight.w700, _C.textDark)),
+            Text(AppLocalizations.of(context).signOutQuestion, style: _p(17, FontWeight.w700, _C.textDark)),
             const SizedBox(height: 8),
-            Text("You'll need to sign in again to access the panel.",
+            Text(AppLocalizations.of(context).signOutDescription,
                 textAlign: TextAlign.center,
                 style: _p(12, FontWeight.w400, _C.textMid)),
             const SizedBox(height: 20),
@@ -342,7 +358,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   decoration: BoxDecoration(
                       color: const Color(0xFFF2F2F2),
                       borderRadius: BorderRadius.circular(10)),
-                  child: Center(child: Text("Cancel",
+                  child: Center(child: Text(AppLocalizations.of(context).cancel,
                       style: _p(13, FontWeight.w600, _C.textMid))),
                 ),
               )),
@@ -354,7 +370,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   decoration: BoxDecoration(
                       color: _C.red,
                       borderRadius: BorderRadius.circular(10)),
-                  child: Center(child: Text("Sign Out",
+                  child: Center(child: Text(AppLocalizations.of(context).signOut,
                       style: _p(13, FontWeight.w600, Colors.white))),
                 ),
               )),
@@ -373,7 +389,7 @@ class _DashboardPageState extends State<DashboardPage> {
         Navigator.of(context).pushNamedAndRemoveUntil('/login', (r) => false);
       }
     } catch (e) {
-      if (mounted) _snack("Logout error: $e", Icons.error_rounded, _C.red);
+      if (mounted) _snack("${AppLocalizations.of(context).logoutError}: $e", Icons.error_rounded, _C.red);
     }
   }
 
@@ -391,8 +407,8 @@ class _DashboardPageState extends State<DashboardPage> {
         ])
             : Row(children: [
           _Sidebar(
-              selected: _selectedIndex, 
-              onTap: _nav, 
+              selected: _selectedIndex,
+              onTap: _nav,
               onLogout: _logout,
               restaurant: _restaurant,
               isLoading: _isLoading),
@@ -430,7 +446,7 @@ class _DashboardPageState extends State<DashboardPage> {
         children: [
           // Breadcrumb
           // Page title
-          Text("Dashboard",
+          Text(AppLocalizations.of(context).dashboardTitle,
               style: _p(isMobile ? 26 : 24, FontWeight.w200, _C.textDark)),
           SizedBox(height: isMobile ? 18 : 24),
 
@@ -453,11 +469,11 @@ class _Sidebar extends StatelessWidget {
   final RestaurantModel? restaurant;
   final bool isLoading;
   const _Sidebar(
-      {required this.selected, 
-      required this.onTap, 
-      required this.onLogout,
-      this.restaurant,
-      required this.isLoading});
+      {required this.selected,
+        required this.onTap,
+        required this.onLogout,
+        this.restaurant,
+        required this.isLoading});
 
   @override
   Widget build(BuildContext context) {
@@ -482,35 +498,34 @@ class _Sidebar extends StatelessWidget {
                   color: _C.orange,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: isLoading 
+                child: isLoading
                     ? const Icon(Icons.storefront_rounded, color: Colors.white, size: 22)
                     : (restaurant?.logoUrl != null
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.network(
-                              restaurant!.logoUrl!,
-                              width: 44,
-                              height: 44,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return const Icon(Icons.storefront_rounded,
-                                    color: Colors.white, size: 22);
-                              },
-                            ),
-                          )
-                        : const Icon(Icons.storefront_rounded,
-                            color: Colors.white, size: 22)),
+                    ? ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    restaurant!.logoUrl!,
+                    width: 44,
+                    height: 44,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(Icons.storefront_rounded,
+                          color: Colors.white, size: 22);
+                    },
+                  ),
+                )
+                    : const Icon(Icons.storefront_rounded,
+                    color: Colors.white, size: 22)),
               ),
               const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(isLoading ? "Restaurant" : (restaurant?.name ?? "Restaurant"),
+                  Text(isLoading ? AppLocalizations.of(context).restaurant : (restaurant?.name ?? AppLocalizations.of(context).restaurant),
                       style: _p(15, FontWeight.w700, _C.textDark),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis),
-                  Text("Admin Panel",
-                      style: _p(11, FontWeight.w400, _C.textLight)),
+                  Text(AppLocalizations.of(context).adminPanel, style: _p(11, FontWeight.w400, _C.textLight)),
                 ],
               ),
             ]),
@@ -522,9 +537,10 @@ class _Sidebar extends StatelessWidget {
           // ── Nav items ──────────────────────────────────────────────────
           Expanded(
             child: ListView.builder(
-              itemCount: _sItems.length,
+              itemCount: _getSidebarItems(context).length,
               padding: const EdgeInsets.symmetric(horizontal: 12),
               itemBuilder: (_, i) {
+                final items = _getSidebarItems(context);
                 final active = i == selected;
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 2),
@@ -541,13 +557,13 @@ class _Sidebar extends StatelessWidget {
                       ),
                       child: Row(children: [
                         Icon(
-                          _sItems[i].icon,
+                          items[i].icon,
                           color: active ? _C.orange : const Color(0xFF4B5563),
                           size: 20,
                         ),
                         const SizedBox(width: 13),
                         Text(
-                          _sItems[i].label,
+                          AppLocalizations.of(context).translate(items[i].key),
                           style: _p(
                             14,
                             active ? FontWeight.w600 : FontWeight.w400,
@@ -571,7 +587,7 @@ class _Sidebar extends StatelessWidget {
                 const Icon(Icons.logout_outlined,
                     color: Color(0xFF6B7280), size: 20),
                 const SizedBox(width: 13),
-                Text("Logout",
+                Text(AppLocalizations.of(context).logout,
                     style: _p(14, FontWeight.w400, const Color(0xFF6B7280))),
               ]),
             ),
@@ -608,34 +624,34 @@ class _MobileBar extends StatelessWidget {
           height: 38,
           decoration: BoxDecoration(
               color: _C.orange, borderRadius: BorderRadius.circular(10)),
-          child: isLoading 
+          child: isLoading
               ? const Icon(Icons.storefront_rounded, color: Colors.white, size: 20)
               : (restaurant?.logoUrl != null
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: Image.network(
-                        restaurant!.logoUrl!,
-                        width: 38,
-                        height: 38,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return const Icon(Icons.storefront_rounded,
-                              color: Colors.white, size: 20);
-                        },
-                      ),
-                    )
-                  : const Icon(Icons.storefront_rounded,
-                      color: Colors.white, size: 20)),
+              ? ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Image.network(
+              restaurant!.logoUrl!,
+              width: 38,
+              height: 38,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return const Icon(Icons.storefront_rounded,
+                    color: Colors.white, size: 20);
+              },
+            ),
+          )
+              : const Icon(Icons.storefront_rounded,
+              color: Colors.white, size: 20)),
         ),
         const SizedBox(width: 10),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(isLoading ? "Restaurant" : (restaurant?.name ?? "Restaurant"), 
+            Text(isLoading ? AppLocalizations.of(context).restaurant : (restaurant?.name ?? AppLocalizations.of(context).restaurant),
                 style: _p(14, FontWeight.w700, _C.textDark),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis),
-            Text("Admin Panel", style: _p(10, FontWeight.w400, _C.textLight)),
+            Text(AppLocalizations.of(context).adminPanel, style: _p(10, FontWeight.w400, _C.textLight)),
           ],
         ),
         const Spacer(),
@@ -648,7 +664,7 @@ class _MobileBar extends StatelessWidget {
               const Icon(Icons.logout_outlined,
                   color: Color(0xFF6B7280), size: 18),
               const SizedBox(width: 6),
-              Text("Logout",
+              Text(AppLocalizations.of(context).logout,
                   style: _p(12, FontWeight.w400, const Color(0xFF6B7280))),
             ]),
           ),
@@ -656,15 +672,6 @@ class _MobileBar extends StatelessWidget {
       ]),
     );
   }
-}
-
-class _CardData {
-  final String label, value, trend;
-  final bool up;
-  final IconData icon;
-  final Color ic, ib;
-  const _CardData(
-      this.label, this.value, this.trend, this.up, this.icon, this.ic, this.ib);
 }
 
 class _StatCards extends StatelessWidget {
@@ -696,14 +703,14 @@ class _StatCards extends StatelessWidget {
             final menus  = menuSnap.data?.docs.length ?? 0;
 
             final cards = [
-              _CardData("Categories", cats.toString(),
-                  "+8% from yesterday",   true,
+              _CardData(AppLocalizations.of(context).categories, cats.toString(),
+                  "+8% ${AppLocalizations.of(context).fromYesterday}",   true,
                   Icons.folder_open_rounded, _C.blueIcon,   _C.blueIconBg),
-              _CardData("Menu Items",  menus.toString(),
-                  "-5% from yesterday",   false,
+              _CardData(AppLocalizations.of(context).menuItems,  menus.toString(),
+                  "-5% ${AppLocalizations.of(context).fromYesterday}",   false,
                   Icons.restaurant_menu,   _C.purpleIcon, _C.purpleIconBg),
-              _CardData("Orders",      orders.toString(),
-                  "+1.2% from yesterday", true,
+              _CardData(AppLocalizations.of(context).orders,      orders.toString(),
+                  "+1.2% ${AppLocalizations.of(context).fromYesterday}", true,
                   Icons.shopping_bag_outlined, _C.greenIcon, _C.greenIconBg),
             ];
 
@@ -738,6 +745,26 @@ class _StatCards extends StatelessWidget {
 extension _ListIndexed<T> on List<T> {
   Iterable<R> mapIndexed<R>(R Function(int i, T e) fn) =>
       asMap().entries.map((e) => fn(e.key, e.value));
+}
+
+class _CardData {
+  final String label;
+  final String value;
+  final String trend;
+  final bool up;
+  final IconData icon;
+  final Color ic;  // icon color
+  final Color ib;  // icon background color
+
+  const _CardData(
+      this.label,
+      this.value,
+      this.trend,
+      this.up,
+      this.icon,
+      this.ic,
+      this.ib,
+      );
 }
 
 class _StatCard extends StatelessWidget {
@@ -817,7 +844,7 @@ class _SalesChart extends StatelessWidget {
         ],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text("Sales Details",
+        Text(AppLocalizations.of(context).salesDetails,
             style: _p(15, FontWeight.w600, _C.textDark)),
         SizedBox(height: isMobile ? 16 : 20),
         SizedBox(

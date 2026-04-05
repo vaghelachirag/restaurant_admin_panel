@@ -51,6 +51,9 @@ dependencies:
   flutter_screenutil: ^5.9.0
   fl_chart: ^0.68.0
   onesignal_flutter: ^5.0.0
+  flutter_localizations:
+    sdk: flutter
+  intl: 0.20.2
 #  flutter_local_notifications: ^17.0.0
 
 dev_dependencies:
@@ -78,6 +81,7 @@ flutter:
   assets:
     - assets/icon.png
     - assets/sounds/new_order.mp3
+    - assets/languages/
 
 flutter_icons:
   android: true

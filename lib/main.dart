@@ -1,10 +1,12 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:restaurant_admin_panel/restaurant_admin/dashboard_page.dart';
 import 'package:restaurant_admin_panel/uttils/session_manager.dart';
+import 'package:restaurant_admin_panel/services/localization_service.dart';
 
 import 'auth/login_page.dart';
 import 'firebase_options.dart';
@@ -113,6 +115,26 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   bool _splashShown = false;
+  final LocalizationService _localizationService = LocalizationService();
+
+  @override
+  void initState() {
+    super.initState();
+    _localizationService.init();
+    _localizationService.addListener(_onLanguageChanged);
+  }
+
+  @override
+  void dispose() {
+    _localizationService.removeListener(_onLanguageChanged);
+    super.dispose();
+  }
+
+  void _onLanguageChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
 
   Widget get _targetPage {
     if (!widget.loggedIn) return const LoginPage();
@@ -137,12 +159,23 @@ class _MyAppState extends State<MyApp> {
       designSize: const Size(1440, 900),
       minTextAdapt: true,
       splitScreenMode: true,
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          textTheme: GoogleFonts.poppinsTextTheme(),
+      child: InheritedLocalizations(
+        service: _localizationService,
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            textTheme: GoogleFonts.poppinsTextTheme(),
+          ),
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: LocalizationService.supportedLocales,
+          locale: _localizationService.currentLocale,
+          home: home,
         ),
-        home: home,
       ),
     );
   }
@@ -163,31 +196,42 @@ class _MyAppState extends State<MyApp> {
       designSize: const Size(1440, 900),
       minTextAdapt: true,
       splitScreenMode: true,
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          textTheme: GoogleFonts.poppinsTextTheme(),
+      child: InheritedLocalizations(
+        service: _localizationService,
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            textTheme: GoogleFonts.poppinsTextTheme(),
+          ),
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: LocalizationService.supportedLocales,
+          locale: _localizationService.currentLocale,
+          onGenerateRoute: (settings) {
+            final routeName = settings.name ?? '/';
+            final uri = Uri.parse(routeName);
+
+            if (uri.pathSegments.length == 2 &&
+                uri.pathSegments.first == 'menu') {
+              final id = uri.pathSegments[1];
+              return MaterialPageRoute(
+                builder: (_) => CustomerMenuPage(restaurantId: id),
+              );
+            }
+            if (routeName == '/' && !_splashShown) {
+              _splashShown = true;
+              return MaterialPageRoute(
+                builder: (_) => SplashScreen(nextPage: _targetPage),
+              );
+            }
+
+            return MaterialPageRoute(builder: (_) => _targetPage);
+          },
         ),
-        onGenerateRoute: (settings) {
-          final routeName = settings.name ?? '/';
-          final uri = Uri.parse(routeName);
-
-          if (uri.pathSegments.length == 2 &&
-              uri.pathSegments.first == 'menu') {
-            final id = uri.pathSegments[1];
-            return MaterialPageRoute(
-              builder: (_) => CustomerMenuPage(restaurantId: id),
-            );
-          }
-          if (routeName == '/' && !_splashShown) {
-            _splashShown = true;
-            return MaterialPageRoute(
-              builder: (_) => SplashScreen(nextPage: _targetPage),
-            );
-          }
-
-          return MaterialPageRoute(builder: (_) => _targetPage);
-        },
       ),
     );
   }

@@ -1,0 +1,125 @@
+{
+  "app_name": "રેસ્ટોરન્ટ એડમિન પેનલ",
+  "login": {
+    "title": "લોગિન",
+    "email": "ઈમેલ",
+    "password": "પાસવર્ડ",
+    "login_button": "લોગિન કરો",
+    "forgot_password": "પાસવર્ડ ભૂલ્યા?",
+    "dont_have_account": "એકાઉન્ટ નથી?",
+    "sign_up": "સાઇન અપ કરો"
+  },
+  "dashboard": {
+    "name": "Dashboard",
+    "title": "ડેશબોર્ડ",
+    "total_orders": "કુલ ઓર્ડર",
+    "total_revenue": "કુલ આવક",
+    "pending_orders": "લંબિત ઓર્ડર",
+    "completed_orders": "પૂર્ણ ઓર્ડર",
+    "today": "આજે",
+    "this_week": "આ સપ્તાહ",
+    "this_month": "આ મહિને",
+    "new_order": "નવા ઓર્ડર",
+    "received": "પ્રાપ્ત",
+    "qr_saved": "QR સેવ ગયા!",
+    "error": "ભૂલ",
+    "menu_qr_link": "મેનૂ QR અને લિંક",
+    "copy_link": "લિંક કૉપી કરેં",
+    "copied": "કૉપી કરેલ!",
+    "download_qr": "QR ડાઉનલોડ કરેં",
+    "sign_out_question": "સાઇન આઉટ કરેં?",
+    "sign_out_description": "તમારે પહુંચના ના લિએ ફર સે સાઇન ઇન કરવા હોગા.",
+    "cancel": "રદ્દ કરેં",
+    "sign_out": "સાઇન આઉટ",
+    "logout_error": "લૉગઆઉટ ભૂલ",
+    "restaurant": "રેસ્ટોરેંટ",
+    "admin_panel": "એડમિન પેનલ",
+    "categories": "શ્રેણિયાં",
+    "menu_items": "મેનૂ આઇટમ",
+    "orders": "ઓર્ડર",
+    "from_yesterday": "કલ સે",
+    "sales_details": "વેચરી વિવરણ"
+  },
+  "menu": {
+    "title": "મેનુ",
+    "categories": "શ્રેણીઓ",
+    "items": "આઇટમ્સ",
+    "add_item": "આઇટમ ઉમેરો",
+    "edit_item": "આઇટમ સંપાદિત કરો",
+    "delete_item": "આઇટમ કાઢી નાખો",
+    "item_name": "આઇટમનું નામ",
+    "price": "કિંમત",
+    "description": "વર્ણન",
+    "category": "શ્રેણી",
+    "available": "ઉપલબ્ધ",
+    "not_available": "અનુપલબ્ધ"
+  },
+  "orders": {
+    "title": "ઓર્ડર",
+    "pending": "બાકી",
+    "preparing": "તૈયાર થઈ રહ્યું છે",
+    "ready": "તૈયાર",
+    "completed": "પૂર્ણ",
+    "cancelled": "રદ",
+    "order_id": "ઓર્ડર ID",
+    "customer": "ગ્રાહક",
+    "items": "આઇટમ્સ",
+    "total": "કુલ",
+    "status": "સ્થિતિ",
+    "time": "સમય",
+    "mark_ready": "તૈયાર તરીકે ચિહ્નિત કરો",
+    "mark_completed": "પૂર્ણ તરીકે ચિહ્નિત કરો",
+    "cancel_order": "ઓર્ડર રદ કરો"
+  },
+  "settings": {
+    "title": "સેટિંગ્સ",
+    "profile": "પ્રોફાઇલ",
+    "restaurant_info": "રેસ્ટોરન્ટ માહિતી",
+    "notifications": "સૂચનાઓ",
+    "language": "ભાષા",
+    "logout": "લોગઆઉટ",
+    "save": "સાચવો",
+    "cancel": "રદ કરો"
+  },
+  "restaurant": {
+    "name": "રેસ્ટોરન્ટનું નામ",
+    "address": "સરનામું",
+    "phone": "ફોન",
+    "email": "ઈમેલ",
+    "opening_hours": "ખુલવાનો સમય",
+    "cuisine_type": "વ્યંજન પ્રકાર"
+  },
+  "common": {
+    "and": "અને",
+    "yes": "હા",
+    "no": "ના",
+    "ok": "બરાબર",
+    "cancel": "રદ કરો",
+    "save": "સાચવો",
+    "delete": "કાઢી નાખો",
+    "edit": "સંપાદિત કરો",
+    "add": "ઉમેરો",
+    "search": "શોધો",
+    "filter": "ફિલ્ટર",
+    "loading": "લોડ થઈ રહ્યું છે...",
+    "error": "ભૂલ",
+    "success": "સફળતા",
+    "warning": "ચેતવણી",
+    "info": "માહિતી"
+  },
+  "categories": {
+    "title": "શ્રેણીઓ"
+  },
+  "menu_items": {
+    "title": "મેનૂ આઇટમ"
+  },
+  "customer_menu": {
+    "title": "ગ્રાહક મેનૂ"
+  },
+  "menu_link": {
+    "title": "મેનૂ લિંક"
+  },
+  "managers": {
+    "title": "મેનેજર"
+  }
+}

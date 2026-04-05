@@ -6,6 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import '../../uttils/responsive.dart';
+import '../services/localization_service.dart';
 
 class MenuPage extends StatefulWidget {
   final String restaurantId;
@@ -140,7 +141,7 @@ class _MenuPageState extends State<MenuPage> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  "Add Menu Item",
+                                  AppLocalizations.of(context).addMenuItem,
                                   style: TextStyle(
                                     fontSize: kIsWeb ? 18 : 16.sp,
                                     fontWeight: FontWeight.w600,
@@ -150,7 +151,7 @@ class _MenuPageState extends State<MenuPage> {
                                 ),
                                 SizedBox(height: kIsWeb ? 3 : 2.sp),
                                 Text(
-                                  "Create a new dish for your menu.",
+                                  AppLocalizations.of(context).createNewDish,
                                   style: TextStyle(
                                     fontSize: kIsWeb ? 13 : 12.sp,
                                     color: colorScheme.onSurface.withOpacity(0.55),
@@ -190,7 +191,7 @@ class _MenuPageState extends State<MenuPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("Item Image", style: TextStyle(fontSize: kIsWeb ? 14 : 14.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
+                            Text(AppLocalizations.of(context).itemImage, style: TextStyle(fontSize: kIsWeb ? 14 : 14.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
                             SizedBox(height: kIsWeb ? 10 : 10.sp),
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -218,7 +219,7 @@ class _MenuPageState extends State<MenuPage> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text("Upload dish image. This image is shown in customer menu.", style: TextStyle(fontSize: kIsWeb ? 12 : 12.sp, color: colorScheme.onSurface.withOpacity(0.6))),
+                                      Text(AppLocalizations.of(context).dishImageDescription, style: TextStyle(fontSize: kIsWeb ? 12 : 12.sp, color: colorScheme.onSurface.withOpacity(0.6))),
                                       SizedBox(height: kIsWeb ? 10 : 10.sp),
                                       OutlinedButton.icon(
                                         onPressed: () async {
@@ -231,7 +232,7 @@ class _MenuPageState extends State<MenuPage> {
                                         },
                                         icon: Icon(Icons.image_outlined, color: colorScheme.primary, size: kIsWeb ? 18 : 18.sp),
                                         label: Text(
-                                          "Upload Image",
+                                          AppLocalizations.of(context).uploadImage,
                                           style: TextStyle(color: colorScheme.primary, fontWeight: FontWeight.w500, fontSize: kIsWeb ? 12 : 12.sp),
                                         ),
                                         style: OutlinedButton.styleFrom(
@@ -246,7 +247,7 @@ class _MenuPageState extends State<MenuPage> {
                               ],
                             ),
                             SizedBox(height: kIsWeb ? 10 : 20.sp),
-                            Text("Category", style: TextStyle(fontSize: kIsWeb ? 14 : 14.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
+                            Text(AppLocalizations.of(context).categoryName, style: TextStyle(fontSize: kIsWeb ? 14 : 14.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
                             SizedBox(height: kIsWeb ? 8 : 8.sp),
                             StreamBuilder<QuerySnapshot>(
                               stream: FirebaseFirestore.instance.collection("categories").where("restaurantId", isEqualTo: widget.restaurantId).snapshots(),
@@ -270,7 +271,7 @@ class _MenuPageState extends State<MenuPage> {
                                       value: selectedCategoryId,
                                       hint: Padding(
                                         padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 12 : 12.sp, vertical: kIsWeb ? 8 : 8.sp),
-                                        child: Text("Select Category", style: TextStyle(color: colorScheme.onSurface.withOpacity(0.5))),
+                                        child: Text(AppLocalizations.of(context).selectCategory, style: TextStyle(color: colorScheme.onSurface.withOpacity(0.5))),
                                       ),
                                       isExpanded: true,
                                       padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 12 : 12.sp, vertical: kIsWeb ? 8 : 8.sp),
@@ -287,12 +288,12 @@ class _MenuPageState extends State<MenuPage> {
                               },
                             ),
                             SizedBox(height: kIsWeb ? 20 : 20.sp),
-                            Text("Item Name", style: TextStyle(fontSize: kIsWeb ? 14 : 16.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
+                            Text(AppLocalizations.of(context).itemName, style: TextStyle(fontSize: kIsWeb ? 14 : 16.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
                             SizedBox(height: kIsWeb ? 8 : 8.sp),
                             TextField(
                               controller: nameController,
                               decoration: InputDecoration(
-                                hintText: "Enter item name",
+                                hintText: AppLocalizations.of(context).enterItemName,
                                 filled: true,
                                 fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp), borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.2))),
@@ -302,13 +303,13 @@ class _MenuPageState extends State<MenuPage> {
                               ),
                             ),
                             SizedBox(height: kIsWeb ? 20 : 20.sp),
-                            Text("Description", style: TextStyle(fontSize: kIsWeb ? 14 : 16.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
+                            Text(AppLocalizations.of(context).itemDescription, style: TextStyle(fontSize: kIsWeb ? 14 : 16.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
                             SizedBox(height: kIsWeb ? 8 : 8.sp),
                             TextField(
                               controller: descriptionController,
                               maxLines: 3,
                               decoration: InputDecoration(
-                                hintText: "Enter item description (optional)",
+                                hintText: AppLocalizations.of(context).enterItemDescription,
                                 filled: true,
                                 fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp), borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.2))),
@@ -321,7 +322,7 @@ class _MenuPageState extends State<MenuPage> {
                               ),
                             ),
                             SizedBox(height: kIsWeb ? 20 : 20.sp),
-                            Text("Food Type", style: TextStyle(fontSize: kIsWeb ? 14 : 16.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
+                            Text(AppLocalizations.of(context).foodType, style: TextStyle(fontSize: kIsWeb ? 14 : 16.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
                             SizedBox(height: kIsWeb ? 10 : 10.sp),
                             Row(
                               children: [
@@ -353,7 +354,7 @@ class _MenuPageState extends State<MenuPage> {
                                             ),
                                           ),
                                           SizedBox(width: kIsWeb ? 8 : 8.sp),
-                                          Text("Veg", style: TextStyle(fontSize: kIsWeb ? 13 : 14.sp, fontWeight: FontWeight.w600, color: const Color(0xFF388E3C))),
+                                          Text(AppLocalizations.of(context).veg, style: TextStyle(fontSize: kIsWeb ? 13 : 14.sp, fontWeight: FontWeight.w600, color: const Color(0xFF388E3C))),
                                         ],
                                       ),
                                     ),
@@ -388,7 +389,7 @@ class _MenuPageState extends State<MenuPage> {
                                             ),
                                           ),
                                           SizedBox(width: kIsWeb ? 8 : 8.sp),
-                                          Text("Non-Veg", style: TextStyle(fontSize: kIsWeb ? 13 : 14.sp, fontWeight: FontWeight.w600, color: const Color(0xFFC62828))),
+                                          Text(AppLocalizations.of(context).nonVeg, style: TextStyle(fontSize: kIsWeb ? 13 : 14.sp, fontWeight: FontWeight.w600, color: const Color(0xFFC62828))),
                                         ],
                                       ),
                                     ),
@@ -401,7 +402,7 @@ class _MenuPageState extends State<MenuPage> {
                               children: [
                                 Icon(Icons.list_alt, color: colorScheme.onSurface.withOpacity(0.7), size: kIsWeb ? 20 : 20.sp),
                                 SizedBox(width: kIsWeb ? 8 : 8.sp),
-                                Text("Variants", style: TextStyle(fontSize: kIsWeb ? 12 : 12.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
+                                Text(AppLocalizations.of(context).variants, style: TextStyle(fontSize: kIsWeb ? 12 : 12.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
                               ],
                             ),
                             SizedBox(height: kIsWeb ? 12 : 12.sp),
@@ -421,7 +422,7 @@ class _MenuPageState extends State<MenuPage> {
                                       child: TextField(
                                         controller: variants[index]["name"],
                                         decoration: InputDecoration(
-                                          labelText: "Variant Name",
+                                          labelText: AppLocalizations.of(context).variantName,
                                           filled: true,
                                           fillColor: Colors.white,
                                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp), borderSide: BorderSide.none),
@@ -436,7 +437,7 @@ class _MenuPageState extends State<MenuPage> {
                                         controller: variants[index]["price"],
                                         keyboardType: TextInputType.number,
                                         decoration: InputDecoration(
-                                          labelText: "Price",
+                                          labelText: AppLocalizations.of(context).price,
                                           prefixText: "₹",
                                           filled: true,
                                           fillColor: Colors.white,
@@ -464,7 +465,7 @@ class _MenuPageState extends State<MenuPage> {
                                   setStateDialog(() {});
                                 },
                                 icon: Icon(Icons.add_circle_outline, color: colorScheme.primary),
-                                label: Text("Add Another Variant", style: TextStyle(color: colorScheme.primary)),
+                                label: Text(AppLocalizations.of(context).addAnotherVariant, style: TextStyle(color: colorScheme.primary)),
                                 style: OutlinedButton.styleFrom(
                                   padding: EdgeInsets.symmetric(vertical: kIsWeb ? 12 : 12.sp),
                                   side: BorderSide(color: colorScheme.primary.withOpacity(0.5)),
@@ -493,7 +494,7 @@ class _MenuPageState extends State<MenuPage> {
                                 side: BorderSide(color: colorScheme.outline),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12)),
                               ),
-                              child: Text("Cancel", style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7), fontWeight: FontWeight.w500)),
+                              child: Text(AppLocalizations.of(context).cancel, style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7), fontWeight: FontWeight.w500)),
                             ),
                           ),
                           SizedBox(width: kIsWeb ? 12 : 12.sp),
@@ -504,7 +505,7 @@ class _MenuPageState extends State<MenuPage> {
                                 if (selectedCategoryId == null || nameController.text.isEmpty) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: const Text("Please fill all required fields"),
+                                      content:  Text(AppLocalizations.of(context).pleaseFillAllRequiredFields),
                                       backgroundColor: colorScheme.error,
                                       behavior: SnackBarBehavior.floating,
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
@@ -534,7 +535,7 @@ class _MenuPageState extends State<MenuPage> {
                                   setState(() { _selectedCategoryId = selectedCategoryId; });
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: const Text("Menu item added successfully!"),
+                                      content:  Text(AppLocalizations.of(context).menuItemAddedSuccess),
                                       backgroundColor: colorScheme.primary,
                                       behavior: SnackBarBehavior.floating,
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
@@ -543,7 +544,7 @@ class _MenuPageState extends State<MenuPage> {
                                 } catch (e) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: Text("Error adding menu item: $e"),
+                                      content: Text("${AppLocalizations.of(context).errorAddingMenuItem}: $e"),
                                       backgroundColor: colorScheme.error,
                                       behavior: SnackBarBehavior.floating,
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
@@ -562,10 +563,10 @@ class _MenuPageState extends State<MenuPage> {
                               child: _isAddingMenuItem
                                   ? Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
-                                children: const [
+                                children:  [
                                   SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
                                   SizedBox(width: 8),
-                                  Text("Adding...", style: TextStyle(fontWeight: FontWeight.w600)),
+                                  Text(AppLocalizations.of(context).addingMenuItem, style: TextStyle(fontWeight: FontWeight.w600)),
                                 ],
                               )
                                   : const Text("Add Menu Item", style: TextStyle(fontWeight: FontWeight.w600)),
@@ -619,7 +620,7 @@ class _MenuPageState extends State<MenuPage> {
                 ),
               ),
               child: Text(
-                "Cancel",
+                AppLocalizations.of(context).cancel,
                 style: TextStyle(
                   color: colorScheme.onSurface.withOpacity(0.7),
                   fontWeight: FontWeight.w500,
@@ -635,7 +636,7 @@ class _MenuPageState extends State<MenuPage> {
               onPressed: isLoading ? null : () async {
                 if (selectedCategoryId == null || nameController.text.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: const Text("Please fill all required fields"),
+                    content:  Text(AppLocalizations.of(context).pleaseFillAllRequiredFields),
                     backgroundColor: colorScheme.error,
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
@@ -663,14 +664,14 @@ class _MenuPageState extends State<MenuPage> {
                   Navigator.pop(context);
                   setState(() { _selectedCategoryId = selectedCategoryId; });
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: const Text("Menu item added successfully!"),
+                    content:  Text(AppLocalizations.of(context).menuItemAddedSuccess),
                     backgroundColor: colorScheme.primary,
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
                   ));
                 } catch (e) {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text("Error adding menu item: $e"),
+                    content: Text("${AppLocalizations.of(context).errorAddingMenuItem}: $e"),
                     backgroundColor: colorScheme.error,
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
@@ -699,7 +700,7 @@ class _MenuPageState extends State<MenuPage> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text("Adding...", style: TextStyle(fontWeight: FontWeight.w600, fontSize: kIsWeb ? 14 : 14.sp)),
+                  Text(AppLocalizations.of(context).addingMenuItem, style: TextStyle(fontWeight: FontWeight.w600, fontSize: kIsWeb ? 14 : 14.sp)),
                 ],
               )
                   : Text("Save Menu Item", style: TextStyle(fontWeight: FontWeight.w600, fontSize: kIsWeb ? 14 : 14.sp)),
@@ -721,7 +722,7 @@ class _MenuPageState extends State<MenuPage> {
           children: [
             Icon(Icons.list_alt, color: colorScheme.onSurface.withOpacity(0.7), size: kIsWeb ? 18 : 18.sp),
             SizedBox(width: kIsWeb ? 6 : 6.sp),
-            Text("Variants", style: TextStyle(fontSize: kIsWeb ? 14 : 14.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
+            Text(AppLocalizations.of(context).variants, style: TextStyle(fontSize: kIsWeb ? 14 : 14.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
           ],
         ),
         SizedBox(height: kIsWeb ? 10 : 10.sp),
@@ -741,7 +742,7 @@ class _MenuPageState extends State<MenuPage> {
                   child: TextField(
                     controller: variants[index]["name"],
                     decoration: InputDecoration(
-                      labelText: "Variant Name",
+                      labelText: AppLocalizations.of(context).variantName,
                       filled: true,
                       fillColor: Colors.white,
                       border: OutlineInputBorder(
@@ -759,7 +760,7 @@ class _MenuPageState extends State<MenuPage> {
                     controller: variants[index]["price"],
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
-                      labelText: "Price",
+                      labelText: AppLocalizations.of(context).price,
                       prefixText: "₹",
                       filled: true,
                       fillColor: Colors.white,
@@ -790,7 +791,7 @@ class _MenuPageState extends State<MenuPage> {
               refresh();
             },
             icon: Icon(Icons.add_circle_outline, color: colorScheme.primary),
-            label: Text("Add Another Variant", style: TextStyle(color: colorScheme.primary)),
+            label: Text(AppLocalizations.of(context).addAnotherVariant, style: TextStyle(color: colorScheme.primary)),
             style: OutlinedButton.styleFrom(
               padding: EdgeInsets.symmetric(vertical: kIsWeb ? 12 : 12.sp),
               side: BorderSide(color: colorScheme.primary.withOpacity(0.5)),
@@ -809,12 +810,12 @@ class _MenuPageState extends State<MenuPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text("Item Name", style: TextStyle(fontSize: kIsWeb ? 12 : 14.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
+        Text(AppLocalizations.of(context).itemName, style: TextStyle(fontSize: kIsWeb ? 12 : 14.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
         SizedBox(height: kIsWeb ? 6 : 8.sp),
         TextField(
           controller: controller,
           decoration: InputDecoration(
-            hintText: "Enter item name",
+            hintText: AppLocalizations.of(context).enterItemName,
             filled: true,
             fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp), borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.2))),
@@ -835,7 +836,7 @@ class _MenuPageState extends State<MenuPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text("Category", style: TextStyle(fontSize: kIsWeb ? 12 : 14.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
+        Text(AppLocalizations.of(context).categoryName, style: TextStyle(fontSize: kIsWeb ? 12 : 14.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
         SizedBox(height: kIsWeb ? 6 : 8.sp),
         StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance.collection("categories").where("restaurantId", isEqualTo: restaurantId).snapshots(),
@@ -859,7 +860,7 @@ class _MenuPageState extends State<MenuPage> {
                   value: selectedCategoryId,
                   hint: Padding(
                     padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 8 : 12.sp, vertical: kIsWeb ? 8 : 8.sp),
-                    child: Text("Select Category", style: TextStyle(color: colorScheme.onSurface.withOpacity(0.5))),
+                    child: Text(AppLocalizations.of(context).selectCategory, style: TextStyle(color: colorScheme.onSurface.withOpacity(0.5))),
                   ),
                   isExpanded: true,
                   padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 8 : 12.sp, vertical: kIsWeb ? 5 : 8.sp),
@@ -901,7 +902,7 @@ class _MenuPageState extends State<MenuPage> {
             children: [
               Icon(Icons.camera_alt_outlined, size: kIsWeb ? 32 : 40.sp, color: colorScheme.onSurface.withOpacity(0.4)),
               SizedBox(height: kIsWeb ? 6 : 8.sp),
-              Text("Upload Image", style: TextStyle(color: colorScheme.onSurface.withOpacity(0.6), fontSize: kIsWeb ? 12 : 14.sp, fontWeight: FontWeight.w500)),
+              Text(AppLocalizations.of(context).uploadImage, style: TextStyle(color: colorScheme.onSurface.withOpacity(0.6), fontSize: kIsWeb ? 12 : 14.sp, fontWeight: FontWeight.w500)),
             ],
           )
               : ClipRRect(
@@ -931,7 +932,7 @@ class _MenuPageState extends State<MenuPage> {
             ),
             SizedBox(width: isMobile ? 10.sp : 12.sp),
             Expanded(
-              child: Text("Delete Menu Item", style: TextStyle(fontSize: isMobile ? 16.sp : 18.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
+              child: Text(AppLocalizations.of(context).deleteMenuItem, style: TextStyle(fontSize: isMobile ? 16.sp : 18.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
             ),
           ],
         ),
@@ -939,7 +940,7 @@ class _MenuPageState extends State<MenuPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Are you sure you want to delete this menu item?", style: TextStyle(fontSize: kIsWeb ? 14 : 14.sp, color: colorScheme.onSurface)),
+            Text(AppLocalizations.of(context).areYouSureDeleteMenuItem, style: TextStyle(fontSize: kIsWeb ? 14 : 14.sp, color: colorScheme.onSurface)),
             if (itemName.isNotEmpty) ...[
               SizedBox(height: isMobile ? 8.sp : 12.sp),
               Container(
@@ -959,7 +960,7 @@ class _MenuPageState extends State<MenuPage> {
               ),
             ],
             SizedBox(height: isMobile ? 12.sp : 16.sp),
-            Text("This action cannot be undone.", style: TextStyle(fontSize: kIsWeb ? 12 : 12.sp, color: colorScheme.error, fontWeight: FontWeight.w500)),
+            Text(AppLocalizations.of(context).thisActionCannotBeUndone, style: TextStyle(fontSize: kIsWeb ? 12 : 12.sp, color: colorScheme.error, fontWeight: FontWeight.w500)),
           ],
         ),
         actions: [
@@ -969,7 +970,7 @@ class _MenuPageState extends State<MenuPage> {
               padding: EdgeInsets.symmetric(horizontal: isMobile ? 16.sp : 20.sp, vertical: isMobile ? 10.sp : 12.sp),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp)),
             ),
-            child: Text("Cancel", style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7), fontWeight: FontWeight.w500, fontSize: isMobile ? 14.sp : null)),
+            child: Text(AppLocalizations.of(context).cancel, style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7), fontWeight: FontWeight.w500, fontSize: isMobile ? 14.sp : null)),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -978,7 +979,7 @@ class _MenuPageState extends State<MenuPage> {
                 await FirebaseFirestore.instance.collection("menu_items").doc(id).delete();
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: const Text("Menu item deleted successfully"),
+                    content:  Text(AppLocalizations.of(context).menuItemDeletedSuccess),
                     backgroundColor: colorScheme.primary,
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
@@ -987,7 +988,7 @@ class _MenuPageState extends State<MenuPage> {
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text("Error deleting menu item: $e"),
+                    content: Text("${AppLocalizations.of(context).errorDeletingMenuItem}: $e"),
                     backgroundColor: colorScheme.error,
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
@@ -1001,7 +1002,7 @@ class _MenuPageState extends State<MenuPage> {
               padding: EdgeInsets.symmetric(horizontal: isMobile ? 16.sp : 20.sp, vertical: isMobile ? 10.sp : 12.sp),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp)),
             ),
-            child: Text("Delete", style: TextStyle(fontWeight: FontWeight.w600, fontSize: isMobile ? 14.sp : null)),
+            child: Text(AppLocalizations.of(context).delete, style: TextStyle(fontWeight: FontWeight.w600, fontSize: isMobile ? 14.sp : null)),
           ),
         ],
       ),
@@ -1089,7 +1090,7 @@ class _MenuPageState extends State<MenuPage> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  "Edit Menu Item",
+                                  AppLocalizations.of(context).editMenuItem,
                                   style: TextStyle(
                                     fontSize: kIsWeb ? 18 : 16.sp,
                                     fontWeight: FontWeight.w600,
@@ -1099,7 +1100,7 @@ class _MenuPageState extends State<MenuPage> {
                                 ),
                                 SizedBox(height: kIsWeb ? 3 : 2.sp),
                                 Text(
-                                  "Update the details of this menu item.",
+                                  AppLocalizations.of(context).updateDetailsOfMenuItem,
                                   style: TextStyle(
                                     fontSize: kIsWeb ? 13 : 12.sp,
                                     color: colorScheme.onSurface.withOpacity(0.55),
@@ -1138,7 +1139,7 @@ class _MenuPageState extends State<MenuPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("Item Image", style: TextStyle(fontSize: kIsWeb ? 14 : 14.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
+                            Text(AppLocalizations.of(context).itemImage, style: TextStyle(fontSize: kIsWeb ? 14 : 14.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
                             SizedBox(height: kIsWeb ? 10 : 10.sp),
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1181,7 +1182,7 @@ class _MenuPageState extends State<MenuPage> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text("Upload or change dish image. This image is shown in customer menu.", style: TextStyle(fontSize: kIsWeb ? 12 : 12.sp, color: colorScheme.onSurface.withOpacity(0.6))),
+                                      Text(AppLocalizations.of(context).uploadOrChangeDishImage, style: TextStyle(fontSize: kIsWeb ? 12 : 12.sp, color: colorScheme.onSurface.withOpacity(0.6))),
                                       SizedBox(height: kIsWeb ? 10 : 10.sp),
                                       OutlinedButton.icon(
                                         onPressed: () async {
@@ -1194,7 +1195,7 @@ class _MenuPageState extends State<MenuPage> {
                                         },
                                         icon: Icon(Icons.image_outlined, color: colorScheme.primary, size: kIsWeb ? 18 : 18.sp),
                                         label: Text(
-                                          imageUrl != null && imageUrl.isNotEmpty ? "Change Image" : "Upload Image",
+                                          imageUrl != null && imageUrl.isNotEmpty ? AppLocalizations.of(context).changeImage : AppLocalizations.of(context).uploadImage,
                                           style: TextStyle(color: colorScheme.primary, fontWeight: FontWeight.w500, fontSize: kIsWeb ? 12 : 12.sp),
                                         ),
                                         style: OutlinedButton.styleFrom(
@@ -1231,7 +1232,7 @@ class _MenuPageState extends State<MenuPage> {
                                       value: selectedCategoryId,
                                       hint: Padding(
                                         padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 12 : 12.sp, vertical: kIsWeb ? 8 : 8.sp),
-                                        child: Text("Select Category", style: TextStyle(color: colorScheme.onSurface.withOpacity(0.5))),
+                                        child: Text(AppLocalizations.of(context).selectCategory, style: TextStyle(color: colorScheme.onSurface.withOpacity(0.5))),
                                       ),
                                       isExpanded: true,
                                       padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 12 : 12.sp, vertical: kIsWeb ? 8 : 8.sp),
@@ -1246,12 +1247,12 @@ class _MenuPageState extends State<MenuPage> {
                               },
                             ),
                             SizedBox(height: kIsWeb ? 20 : 20.sp),
-                            Text("Item Name", style: TextStyle(fontSize: kIsWeb ? 14 : 16.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
+                            Text(AppLocalizations.of(context).itemName, style: TextStyle(fontSize: kIsWeb ? 14 : 16.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
                             SizedBox(height: kIsWeb ? 8 : 8.sp),
                             TextField(
                               controller: nameController,
                               decoration: InputDecoration(
-                                hintText: "Enter item name",
+                                hintText: AppLocalizations.of(context).enterItemName,
                                 filled: true,
                                 fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp), borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.2))),
@@ -1261,13 +1262,13 @@ class _MenuPageState extends State<MenuPage> {
                               ),
                             ),
                             SizedBox(height: kIsWeb ? 20 : 20.sp),
-                            Text("Description", style: TextStyle(fontSize: kIsWeb ? 14 : 16.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
+                            Text(AppLocalizations.of(context).itemDescription, style: TextStyle(fontSize: kIsWeb ? 14 : 16.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
                             SizedBox(height: kIsWeb ? 8 : 8.sp),
                             TextField(
                               controller: descriptionController,
                               maxLines: 3,
                               decoration: InputDecoration(
-                                hintText: "Enter item description (optional)",
+                                hintText: AppLocalizations.of(context).enterItemDescription,
                                 filled: true,
                                 fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp), borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.2))),
@@ -1280,7 +1281,7 @@ class _MenuPageState extends State<MenuPage> {
                               ),
                             ),
                             SizedBox(height: kIsWeb ? 20 : 20.sp),
-                            Text("Food Type", style: TextStyle(fontSize: kIsWeb ? 14 : 16.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
+                            Text(AppLocalizations.of(context).foodType, style: TextStyle(fontSize: kIsWeb ? 14 : 16.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
                             SizedBox(height: kIsWeb ? 10 : 10.sp),
                             Row(
                               children: [
@@ -1304,7 +1305,7 @@ class _MenuPageState extends State<MenuPage> {
                                             child: Center(child: Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFF388E3C), shape: BoxShape.circle))),
                                           ),
                                           SizedBox(width: kIsWeb ? 8 : 8.sp),
-                                          Text("Veg", style: TextStyle(fontSize: kIsWeb ? 13 : 14.sp, fontWeight: FontWeight.w600, color: const Color(0xFF388E3C))),
+                                          Text(AppLocalizations.of(context).veg, style: TextStyle(fontSize: kIsWeb ? 13 : 14.sp, fontWeight: FontWeight.w600, color: const Color(0xFF388E3C))),
                                         ],
                                       ),
                                     ),
@@ -1331,7 +1332,7 @@ class _MenuPageState extends State<MenuPage> {
                                             child: Center(child: Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFFC62828), shape: BoxShape.circle))),
                                           ),
                                           SizedBox(width: kIsWeb ? 8 : 8.sp),
-                                          Text("Non-Veg", style: TextStyle(fontSize: kIsWeb ? 13 : 14.sp, fontWeight: FontWeight.w600, color: const Color(0xFFC62828))),
+                                          Text(AppLocalizations.of(context).nonVeg, style: TextStyle(fontSize: kIsWeb ? 13 : 14.sp, fontWeight: FontWeight.w600, color: const Color(0xFFC62828))),
                                         ],
                                       ),
                                     ),
@@ -1344,7 +1345,7 @@ class _MenuPageState extends State<MenuPage> {
                               children: [
                                 Icon(Icons.list_alt, color: colorScheme.onSurface.withOpacity(0.7), size: kIsWeb ? 20 : 20.sp),
                                 SizedBox(width: kIsWeb ? 8 : 8.sp),
-                                Text("Variants", style: TextStyle(fontSize: kIsWeb ? 12 : 12.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
+                                Text(AppLocalizations.of(context).variants, style: TextStyle(fontSize: kIsWeb ? 12 : 12.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
                               ],
                             ),
                             SizedBox(height: kIsWeb ? 12 : 12.sp),
@@ -1364,7 +1365,7 @@ class _MenuPageState extends State<MenuPage> {
                                       child: TextField(
                                         controller: variantsControllers[index]["name"],
                                         decoration: InputDecoration(
-                                          labelText: "Variant Name",
+                                          labelText: AppLocalizations.of(context).variantName,
                                           filled: true,
                                           fillColor: Colors.white,
                                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp), borderSide: BorderSide.none),
@@ -1379,7 +1380,7 @@ class _MenuPageState extends State<MenuPage> {
                                         controller: variantsControllers[index]["price"],
                                         keyboardType: TextInputType.number,
                                         decoration: InputDecoration(
-                                          labelText: "Price",
+                                          labelText: AppLocalizations.of(context).price,
                                           prefixText: "₹",
                                           filled: true,
                                           fillColor: Colors.white,
@@ -1407,7 +1408,7 @@ class _MenuPageState extends State<MenuPage> {
                                   setStateDialog(() {});
                                 },
                                 icon: Icon(Icons.add_circle_outline, color: colorScheme.primary),
-                                label: Text("Add Another Variant", style: TextStyle(color: colorScheme.primary)),
+                                label: Text(AppLocalizations.of(context).addAnotherVariant, style: TextStyle(color: colorScheme.primary)),
                                 style: OutlinedButton.styleFrom(
                                   padding: EdgeInsets.symmetric(vertical: kIsWeb ? 12 : 12.sp),
                                   side: BorderSide(color: colorScheme.primary.withOpacity(0.5)),
@@ -1435,7 +1436,7 @@ class _MenuPageState extends State<MenuPage> {
                                 side: BorderSide(color: colorScheme.outline),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12)),
                               ),
-                              child: Text("Cancel", style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7), fontWeight: FontWeight.w500)),
+                              child: Text(AppLocalizations.of(context).cancel, style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7), fontWeight: FontWeight.w500)),
                             ),
                           ),
                           SizedBox(width: kIsWeb ? 12 : 12.sp),
@@ -1445,7 +1446,7 @@ class _MenuPageState extends State<MenuPage> {
                               onPressed: isEditing ? null : () async {
                                 if (selectedCategoryId == null || nameController.text.trim().isEmpty) {
                                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                    content: const Text("Please fill all required fields"),
+                                    content: Text(AppLocalizations.of(context).pleaseFillAllRequiredFields),
                                     backgroundColor: colorScheme.error,
                                     behavior: SnackBarBehavior.floating,
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
@@ -1487,17 +1488,8 @@ class _MenuPageState extends State<MenuPage> {
                                   if (context.mounted) {
                                     Navigator.pop(context);
                                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                      content: const Text("Menu item updated successfully!"),
+                                      content:  Text(AppLocalizations.of(context).menuItemUpdatedSuccess),
                                       backgroundColor: colorScheme.primary,
-                                      behavior: SnackBarBehavior.floating,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
-                                    ));
-                                  }
-                                } catch (e) {
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                      content: Text("Error updating menu item: $e"),
-                                      backgroundColor: colorScheme.error,
                                       behavior: SnackBarBehavior.floating,
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
                                     ));
@@ -1516,13 +1508,13 @@ class _MenuPageState extends State<MenuPage> {
                               child: isEditing
                                   ? Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
-                                children: const [
-                                  SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
-                                  SizedBox(width: 8),
-                                  Text("Updating...", style: TextStyle(fontWeight: FontWeight.w600)),
+                                children: [
+                                  const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                                  const SizedBox(width: 8),
+                                  Text(AppLocalizations.of(context).updatingMenuItem, style: const TextStyle(fontWeight: FontWeight.w600)),
                                 ],
                               )
-                                  : const Text("Update Menu Item", style: TextStyle(fontWeight: FontWeight.w600)),
+                                  : Text(AppLocalizations.of(context).updateMenuItem, style: const TextStyle(fontWeight: FontWeight.w600)),
                             ),
                           ),
                         ],
@@ -1574,7 +1566,7 @@ class _MenuPageState extends State<MenuPage> {
                   Row(
                     children: [
                       Text(
-                        'Menu Items',
+                        AppLocalizations.of(context).menuItems,
                         style: TextStyle(
                           fontSize: isDesktop ? 24 : 30,
                           fontWeight: FontWeight.w200,
@@ -1591,12 +1583,12 @@ class _MenuPageState extends State<MenuPage> {
                           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.add, size: 16),
-                            SizedBox(width: 8),
-                            Text('Add Menu Item', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                            const Icon(Icons.add, size: 16),
+                            const SizedBox(width: 8),
+                            Text(AppLocalizations.of(context).addMenuItem, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                           ],
                         ),
                       ),
@@ -1657,245 +1649,245 @@ class _MenuPageState extends State<MenuPage> {
                   builder: (context, snapshot) {
                     if (snapshot.hasError) {
                       return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Text("Failed to load menu: ${snapshot.error}", style: const TextStyle(color: Colors.red), textAlign: TextAlign.center),
-                        ),
-                      );
-                    }
-                    if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-
-                    final allItems = snapshot.data!.docs;
-                    final items = allItems.where((doc) {
-                      final data = doc.data() as Map<String, dynamic>;
-                      final name = (data['name'] ?? '').toString().toLowerCase();
-                      final desc = (data['description'] ?? '').toString().toLowerCase();
-                      final categoryId = (data['categoryId'] ?? '').toString();
-                      final categoryName = (categoryMap[categoryId] ?? '').toLowerCase();
-                      if (_searchQuery.isEmpty) return true;
-                      return name.contains(_searchQuery) || desc.contains(_searchQuery) || categoryName.contains(_searchQuery);
-                    }).toList();
-
-                    if (items.isEmpty) {
-                      return Padding(
-                        padding: const EdgeInsets.fromLTRB(28, 20, 28, 30),
-                        child: Center(
-                          child: Text(
-                            _searchQuery.isEmpty ? "No menu items" : "No results for your search",
-                            style: const TextStyle(fontSize: 15, color: Color(0xFF6B7280)),
-                          ),
-                        ),
-                      );
-                    }
-
-                    final isTablet = Responsive.isTablet(context);
-                    final crossAxisCount = isDesktop ? 4 : (isTablet ? 2 : 1);
-
-                    return Padding(
-                      padding: EdgeInsets.fromLTRB(isDesktop ? 28 : 16, 10, isDesktop ? 28 : 16, 30),
-                      child: GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: crossAxisCount,
-                          // Image ~58%, info ~42% — matches screenshot card proportions
-                          childAspectRatio: isDesktop ? 0.68 : 0.72,
-                          crossAxisSpacing: 14,
-                          mainAxisSpacing: 14,
-                        ),
-                        itemCount: items.length,
-                        itemBuilder: (context, index) {
-                          final doc = items[index];
-                          final data = doc.data() as Map<String, dynamic>;
-                          final List variants = (data['variants'] ?? []) as List;
-                          final String name = (data['name'] ?? '').toString();
-                          final String imageUrl = (data['image'] ?? '').toString();
-                          final String description = (data['description'] ?? '').toString();
-                          final String categoryId = (data['categoryId'] ?? '').toString();
-                          final String categoryName = (categoryMap[categoryId] ?? '').toString();
-                          final num firstPrice = variants.isNotEmpty ? (variants.first['price'] ?? 0) as num : 0;
-                          final bool isVeg = data['isVeg'] ?? true;
-
-                          return Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: const Color(0xFFE5E7EB)),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.04),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Text(AppLocalizations.of(context).failedToLoadMenu, style: const TextStyle(color: Colors.red), textAlign: TextAlign.center),
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  flex: 58,
-                                  child: ClipRRect(
-                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-                                    child: imageUrl.isNotEmpty
-                                        ? Image.network(
-                                      imageUrl,
-                                      width: double.infinity,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) => Container(
+                          );
+                      }
+                          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+
+                      final allItems = snapshot.data!.docs;
+                      final items = allItems.where((doc) {
+                        final data = doc.data() as Map<String, dynamic>;
+                        final name = (data['name'] ?? '').toString().toLowerCase();
+                        final desc = (data['description'] ?? '').toString().toLowerCase();
+                        final categoryId = (data['categoryId'] ?? '').toString();
+                        final categoryName = (categoryMap[categoryId] ?? '').toLowerCase();
+                        if (_searchQuery.isEmpty) return true;
+                        return name.contains(_searchQuery) || desc.contains(_searchQuery) || categoryName.contains(_searchQuery);
+                      }).toList();
+
+                      if (items.isEmpty) {
+                        return Padding(
+                          padding: const EdgeInsets.fromLTRB(28, 20, 28, 30),
+                          child: Center(
+                            child: Text(
+                              _searchQuery.isEmpty ? AppLocalizations.of(context).noMenuItems : AppLocalizations.of(context).noResultsForSearch,
+                              style: const TextStyle(fontSize: 15, color: Color(0xFF6B7280)),
+                            ),
+                          ),
+                        );
+                      }
+
+                      final isTablet = Responsive.isTablet(context);
+                      final crossAxisCount = isDesktop ? 4 : (isTablet ? 2 : 1);
+
+                      return Padding(
+                        padding: EdgeInsets.fromLTRB(isDesktop ? 28 : 16, 10, isDesktop ? 28 : 16, 30),
+                        child: GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: crossAxisCount,
+                            // Image ~58%, info ~42% — matches screenshot card proportions
+                            childAspectRatio: isDesktop ? 0.68 : 0.72,
+                            crossAxisSpacing: 14,
+                            mainAxisSpacing: 14,
+                          ),
+                          itemCount: items.length,
+                          itemBuilder: (context, index) {
+                            final doc = items[index];
+                            final data = doc.data() as Map<String, dynamic>;
+                            final List variants = (data['variants'] ?? []) as List;
+                            final String name = (data['name'] ?? '').toString();
+                            final String imageUrl = (data['image'] ?? '').toString();
+                            final String description = (data['description'] ?? '').toString();
+                            final String categoryId = (data['categoryId'] ?? '').toString();
+                            final String categoryName = (categoryMap[categoryId] ?? '').toString();
+                            final num firstPrice = variants.isNotEmpty ? (variants.first['price'] ?? 0) as num : 0;
+                            final bool isVeg = data['isVeg'] ?? true;
+
+                            return Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: const Color(0xFFE5E7EB)),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.04),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    flex: 58,
+                                    child: ClipRRect(
+                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+                                      child: imageUrl.isNotEmpty
+                                          ? Image.network(
+                                        imageUrl,
+                                        width: double.infinity,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) => Container(
+                                          color: const Color(0xFFF3F4F6),
+                                          child: const Center(child: Icon(Icons.fastfood_rounded, color: Color(0xFFCCCCCC), size: 36)),
+                                        ),
+                                      )
+                                          : Container(
                                         color: const Color(0xFFF3F4F6),
                                         child: const Center(child: Icon(Icons.fastfood_rounded, color: Color(0xFFCCCCCC), size: 36)),
                                       ),
-                                    )
-                                        : Container(
-                                      color: const Color(0xFFF3F4F6),
-                                      child: const Center(child: Icon(Icons.fastfood_rounded, color: Color(0xFFCCCCCC), size: 36)),
                                     ),
                                   ),
-                                ),
 
-                                // ── Card info section (bottom ~42 flex) ───────
-                                Expanded(
-                                  flex: 42,
-                                  child: Padding(
-                                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        // Item name + edit/delete
-                                        Row(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                name,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w700,
-                                                  color: Color(0xFF1A1A1A),
-                                                ),
-                                              ),
-                                            ),
-                                            InkWell(
-                                              onTap: () => editMenuItem(doc),
-                                              borderRadius: BorderRadius.circular(6),
-                                              child: Padding(
-                                                padding: const EdgeInsets.all(2),
-                                                child: Icon(Icons.edit_outlined, size: 30, color: Colors.grey[500]),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 6),
-                                            InkWell(
-                                              onTap: () => deleteMenuItem(doc.id, name),
-                                              borderRadius: BorderRadius.circular(6),
-                                              child: const Padding(
-                                                padding: EdgeInsets.all(2),
-                                                child: Icon(Icons.delete_outline, size: 30, color: Color(0xFFEF4444)),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 5),
-                                        Row(
-                                          children: [
-                                            if (categoryName.isNotEmpty)
-                                              Container(
-                                                margin: const EdgeInsets.only(bottom: 5, right: 5),
-                                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                                                decoration: BoxDecoration(
-                                                  color: const Color(0xFFFFF0E6),
-                                                  borderRadius: BorderRadius.circular(20),
-                                                  border: Border.all(color: const Color(0xFFE8622A).withOpacity(0.35)),
-                                                ),
+                                  // ── Card info section (bottom ~42 flex) ───────
+                                  Expanded(
+                                    flex: 42,
+                                    child: Padding(
+                                      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          // Item name + edit/delete
+                                          Row(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Expanded(
                                                 child: Text(
-                                                  categoryName,
+                                                  name,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
                                                   style: const TextStyle(
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.w600,
-                                                    color: Color(0xFFE8622A),
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: Color(0xFF1A1A1A),
                                                   ),
                                                 ),
                                               ),
-                                            Container(
-                                              margin: const EdgeInsets.only(bottom: 5),
-                                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                                              decoration: BoxDecoration(
-                                                color: isVeg ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE),
-                                                borderRadius: BorderRadius.circular(20),
-                                                border: Border.all(
-                                                  color: isVeg ? const Color(0xFF388E3C).withOpacity(0.5) : const Color(0xFFC62828).withOpacity(0.5),
+                                              InkWell(
+                                                onTap: () => editMenuItem(doc),
+                                                borderRadius: BorderRadius.circular(6),
+                                                child: Padding(
+                                                  padding: const EdgeInsets.all(2),
+                                                  child: Icon(Icons.edit_outlined, size: 30, color: Colors.grey[500]),
                                                 ),
                                               ),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Container(
-                                                    width: 9, height: 9,
-                                                    decoration: BoxDecoration(
-                                                      border: Border.all(
-                                                        color: isVeg ? const Color(0xFF388E3C) : const Color(0xFFC62828),
-                                                        width: 1.5,
-                                                      ),
-                                                      borderRadius: BorderRadius.circular(2),
+                                              const SizedBox(width: 6),
+                                              InkWell(
+                                                onTap: () => deleteMenuItem(doc.id, name),
+                                                borderRadius: BorderRadius.circular(6),
+                                                child: const Padding(
+                                                  padding: EdgeInsets.all(2),
+                                                  child: Icon(Icons.delete_outline, size: 30, color: Color(0xFFEF4444)),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 5),
+                                          Row(
+                                            children: [
+                                              if (categoryName.isNotEmpty)
+                                                Container(
+                                                  margin: const EdgeInsets.only(bottom: 5, right: 5),
+                                                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(0xFFFFF0E6),
+                                                    borderRadius: BorderRadius.circular(20),
+                                                    border: Border.all(color: const Color(0xFFE8622A).withOpacity(0.35)),
+                                                  ),
+                                                  child: Text(
+                                                    categoryName,
+                                                    style: const TextStyle(
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: Color(0xFFE8622A),
                                                     ),
-                                                    child: Center(
-                                                      child: Container(
-                                                        width: 4, height: 4,
-                                                        decoration: BoxDecoration(
+                                                  ),
+                                                ),
+                                              Container(
+                                                margin: const EdgeInsets.only(bottom: 5),
+                                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                                decoration: BoxDecoration(
+                                                  color: isVeg ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE),
+                                                  borderRadius: BorderRadius.circular(20),
+                                                  border: Border.all(
+                                                    color: isVeg ? const Color(0xFF388E3C).withOpacity(0.5) : const Color(0xFFC62828).withOpacity(0.5),
+                                                  ),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Container(
+                                                      width: 9, height: 9,
+                                                      decoration: BoxDecoration(
+                                                        border: Border.all(
                                                           color: isVeg ? const Color(0xFF388E3C) : const Color(0xFFC62828),
-                                                          shape: BoxShape.circle,
+                                                          width: 1.5,
+                                                        ),
+                                                        borderRadius: BorderRadius.circular(2),
+                                                      ),
+                                                      child: Center(
+                                                        child: Container(
+                                                          width: 4, height: 4,
+                                                          decoration: BoxDecoration(
+                                                            color: isVeg ? const Color(0xFF388E3C) : const Color(0xFFC62828),
+                                                            shape: BoxShape.circle,
+                                                          ),
                                                         ),
                                                       ),
                                                     ),
-                                                  ),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    isVeg ? "Veg" : "Non-Veg",
-                                                    style: TextStyle(
-                                                      fontSize: 10,
-                                                      fontWeight: FontWeight.w600,
-                                                      color: isVeg ? const Color(0xFF388E3C) : const Color(0xFFC62828),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      isVeg ? AppLocalizations.of(context).veg : AppLocalizations.of(context).nonVeg,
+                                                      style: TextStyle(
+                                                        fontSize: 10,
+                                                        fontWeight: FontWeight.w600,
+                                                        color: isVeg ? const Color(0xFF388E3C) : const Color(0xFFC62828),
+                                                      ),
                                                     ),
-                                                  ),
-                                                ],
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          if (description.isNotEmpty)
+                                            Flexible(
+                                              child: Text(
+                                                description,
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  color: Color(0xFF6B7280),
+                                                  height: 1.4,
+                                                ),
                                               ),
                                             ),
-                                          ],
-                                        ),
-                                        if (description.isNotEmpty)
-                                          Flexible(
-                                            child: Text(
-                                              description,
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                                color: Color(0xFF6B7280),
-                                                height: 1.4,
-                                              ),
+                                          const Spacer(),
+                                          Text(
+                                            '₹${firstPrice.toStringAsFixed(2)}',
+                                            style: const TextStyle(
+                                              fontSize: 17,
+                                              fontWeight: FontWeight.w700,
+                                              color: Colors.red,
                                             ),
                                           ),
-                                        const Spacer(),
-                                        Text(
-                                          '₹${firstPrice.toStringAsFixed(2)}',
-                                          style: const TextStyle(
-                                            fontSize: 17,
-                                            fontWeight: FontWeight.w700,
-                                            color: Colors.red,
-                                          ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    );
-                  },
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    },
                 );
               },
             ),

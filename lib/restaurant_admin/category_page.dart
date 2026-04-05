@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 
 import '../uttils/responsive.dart';
+import '../services/localization_service.dart';
 
 class CategoryPage extends StatefulWidget {
   final String restaurantId;
@@ -20,7 +21,6 @@ class CategoryPage extends StatefulWidget {
 }
 
 class _CategoryPageState extends State<CategoryPage> {
-
   XFile? pickedImage;
   Uint8List? imageBytes;
   final String apiKey = "a923bc17d28cd6fe1be417700456eb69";
@@ -91,7 +91,7 @@ class _CategoryPageState extends State<CategoryPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  "Add Category",
+                                  AppLocalizations.of(context).addCategory,
                                   style: TextStyle(
                                     fontSize: kIsWeb ? 20 : 18.sp,
                                     fontWeight: FontWeight.w600,
@@ -100,7 +100,7 @@ class _CategoryPageState extends State<CategoryPage> {
                                 ),
                                 SizedBox(height: kIsWeb ? 4 : 2.sp),
                                 Text(
-                                  "Create a new section for your menu.",
+                                  AppLocalizations.of(context).createNewSection,
                                   style: TextStyle(
                                     fontSize: kIsWeb ? 14 : 12.sp,
                                     color: colorScheme.onSurface.withOpacity(0.6),
@@ -129,7 +129,7 @@ class _CategoryPageState extends State<CategoryPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Category name",
+                        AppLocalizations.of(context).categoryName,
                         style: TextStyle(
                           fontSize: kIsWeb ? 14 : 12.sp,
                           fontWeight: FontWeight.w500,
@@ -140,7 +140,7 @@ class _CategoryPageState extends State<CategoryPage> {
                       TextField(
                         controller: nameController,
                         decoration: InputDecoration(
-                          hintText: "e.g. Starters, Desserts",
+                          hintText: AppLocalizations.of(context).categoryPlaceholder,
                           filled: true,
                           fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
                           border: OutlineInputBorder(
@@ -186,7 +186,7 @@ class _CategoryPageState extends State<CategoryPage> {
                             ),
                           ),
                           child: Text(
-                            "Cancel",
+                            AppLocalizations.of(context).cancel,
                             style: TextStyle(
                               color: colorScheme.onSurface.withOpacity(0.7),
                               fontWeight: FontWeight.w500,
@@ -210,7 +210,7 @@ class _CategoryPageState extends State<CategoryPage> {
                                         size: kIsWeb ? 20 : 18.sp,
                                       ),
                                       SizedBox(width: kIsWeb ? 12 : 8.sp),
-                                      const Text("Please enter a category name"),
+                                      Text(AppLocalizations.of(context).pleaseEnterCategoryName),
                                     ],
                                   ),
                                   backgroundColor: colorScheme.error,
@@ -235,9 +235,9 @@ class _CategoryPageState extends State<CategoryPage> {
                               });
 
                               Navigator.pop(context);
-                              _showSuccess(context, "Category added successfully!", colorScheme);
+                              _showSuccess(context, AppLocalizations.of(context).categoryAddedSuccess, colorScheme);
                             } catch (e) {
-                              _showError(context, "Error adding category: $e", colorScheme);
+                              _showError(context, "${AppLocalizations.of(context).errorAddingCategory}: $e", colorScheme);
                             }
                           },
                           style: ElevatedButton.styleFrom(
@@ -249,7 +249,7 @@ class _CategoryPageState extends State<CategoryPage> {
                             ),
                           ),
                           child: Text(
-                            "Save",
+                            AppLocalizations.of(context).price,
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: kIsWeb ? 14 : 12.sp,
@@ -277,7 +277,7 @@ class _CategoryPageState extends State<CategoryPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Position",
+          AppLocalizations.of(context).position,
           style: TextStyle(
             fontSize: kIsWeb ? 16 : 14.sp,
             fontWeight: FontWeight.w600,
@@ -289,7 +289,7 @@ class _CategoryPageState extends State<CategoryPage> {
           controller: controller,
           keyboardType: TextInputType.number,
           decoration: InputDecoration(
-            hintText: "Enter position (0 for first)",
+            hintText: AppLocalizations.of(context).enterPosition,
             filled: true,
             fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
             border: OutlineInputBorder(
@@ -328,7 +328,7 @@ class _CategoryPageState extends State<CategoryPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Category Name",
+          AppLocalizations.of(context).categoryName,
           style: TextStyle(
             fontSize: kIsWeb ? 16 : 14.sp,
             fontWeight: FontWeight.w600,
@@ -339,7 +339,7 @@ class _CategoryPageState extends State<CategoryPage> {
         TextField(
           controller: controller,
           decoration: InputDecoration(
-            hintText: "Enter category name",
+            hintText: AppLocalizations.of(context).enterCategoryName,
             filled: true,
             fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
             border: OutlineInputBorder(
@@ -420,8 +420,8 @@ class _CategoryPageState extends State<CategoryPage> {
                   Expanded(
                     child: Text(
                       categoryId != null
-                          ? "Updating category, please wait..."
-                          : "Adding category, please wait...",
+                          ? AppLocalizations.of(context).updatingCategory
+                          : AppLocalizations.of(context).addingCategory,
                       style: TextStyle(
                         color: colorScheme.primary,
                         fontSize: kIsWeb ? 14 : 13.sp,
@@ -452,7 +452,7 @@ class _CategoryPageState extends State<CategoryPage> {
                     ),
                   ),
                   child: Text(
-                    "Cancel",
+                    AppLocalizations.of(context).cancel,
                     style: TextStyle(
                       color: isLoading
                           ? colorScheme.onSurface.withOpacity(0.4)
@@ -484,8 +484,7 @@ class _CategoryPageState extends State<CategoryPage> {
                                 size: kIsWeb ? 20 : 18.sp,
                               ),
                               SizedBox(width: kIsWeb ? 12 : 8.sp),
-                              const Text(
-                                  "Please fill all required fields"),
+                              Text(AppLocalizations.of(context).pleaseFillAllRequiredFields),
                             ],
                           ),
                           backgroundColor: colorScheme.error,
@@ -520,7 +519,7 @@ class _CategoryPageState extends State<CategoryPage> {
                           Navigator.pop(context);
                           _showSuccess(
                             context,
-                            "Category updated successfully!",
+                            AppLocalizations.of(context).categoryUpdatedSuccess,
                             colorScheme,
                           );
                         }
@@ -541,7 +540,7 @@ class _CategoryPageState extends State<CategoryPage> {
                           Navigator.pop(context);
                           _showSuccess(
                             context,
-                            "Category added successfully!",
+                            AppLocalizations.of(context).categoryAddedSuccess,
                             colorScheme,
                           );
                         }
@@ -550,7 +549,7 @@ class _CategoryPageState extends State<CategoryPage> {
                       if (context.mounted) {
                         _showError(
                           context,
-                          "Error ${categoryId != null ? 'updating' : 'adding'} category: $e",
+                          "${categoryId != null ? AppLocalizations.of(context).errorUpdatingCategory : AppLocalizations.of(context).errorAddingCategory}: $e",
                           colorScheme,
                         );
                       }
@@ -589,8 +588,8 @@ class _CategoryPageState extends State<CategoryPage> {
                       SizedBox(width: kIsWeb ? 12 : 8),
                       Text(
                         categoryId != null
-                            ? "Updating..."
-                            : "Adding...",
+                            ? AppLocalizations.of(context).updatingCategory
+                            : AppLocalizations.of(context).addingCategory,
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: isMobile
@@ -604,8 +603,8 @@ class _CategoryPageState extends State<CategoryPage> {
                   )
                       : Text(
                     categoryId != null
-                        ? "Update Category"
-                        : "Save Category",
+                        ? AppLocalizations.of(context).updateCategory
+                        : AppLocalizations.of(context).saveCategory,
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: isMobile
@@ -779,7 +778,7 @@ class _CategoryPageState extends State<CategoryPage> {
               ),
               SizedBox(height: kIsWeb ? 8 : 6.sp),
               Text(
-                "Upload Image",
+                AppLocalizations.of(context).uploadImage,
                 style: TextStyle(
                   color: colorScheme.onSurface.withOpacity(0.6),
                   fontSize: kIsWeb ? 14 : 12.sp,
@@ -939,7 +938,7 @@ class _CategoryPageState extends State<CategoryPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  "Edit Category",
+                                  AppLocalizations.of(context).editCategory,
                                   style: TextStyle(
                                     fontSize: kIsWeb ? 20 : 18.sp,
                                     fontWeight: FontWeight.w600,
@@ -948,7 +947,7 @@ class _CategoryPageState extends State<CategoryPage> {
                                 ),
                                 SizedBox(height: kIsWeb ? 4 : 2.sp),
                                 Text(
-                                  "Update the name of this menu section.",
+                                  AppLocalizations.of(context).updateNameOfSection,
                                   style: TextStyle(
                                     fontSize: kIsWeb ? 14 : 12.sp,
                                     color: colorScheme.onSurface.withOpacity(0.6),
@@ -977,7 +976,7 @@ class _CategoryPageState extends State<CategoryPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Category name",
+                        AppLocalizations.of(context).categoryName,
                         style: TextStyle(
                           fontSize: kIsWeb ? 14 : 12.sp,
                           fontWeight: FontWeight.w500,
@@ -989,7 +988,7 @@ class _CategoryPageState extends State<CategoryPage> {
                         controller: nameController,
                         autofocus: true,
                         decoration: InputDecoration(
-                          hintText: "e.g. Starters, Desserts",
+                          hintText: AppLocalizations.of(context).categoryPlaceholder,
                           filled: true,
                           fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
                           border: OutlineInputBorder(
@@ -1035,7 +1034,7 @@ class _CategoryPageState extends State<CategoryPage> {
                             ),
                           ),
                           child: Text(
-                            "Cancel",
+                            AppLocalizations.of(context).cancel,
                             style: TextStyle(
                               color: colorScheme.onSurface.withOpacity(0.7),
                               fontWeight: FontWeight.w500,
@@ -1059,7 +1058,7 @@ class _CategoryPageState extends State<CategoryPage> {
                                         size: kIsWeb ? 20 : 18.sp,
                                       ),
                                       SizedBox(width: kIsWeb ? 12 : 8.sp),
-                                      const Text("Please enter a category name"),
+                                      Text(AppLocalizations.of(context).pleaseEnterCategoryName),
                                     ],
                                   ),
                                   backgroundColor: colorScheme.error,
@@ -1081,9 +1080,9 @@ class _CategoryPageState extends State<CategoryPage> {
                               });
 
                               Navigator.pop(context);
-                              _showSuccess(context, "Category updated successfully!", colorScheme);
+                              _showSuccess(context, AppLocalizations.of(context).categoryUpdatedSuccess, colorScheme);
                             } catch (e) {
-                              _showError(context, "Error updating category: $e", colorScheme);
+                              _showError(context, "${AppLocalizations.of(context).errorUpdatingCategory}: $e", colorScheme);
                             }
                           },
                           style: ElevatedButton.styleFrom(
@@ -1095,7 +1094,7 @@ class _CategoryPageState extends State<CategoryPage> {
                             ),
                           ),
                           child: Text(
-                            "Save",
+                            AppLocalizations.of(context).languageSettings,
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: kIsWeb ? 14 : 12.sp,
@@ -1176,7 +1175,7 @@ class _CategoryPageState extends State<CategoryPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  "Delete Category",
+                                  AppLocalizations.of(context).deleteCategory,
                                   style: TextStyle(
                                     fontSize: kIsWeb ? 20 : 18.sp,
                                     fontWeight: FontWeight.w600,
@@ -1185,7 +1184,7 @@ class _CategoryPageState extends State<CategoryPage> {
                                 ),
                                 SizedBox(height: kIsWeb ? 4 : 2.sp),
                                 Text(
-                                  "Remove this section from your menu.",
+                                  AppLocalizations.of(context).removeThisSection,
                                   style: TextStyle(
                                     fontSize: kIsWeb ? 14 : 12.sp,
                                     color: colorScheme.onSurface.withOpacity(0.6),
@@ -1214,7 +1213,7 @@ class _CategoryPageState extends State<CategoryPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Are you sure you want to delete \"$name\"?",
+                        "${AppLocalizations.of(context).areYouSureDelete} \"$name\"?",
                         style: TextStyle(
                           fontSize: kIsWeb ? 16 : 14.sp,
                           fontWeight: FontWeight.w600,
@@ -1223,7 +1222,7 @@ class _CategoryPageState extends State<CategoryPage> {
                       ),
                       SizedBox(height: kIsWeb ? 8 : 6.sp),
                       Text(
-                        "This action cannot be undone.",
+                        AppLocalizations.of(context).thisActionCannotBeUndone,
                         style: TextStyle(
                           fontSize: kIsWeb ? 14 : 12.sp,
                           color: colorScheme.onSurface.withOpacity(0.6),
@@ -1249,7 +1248,7 @@ class _CategoryPageState extends State<CategoryPage> {
                             ),
                           ),
                           child: Text(
-                            "Cancel",
+                            AppLocalizations.of(context).cancel,
                             style: TextStyle(
                               color: colorScheme.onSurface.withOpacity(0.7),
                               fontWeight: FontWeight.w500,
@@ -1271,7 +1270,7 @@ class _CategoryPageState extends State<CategoryPage> {
                             ),
                           ),
                           child: Text(
-                            "Delete",
+                            AppLocalizations.of(context).delete,
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: kIsWeb ? 14 : 12.sp,
@@ -1397,7 +1396,7 @@ class _CategoryPageState extends State<CategoryPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Quantity",
+                  AppLocalizations.of(context).quantity,
                   style: GoogleFonts.poppins(
                     fontSize: kIsWeb ? 14 : 14.sp,
                     fontWeight: FontWeight.w500,
@@ -1479,7 +1478,7 @@ class _CategoryPageState extends State<CategoryPage> {
               Row(
                 children: [
                   Text(
-                    "Categories",
+                    AppLocalizations.of(context).categoriesTitle,
                     style: GoogleFonts.poppins(
                       fontSize: 24,
                       fontWeight: FontWeight.w200,
@@ -1507,7 +1506,7 @@ class _CategoryPageState extends State<CategoryPage> {
                         const Icon(Icons.add, size: 16),
                         const SizedBox(width: 8),
                         Text(
-                          "Add Category",
+                          AppLocalizations.of(context).addCategory,
                           style: GoogleFonts.poppins(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -1535,7 +1534,7 @@ class _CategoryPageState extends State<CategoryPage> {
                     if (categories.isEmpty) {
                       return Center(
                         child: Text(
-                          "No categories yet",
+                          AppLocalizations.of(context).noCategoriesYet,
                           style: GoogleFonts.poppins(
                             fontSize: 16,
                             color: const Color(0xFF808896),
@@ -1609,8 +1608,8 @@ class _CategoryPageState extends State<CategoryPage> {
                                       Row(
                                         children: [
                                           Container(
-                                            width: 64,
-                                            height: 64,
+                                            width: 100,
+                                            height: 100,
                                             decoration: BoxDecoration(
                                               color:
                                               const Color(0xFFFFF2E6),
@@ -1621,7 +1620,7 @@ class _CategoryPageState extends State<CategoryPage> {
                                             child: const Icon(
                                               Icons.folder_open_outlined,
                                               color: Color(0xFFE0752D),
-                                              size: 22,
+                                              size: 34,
                                             ),
                                           ),
                                           const Spacer(),
@@ -1636,7 +1635,7 @@ class _CategoryPageState extends State<CategoryPage> {
                                               BorderRadius.circular(6),
                                               child: Icon(
                                                 Icons.edit_outlined,
-                                                size: kIsWeb ? 20 : 20.sp,
+                                                size: kIsWeb ? 30 : 20.sp,
                                                 color: const Color(0xFF6A7280),
                                               ),
                                             ),
@@ -1653,7 +1652,7 @@ class _CategoryPageState extends State<CategoryPage> {
                                               BorderRadius.circular(6),
                                               child: Icon(
                                                 Icons.delete_outline,
-                                                size: kIsWeb ? 20 : 20.sp,
+                                                size: kIsWeb ? 30 : 20.sp,
                                                 color: const Color(0xFFE15757),
                                               ),
                                             ),
@@ -1666,14 +1665,14 @@ class _CategoryPageState extends State<CategoryPage> {
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: GoogleFonts.poppins(
-                                          fontSize: 24,
+                                          fontSize: 20,
                                           fontWeight: FontWeight.w700,
                                           color: const Color(0xFF111827),
                                         ),
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
-                                        "$count items",
+                                        "$count ${AppLocalizations.of(context).items}",
                                         style: GoogleFonts.poppins(
                                           fontSize: 14,
                                           fontWeight: FontWeight.w500,
