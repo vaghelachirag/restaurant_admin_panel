@@ -1738,8 +1738,9 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
           .orderBy("name")
           .snapshots(),
       builder: (context, snap) {
-        if (snap.hasError)
+        if (snap.hasError) {
           return _errorWidget('Error loading menu items', snap.error);
+        }
 
         // FIX #5: connectionState check
         if (snap.connectionState == ConnectionState.waiting) {

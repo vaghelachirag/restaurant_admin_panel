@@ -823,13 +823,13 @@ class LocalizationService extends ChangeNotifier {
       if (value is Map && value.containsKey(k)) {
         value = value[k];
       } else {
-        debugPrint('Translation key not found: $key (missing: $k)');
+       // debugPrint('Translation key not found: $key (missing: $k)');
         return key; // Return key if translation not found
       }
     }
 
     final result = value?.toString() ?? key;
-    debugPrint('Translation: $key -> $result');
+   // debugPrint('Translation: $key -> $result');
     return result;
   }
 }

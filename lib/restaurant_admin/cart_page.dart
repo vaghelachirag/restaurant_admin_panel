@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -80,69 +81,104 @@ class _CartPageState extends State<CartPage> {
     required bool enablePackaging,
     required double packagingCharge,
   }) async {
-    int tokenNumber = DateTime.now().millisecondsSinceEpoch % 10000;
-
+    // ── Validation ──────────────────────────────────────────────────────────
     if (orderType == "Parcel" &&
         (nameController.text.isEmpty || mobileController.text.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
             content: Text(
-                "Please enter customer name and mobile number for parcel order")),
+                "Please enter customer name and mobile for parcel order")),
       );
       return;
     }
 
-    final double grandTotal = getFinalTotal(
-      enableGst: enableGst,
-      gstPct: gstPct,
-      sgstPct: sgstPct,
-      enablePackaging: enablePackaging,
-      packagingCharge: packagingCharge,
-    );
-
-    final orderRef = FirebaseFirestore.instance.collection("orders").doc();
-
-    await orderRef.set({
-      "restaurantId": widget.restaurantId,
-      "tokenNumber": tokenNumber,
-      "customerName": nameController.text,
-      "mobile": mobileController.text,
-      "orderType": orderType,
-      "specialInstruction": instructionController.text,
-      "status": "pending",
-      "subtotal": getTotal(),
-      // GST fields (only meaningful when enableGst is true)
-      "enableGst": enableGst,
-      "gstPercentage": gstPct,
-      "sgstPercentage": sgstPct,
-      "gstAmount": enableGst ? getGSTAmount(gstPct).toStringAsFixed(2) : "0.00",
-      "sgstAmount": enableGst ? getSGSTAmount(sgstPct).toStringAsFixed(2) : "0.00",
-      // Packaging fields
-      "enablePackagingCharge": enablePackaging,
-      "packagingCharge": enablePackaging ? packagingCharge : 0,
-      // Grand total
-      "totalAmount": grandTotal.round(),
-      "createdAt": FieldValue.serverTimestamp(),
-      "items": widget.cart
-          .map((e) => {
-        "itemId": e.itemId,
-        "name": e.name,
-        "variant": e.variant,
-        "price": e.price,
-        "qty": e.qty
-      })
-          .toList()
-    });
-
-    String orderId = orderRef.id;
-    widget.cart.clear();
-
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => OrderPlacedScreen(orderId: orderId),
+    // ── Show loading ─────────────────────────────────────────────────────────
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFF7C3AED)),
       ),
     );
+
+    try {
+      // ── Anonymous sign-in (gives auth token for Firestore rules) ─────────
+      if (FirebaseAuth.instance.currentUser == null) {
+        await FirebaseAuth.instance.signInAnonymously();
+      }
+
+      final double grandTotal = getFinalTotal(
+        enableGst: enableGst,
+        gstPct: gstPct,
+        sgstPct: sgstPct,
+        enablePackaging: enablePackaging,
+        packagingCharge: packagingCharge,
+      );
+
+      int tokenNumber = DateTime.now().millisecondsSinceEpoch % 10000;
+      final orderRef = FirebaseFirestore.instance.collection("orders").doc();
+
+      await orderRef.set({
+        "restaurantId"          : widget.restaurantId,
+        "tokenNumber"           : tokenNumber,
+        "customerName"          : nameController.text.trim(),
+        "mobile"                : mobileController.text.trim(),
+        "orderType"             : orderType,
+        "specialInstruction"    : instructionController.text.trim(),
+        "status"                : "pending",
+        "subtotal"              : getTotal(),
+        "enableGst"             : enableGst,
+        "gstPercentage"         : gstPct,
+        "sgstPercentage"        : sgstPct,
+        "gstAmount"             : enableGst
+            ? getGSTAmount(gstPct).toStringAsFixed(2)
+            : "0.00",
+        "sgstAmount"            : enableGst
+            ? getSGSTAmount(sgstPct).toStringAsFixed(2)
+            : "0.00",
+        "enablePackagingCharge" : enablePackaging,
+        "packagingCharge"       : enablePackaging ? packagingCharge : 0,
+        "totalAmount"           : grandTotal.round(),
+        "createdAt"             : FieldValue.serverTimestamp(),
+        "items"                 : widget.cart.map((e) => {
+          "itemId"  : e.itemId,
+          "name"    : e.name,
+          "variant" : e.variant,
+          "price"   : e.price,
+          "qty"     : e.qty,
+        }).toList(),
+      });
+
+      // ── Success ───────────────────────────────────────────────────────────
+      final orderId = orderRef.id;
+      widget.cart.clear();
+
+      if (mounted) {
+        Navigator.pop(context); // close loader
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => OrderPlacedScreen(orderId: orderId),
+          ),
+        );
+      }
+    } on FirebaseException catch (e) {
+      if (mounted) Navigator.pop(context); // close loader
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Order failed: ${e.message}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } catch (e) {
+      if (mounted) Navigator.pop(context); // close loader
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Something went wrong: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override

@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../widgets/professional_loader.dart';
@@ -98,9 +99,12 @@ class _OrderPlacedScreenState extends State<OrderPlacedScreen>
   final List<_ConfettiParticle> _particles = [];
   final Random _rng = Random();
 
+  bool _authReady = false; // ← tracks anonymous auth state
+
   @override
   void initState() {
     super.initState();
+    _ensureAuth(); // ← ensure anonymous auth before Firestore read
     _spawnParticles();
 
     _confettiCtrl = AnimationController(
@@ -146,6 +150,18 @@ class _OrderPlacedScreenState extends State<OrderPlacedScreen>
     });
   }
 
+  // ── Ensure anonymous auth before Firestore read ───────────────────────────
+  Future<void> _ensureAuth() async {
+    try {
+      if (FirebaseAuth.instance.currentUser == null) {
+        await FirebaseAuth.instance.signInAnonymously();
+      }
+    } catch (_) {
+      // Even if sign-in fails, attempt the read — rules may allow it
+    }
+    if (mounted) setState(() => _authReady = true);
+  }
+
   void _spawnParticles() {
     final colors = [
       const Color(0xFFE8532A),
@@ -186,7 +202,14 @@ class _OrderPlacedScreenState extends State<OrderPlacedScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFEEEEF4),
-      body: StreamBuilder<DocumentSnapshot>(
+      body: !_authReady
+      // ── Wait for anonymous auth before opening Firestore stream ──────
+          ? const Center(
+        child: CircularProgressIndicator(
+          color: Color(0xFF7C3AED),
+        ),
+      )
+          : StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance
             .collection('orders')
             .doc(widget.orderId)

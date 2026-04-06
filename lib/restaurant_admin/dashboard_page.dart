@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:restaurant_admin_panel/restaurant_admin/table_management.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:restaurant_admin_panel/restaurant_admin/restaurant_orders_page.dart';
 
@@ -22,7 +23,6 @@ import 'qr_download_io.dart' if (dart.library.html) 'qr_download_web.dart' as qr
 import 'manager_page.dart';
 import 'settings_page.dart';
 
-// ─── Design Tokens (matched exactly from Figma screenshot) ──────────────────
 class _C {
   // Backgrounds
   static const bg           = Color(0xFFFFF3EE); // warm peach page background
@@ -74,6 +74,7 @@ List<_SItem> _getSidebarItems(BuildContext context) {
   return [
     _SItem(Icons.space_dashboard_outlined,   localizations.translate("dashboard.title")),
     _SItem(Icons.shopping_bag_outlined,      localizations.translate("orders.title")),
+    _SItem(Icons.table_restaurant_outlined,  localizations.translate("tables.title")),
     _SItem(Icons.folder_open_outlined,       localizations.translate("categories.title")),
     _SItem(Icons.restaurant_outlined,        localizations.translate("menu_items.title")),
     _SItem(Icons.storefront_outlined,        localizations.translate("customer_menu.title")),
@@ -192,7 +193,7 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   void _nav(int i) {
-    if (i == 5) {
+    if (i == 6) {
       _showQrDialog();
       return;
     }
@@ -424,14 +425,16 @@ class _DashboardPageState extends State<DashboardPage> {
       case 1:
         return RestaurantOrdersPage(restaurantId: widget.restaurantId);
       case 2:
-        return CategoryPage(restaurantId: widget.restaurantId);
+        return TableManagementPage(restaurantId: widget.restaurantId);
       case 3:
-        return MenuPage(restaurantId: widget.restaurantId);
+        return CategoryPage(restaurantId: widget.restaurantId);
       case 4:
+        return MenuPage(restaurantId: widget.restaurantId);
+      case 5:
         return CustomerMenuPage(restaurantId: widget.restaurantId);
-      case 6:
-        return ManagerPage(restaurantId: widget.restaurantId);
       case 7:
+        return ManagerPage(restaurantId: widget.restaurantId);
+      case 8:
         return SettingsPage(restaurantId: widget.restaurantId);
       case 0:
       default:

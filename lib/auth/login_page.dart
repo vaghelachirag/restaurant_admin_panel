@@ -62,6 +62,9 @@ class _LoginPageState extends State<LoginPage>
   }
 
   Future<void> login() async {
+    emailController.text = "havemore@gmail.com";
+    passwordController.text = "123456";
+
     final l10n = AppLocalizations.of(context);
     if (emailController.text.trim().isEmpty ||
         passwordController.text.trim().isEmpty) {
