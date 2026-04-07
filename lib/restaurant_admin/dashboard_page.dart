@@ -200,20 +200,30 @@ class _DashboardPageState extends State<DashboardPage> {
     setState(() => _selectedIndex = i);
   }
 
-  String get _link =>
+  // ── Base menu URL (no table) ─────────────────────────────────────────────
+  String get _baseLink =>
       "https://restaurant-menu-system-fc074.web.app/#/menu/${widget.restaurantId}";
 
-  Future<void> _downloadQR() async {
+  // ── Build link for a specific table (or base if tableId is empty) ────────
+  String _linkForTable(String tableId) => tableId.isEmpty
+      ? _baseLink
+      : "$_baseLink?table=$tableId";
+
+  // ── Download QR for given link ───────────────────────────────────────────
+  Future<void> _downloadQRForLink(String link, String tableId) async {
     try {
-      final ok = QrValidator.validate(data: _link);
+      final ok = QrValidator.validate(data: link);
       if (ok.status == QrValidationStatus.error) throw Exception('Invalid QR data');
       final painter = QrPainter(
-          data: _link, version: QrVersions.auto,
+          data: link, version: QrVersions.auto,
           color: const Color(0xFF000000), emptyColor: const Color(0xFFFFFFFF), gapless: true);
       final img = await painter.toImageData(300);
       final bytes = img?.buffer.asUint8List();
       if (bytes == null) throw Exception('Failed to generate QR');
-      await qr_download.saveQrBytesToPlatform(bytes, 'menu_qr_${widget.restaurantId}.png');
+      final fileName = tableId.isEmpty
+          ? 'menu_qr_${widget.restaurantId}.png'
+          : 'menu_qr_${widget.restaurantId}_$tableId.png';
+      await qr_download.saveQrBytesToPlatform(bytes, fileName);
       if (mounted) _snack(AppLocalizations.of(context).copied, Icons.check_circle_rounded, _C.green);
     } catch (e) {
       if (mounted) _snack("${AppLocalizations.of(context).error}: $e", Icons.error_rounded, _C.red);
@@ -221,85 +231,46 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   void _showQrDialog() {
+    // Show loader snack while fetching tables
+    FirebaseFirestore.instance
+        .collection('restaurants')
+        .doc(widget.restaurantId)
+        .collection('tables')
+        .where('is_active', isEqualTo: true)
+        .get()
+        .then((snap) {
+      final tables = <Map<String, String>>[
+        {'id': '', 'name': 'Default (No Table)'},
+        ...snap.docs.map((d) => {
+          'id': d.id,
+          'name': (d.data()['name'] as String? ?? d.id),
+        }),
+      ];
+      if (mounted) _openQrDialog(tables);
+    }).catchError((_) {
+      // Fallback to default if tables can't be fetched
+      if (mounted) {
+        _openQrDialog(const [{'id': '', 'name': 'Default (No Table)'}]);
+      }
+    });
+  }
+
+  void _openQrDialog(List<Map<String, String>> tables) {
     showDialog(
       context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 420),
-          padding: const EdgeInsets.all(26),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.1),
-                  blurRadius: 40, offset: const Offset(0, 16))
-            ],
-          ),
-          child: Column(mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                        color: _C.orangeLight,
-                        borderRadius: BorderRadius.circular(12)),
-                    child: const Icon(Icons.qr_code_2_rounded, color: _C.orange, size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(child: Text(AppLocalizations.of(context).menuQrLink,
-                      style: _p(17, FontWeight.w700, _C.textDark))),
-                  GestureDetector(
-                    onTap: () => Navigator.pop(ctx),
-                    child: const Icon(Icons.close_rounded, color: _C.textLight, size: 22),
-                  ),
-                ]),
-                const SizedBox(height: 20),
-                Center(
-                  child: Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: _C.cardBorder),
-                      boxShadow: [
-                        BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)
-                      ],
-                    ),
-                    child: QrImageView(
-                      data: _link, version: QrVersions.auto, size: 170,
-                      eyeStyle: const QrEyeStyle(
-                          eyeShape: QrEyeShape.square, color: Color(0xFF000000)),
-                      dataModuleStyle: const QrDataModuleStyle(
-                          dataModuleShape: QrDataModuleShape.square,
-                          color: Color(0xFF000000)),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(11),
-                  decoration: BoxDecoration(
-                      color: const Color(0xFFF7F7F7),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: _C.cardBorder)),
-                  child: SelectableText(_link,
-                      style: _p(11, FontWeight.w400, _C.textMid)),
-                ),
-                const SizedBox(height: 16),
-                Row(children: [
-                  Expanded(child: _qrBtn(AppLocalizations.of(context).copyLink, Icons.copy_rounded,
-                      _C.orangeLight, _C.orange, () {
-                        Clipboard.setData(ClipboardData(text: _link));
-                        _snack(AppLocalizations.of(context).copied, Icons.check_circle_rounded, _C.orange);
-                      })),
-                  const SizedBox(width: 12),
-                  Expanded(child: _qrBtn(AppLocalizations.of(context).downloadQr, Icons.download_rounded,
-                      _C.orange, Colors.white, _downloadQR)),
-                ]),
-              ]),
-        ),
+      builder: (ctx) => _QrDialog(
+        tables: tables,
+        buildLink: _linkForTable,
+        onDownload: _downloadQRForLink,
+        onCopy: (link) {
+          Clipboard.setData(ClipboardData(text: link));
+          _snack(AppLocalizations.of(context).copied,
+              Icons.check_circle_rounded, _C.orange);
+        },
+        onClose: () => Navigator.pop(ctx),
+        title: AppLocalizations.of(context).menuQrLink,
+        copyLabel: AppLocalizations.of(context).copyLink,
+        downloadLabel: AppLocalizations.of(context).downloadQr,
       ),
     );
   }
@@ -1065,6 +1036,292 @@ class _SalesChart extends StatelessWidget {
           )),
         ),
       ]),
+    );
+  }
+}
+
+// ─── Table-aware QR Dialog ────────────────────────────────────────────────────
+class _QrDialog extends StatefulWidget {
+  final List<Map<String, String>> tables;
+  final String Function(String tableId) buildLink;
+  final Future<void> Function(String link, String tableId) onDownload;
+  final void Function(String link) onCopy;
+  final VoidCallback onClose;
+  final String title;
+  final String copyLabel;
+  final String downloadLabel;
+
+  const _QrDialog({
+    required this.tables,
+    required this.buildLink,
+    required this.onDownload,
+    required this.onCopy,
+    required this.onClose,
+    required this.title,
+    required this.copyLabel,
+    required this.downloadLabel,
+  });
+
+  @override
+  State<_QrDialog> createState() => _QrDialogState();
+}
+
+class _QrDialogState extends State<_QrDialog> {
+  late String _selectedTableId;
+  bool _downloading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Default to first table if exists, otherwise empty (no table)
+    _selectedTableId = widget.tables.length > 1
+        ? widget.tables[1]['id']! // first real table
+        : '';
+  }
+
+  String get _currentLink => widget.buildLink(_selectedTableId);
+
+  String get _selectedTableName {
+    final match = widget.tables.firstWhere(
+          (t) => t['id'] == _selectedTableId,
+      orElse: () => {'id': '', 'name': 'Default (No Table)'},
+    );
+    return match['name']!;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 420),
+        padding: const EdgeInsets.all(26),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 40,
+                offset: const Offset(0, 16))
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Header ──────────────────────────────────────────────────────
+            Row(children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                    color: _C.orangeLight,
+                    borderRadius: BorderRadius.circular(12)),
+                child: const Icon(Icons.qr_code_2_rounded,
+                    color: _C.orange, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                  child: Text(widget.title,
+                      style: _p(17, FontWeight.w700, _C.textDark))),
+              GestureDetector(
+                onTap: widget.onClose,
+                child: const Icon(Icons.close_rounded,
+                    color: _C.textLight, size: 22),
+              ),
+            ]),
+            const SizedBox(height: 20),
+
+            // ── Table selector ───────────────────────────────────────────────
+            if (widget.tables.length > 1) ...[
+              Text('Select Table',
+                  style: _p(12, FontWeight.w600, _C.textDark)),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: _C.cardBorder),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedTableId,
+                    isExpanded: true,
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                        color: _C.textMid),
+                    style: _p(13, FontWeight.w500, _C.textDark),
+                    onChanged: (v) {
+                      if (v != null) setState(() => _selectedTableId = v);
+                    },
+                    items: widget.tables
+                        .map((t) => DropdownMenuItem(
+                      value: t['id'],
+                      child: Row(children: [
+                        Icon(
+                          t['id']!.isEmpty
+                              ? Icons.public_rounded
+                              : Icons.table_restaurant_rounded,
+                          size: 16,
+                          color: t['id']!.isEmpty
+                              ? _C.textLight
+                              : _C.orange,
+                        ),
+                        const SizedBox(width: 10),
+                        Text(t['name']!),
+                      ]),
+                    ))
+                        .toList(),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // ── QR Code ──────────────────────────────────────────────────────
+            Center(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 220),
+                child: Container(
+                  key: ValueKey(_currentLink),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: _C.cardBorder),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10)
+                    ],
+                  ),
+                  child: QrImageView(
+                    data: _currentLink,
+                    version: QrVersions.auto,
+                    size: 170,
+                    eyeStyle: const QrEyeStyle(
+                        eyeShape: QrEyeShape.square,
+                        color: Color(0xFF000000)),
+                    dataModuleStyle: const QrDataModuleStyle(
+                        dataModuleShape: QrDataModuleShape.square,
+                        color: Color(0xFF000000)),
+                  ),
+                ),
+              ),
+            ),
+
+            // ── Table label under QR ─────────────────────────────────────────
+            const SizedBox(height: 10),
+            Center(
+              child: Container(
+                padding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                decoration: BoxDecoration(
+                  color: _selectedTableId.isEmpty
+                      ? const Color(0xFFF5F5F5)
+                      : _C.orangeLight,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(
+                    _selectedTableId.isEmpty
+                        ? Icons.public_rounded
+                        : Icons.table_restaurant_rounded,
+                    size: 13,
+                    color: _selectedTableId.isEmpty ? _C.textLight : _C.orange,
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    _selectedTableName,
+                    style: _p(
+                        11,
+                        FontWeight.w600,
+                        _selectedTableId.isEmpty ? _C.textMid : _C.orange),
+                  ),
+                ]),
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // ── Link preview ─────────────────────────────────────────────────
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(11),
+              decoration: BoxDecoration(
+                  color: const Color(0xFFF7F7F7),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: _C.cardBorder)),
+              child: SelectableText(_currentLink,
+                  style: _p(10, FontWeight.w400, _C.textMid)),
+            ),
+            const SizedBox(height: 16),
+
+            // ── Action buttons ───────────────────────────────────────────────
+            Row(children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => widget.onCopy(_currentLink),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                        color: _C.orangeLight,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: _C.cardBorder)),
+                    child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.copy_rounded,
+                              color: _C.orange, size: 15),
+                          const SizedBox(width: 7),
+                          Text(widget.copyLabel,
+                              style: _p(13, FontWeight.w600, _C.orange)),
+                        ]),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: GestureDetector(
+                  onTap: _downloading
+                      ? null
+                      : () async {
+                    setState(() => _downloading = true);
+                    await widget.onDownload(
+                        _currentLink, _selectedTableId);
+                    if (mounted) setState(() => _downloading = false);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                        color: _downloading
+                            ? _C.orange.withOpacity(0.6)
+                            : _C.orange,
+                        borderRadius: BorderRadius.circular(10)),
+                    child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _downloading
+                              ? const SizedBox(
+                              width: 15,
+                              height: 15,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white))
+                              : const Icon(Icons.download_rounded,
+                              color: Colors.white, size: 15),
+                          const SizedBox(width: 7),
+                          Text(widget.downloadLabel,
+                              style:
+                              _p(13, FontWeight.w600, Colors.white)),
+                        ]),
+                  ),
+                ),
+              ),
+            ]),
+          ],
+        ),
+      ),
     );
   }
 }

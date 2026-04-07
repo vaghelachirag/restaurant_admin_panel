@@ -66,6 +66,10 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
   bool _isFirebaseReady = false;
   bool _hasRestaurantIdError = false;
 
+  // ── Table pre-selection from QR URL (?table=T01) ─────────────────────────
+  String? _preselectedTableId;
+  String? _preselectedTableName;
+
   static const Color _primaryColor = Color(0xFFE24B4A);
 
   @override
@@ -82,6 +86,8 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     } else {
       _isFirebaseReady = true;
     }
+    // Read ?table=T01 from URL on web
+    _readTableFromUrl();
   }
 
   @override
@@ -92,6 +98,47 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     _cartBounce.dispose();
     _selectedCategoryIdNotifier.dispose();
     super.dispose();
+  }
+
+  // ── Read ?table=T01 from URL fragment — works with hash routing ───────────
+  // URL format: https://.../#/menu/{restaurantId}?table=T01
+  // The ?table= lives inside the fragment, so Uri.base.queryParameters
+  // won't find it. We parse the fragment string manually.
+  void _readTableFromUrl() {
+    if (!kIsWeb) return;
+    try {
+      // Uri.base.fragment = "/menu/{restaurantId}?table=T01"
+      final fragment = Uri.base.fragment;
+      if (!fragment.contains('?')) return;
+
+      final queryString = fragment.split('?').last; // "table=T01"
+      final params = Uri.splitQueryString(queryString); // {"table": "T01"}
+      final tableId = params['table'] ?? '';
+      if (tableId.isEmpty) return;
+
+      // Set immediately so cart opens with it even before name loads
+      if (mounted) setState(() => _preselectedTableId = tableId);
+
+      // Fetch table name from Firestore for display
+      FirebaseFirestore.instance
+          .collection('restaurants')
+          .doc(widget.restaurantId)
+          .collection('tables')
+          .doc(tableId)
+          .get()
+          .then((doc) {
+        if (mounted) {
+          final name = doc.exists
+              ? ((doc.data()?['name'] as String?) ?? tableId)
+              : tableId;
+          setState(() => _preselectedTableName = name);
+        }
+      }).catchError((_) {
+        if (mounted) setState(() => _preselectedTableName = tableId);
+      });
+    } catch (_) {
+      // URL parsing failed — no table preselection
+    }
   }
 
   // ─── Cart helpers ─────────────────────────────────────────────────────────────
@@ -1147,6 +1194,45 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
             body: Column(
               children: [
                 _buildHeader(),
+
+                // ── Table banner — shown when URL has ?table=T01 ─────────
+                if (_preselectedTableId != null && _preselectedTableId!.isNotEmpty)
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(
+                        horizontal: kIsWeb ? 16 : 16.w,
+                        vertical: kIsWeb ? 8 : 8.h),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFFF0E8),
+                      border: Border(
+                          bottom: BorderSide(color: Color(0xFFFFD5BC), width: 1)),
+                    ),
+                    child: Row(children: [
+                      const Icon(Icons.table_restaurant_rounded,
+                          color: Color(0xFFE8622A), size: 16),
+                      SizedBox(width: kIsWeb ? 8 : 8.w),
+                      Expanded(
+                        child: Text(
+                          'Ordering for: ${_preselectedTableName ?? _preselectedTableId}',
+                          style: GoogleFonts.poppins(
+                            fontSize: kIsWeb ? 12 : 12.sp,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFFE8622A),
+                          ),
+                        ),
+                      ),
+                      const Icon(Icons.check_circle_rounded,
+                          color: Color(0xFF2ECC71), size: 14),
+                      SizedBox(width: kIsWeb ? 4 : 4.w),
+                      Text('Auto-selected',
+                          style: GoogleFonts.poppins(
+                            fontSize: kIsWeb ? 10 : 10.sp,
+                            color: const Color(0xFF2ECC71),
+                            fontWeight: FontWeight.w500,
+                          )),
+                    ]),
+                  ),
+
                 Expanded(
                   child: IndexedStack(
                     index: _selectedTabIndex,
@@ -1260,7 +1346,9 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                             MaterialPageRoute(
                               builder: (_) => CartPage(
                                   cart: mutableCart,
-                                  restaurantId: widget.restaurantId),
+                                  restaurantId: widget.restaurantId,
+                                  preselectedTableId: _preselectedTableId,
+                                  preselectedTableName: _preselectedTableName),
                             ),
                           ).then((_) {
                             if (mounted) {

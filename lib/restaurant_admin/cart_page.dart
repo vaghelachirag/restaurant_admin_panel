@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:restaurant_admin_panel/data/models/cart_item.dart';
 
 import 'order_status_page.dart';
+import 'table_management.dart';
 
 Color _hexToColor(String hex) {
   hex = hex.replaceAll("#", "");
@@ -19,11 +20,15 @@ Color _hexToColor(String hex) {
 class CartPage extends StatefulWidget {
   final List<CartItem> cart;
   final String restaurantId;
+  final String? preselectedTableId;    // ← from QR URL
+  final String? preselectedTableName;  // ← fetched from Firestore
 
   const CartPage({
     super.key,
     required this.cart,
     required this.restaurantId,
+    this.preselectedTableId,
+    this.preselectedTableName,
   });
 
   @override
@@ -36,8 +41,22 @@ class _CartPageState extends State<CartPage> {
   final TextEditingController instructionController = TextEditingController();
 
   String orderType = "Dine In";
+  String? selectedTableId;
+  String? selectedTableName;
 
   Map<String, dynamic>? _cachedRestaurantData;
+  final TableService _tableService = TableService();
+
+  @override
+  void initState() {
+    super.initState();
+    // Auto-set table from QR URL — customer doesn't need to pick manually
+    if (widget.preselectedTableId != null &&
+        widget.preselectedTableId!.isNotEmpty) {
+      selectedTableId   = widget.preselectedTableId;
+      selectedTableName = widget.preselectedTableName ?? widget.preselectedTableId;
+    }
+  }
 
   int getTotal() {
     int total = 0;
@@ -92,6 +111,14 @@ class _CartPageState extends State<CartPage> {
       return;
     }
 
+    if (orderType == "Dine In" && selectedTableId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text("Please select a table for dine in order")),
+      );
+      return;
+    }
+
     // ── Show loading ─────────────────────────────────────────────────────────
     showDialog(
       context: context,
@@ -124,6 +151,8 @@ class _CartPageState extends State<CartPage> {
         "customerName"          : nameController.text.trim(),
         "mobile"                : mobileController.text.trim(),
         "orderType"             : orderType,
+        "tableId"               : orderType == "Dine In" ? selectedTableId : null,
+        "tableName"             : orderType == "Dine In" ? selectedTableName : null,
         "specialInstruction"    : instructionController.text.trim(),
         "status"                : "pending",
         "subtotal"              : getTotal(),
@@ -151,6 +180,22 @@ class _CartPageState extends State<CartPage> {
 
       // ── Success ───────────────────────────────────────────────────────────
       final orderId = orderRef.id;
+
+      // Update table status if it's a Dine In order
+      if (orderType == "Dine In" && selectedTableId != null) {
+        try {
+          await _tableService.updateTableStatus(
+            restaurantId: widget.restaurantId,
+            tableId: selectedTableId!,
+            status: 'occupied',
+            currentOrderId: orderId,
+          );
+        } catch (e) {
+          // Log error but don't fail the order
+          print('Error updating table status: $e');
+        }
+      }
+
       widget.cart.clear();
 
       if (mounted) {
@@ -577,6 +622,316 @@ class _CartPageState extends State<CartPage> {
                       ],
                     ),
                   ),
+                ),
+
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 220),
+                  transitionBuilder: (child, animation) => SizeTransition(
+                    sizeFactor: animation,
+                    axisAlignment: -1,
+                    child: FadeTransition(opacity: animation, child: child),
+                  ),
+                  child: orderType == "Dine In"
+                      ? Padding(
+                    key: const ValueKey('dine-in-table'),
+                    padding: EdgeInsets.fromLTRB(
+                      kIsWeb ? 16 : 16.w,
+                      kIsWeb ? 4 : 4.h,
+                      kIsWeb ? 16 : 16.w,
+                      kIsWeb ? 8 : 8.h,
+                    ),
+                    // ── If table was preselected from QR URL ──────────────
+                    child: widget.preselectedTableId != null &&
+                        widget.preselectedTableId!.isNotEmpty
+                        ? Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0FDF4),
+                        borderRadius: BorderRadius.circular(
+                            kIsWeb ? 14 : 14.r),
+                        border: Border.all(
+                            color: const Color(0xFF86EFAC), width: 1.5),
+                      ),
+                      padding: EdgeInsets.all(kIsWeb ? 16 : 16.w),
+                      child: Row(children: [
+                        Container(
+                          padding: EdgeInsets.all(kIsWeb ? 10 : 10.w),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFDCFCE7),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.table_restaurant_rounded,
+                              color: const Color(0xFF16A34A),
+                              size: kIsWeb ? 22 : 22.sp),
+                        ),
+                        SizedBox(width: kIsWeb ? 14 : 14.w),
+                        Expanded(
+                          child: Column(
+                              crossAxisAlignment:
+                              CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Table Selected',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: kIsWeb ? 13 : 13.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF15803D),
+                                  ),
+                                ),
+                                SizedBox(height: kIsWeb ? 2 : 2.h),
+                                Text(
+                                  widget.preselectedTableName ??
+                                      widget.preselectedTableId!,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: kIsWeb ? 15 : 15.sp,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF14532D),
+                                  ),
+                                ),
+                              ]),
+                        ),
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: kIsWeb ? 10 : 10.w,
+                              vertical: kIsWeb ? 4 : 4.h),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFDCFCE7),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.check_circle_rounded,
+                                    color: Color(0xFF16A34A), size: 12),
+                                SizedBox(width: kIsWeb ? 4 : 4.w),
+                                Text('Auto',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: kIsWeb ? 10 : 10.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF16A34A),
+                                    )),
+                              ]),
+                        ),
+                      ]),
+                    )
+                    // ── No preselection — show full table picker ───────
+                        : Container(
+                      decoration: BoxDecoration(
+                        color: cardColor,
+                        borderRadius:
+                        BorderRadius.circular(kIsWeb ? 14 : 14.r),
+                        border: Border.all(
+                            color: const Color(0xFFE5E7EB), width: 1),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: kIsWeb ? 8 : 8.r,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      padding: EdgeInsets.all(kIsWeb ? 16 : 16.w),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Select Table",
+                            style: GoogleFonts.poppins(
+                              fontSize: kIsWeb ? 15 : 15.sp,
+                              fontWeight: FontWeight.w600,
+                              color: textColor,
+                            ),
+                          ),
+                          SizedBox(height: kIsWeb ? 4 : 4.h),
+                          Text(
+                            "Choose a table for dine in order",
+                            style: GoogleFonts.poppins(
+                              fontSize: kIsWeb ? 12 : 12.sp,
+                              color: cardInfoColor,
+                            ),
+                          ),
+                          SizedBox(height: kIsWeb ? 14 : 14.h),
+                          StreamBuilder<List<TableModel>>(
+                            stream: _tableService
+                                .watchTables(widget.restaurantId),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(
+                                        vertical: kIsWeb ? 20 : 20.h),
+                                    child: const CircularProgressIndicator(
+                                        color: Color(0xFF7C3AED)),
+                                  ),
+                                );
+                              }
+
+                              if (snapshot.hasError) {
+                                return Center(
+                                  child: Text(
+                                    'Error loading tables: ${snapshot.error}',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: kIsWeb ? 12 : 12.sp,
+                                      color: Colors.red,
+                                    ),
+                                  ),
+                                );
+                              }
+
+                              final tables = snapshot.data ?? [];
+                              final availableTables = tables
+                                  .where((t) => t.isAvailable)
+                                  .toList();
+
+                              if (availableTables.isEmpty) {
+                                return Container(
+                                  padding: EdgeInsets.all(
+                                      kIsWeb ? 16 : 16.w),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFF3F3),
+                                    borderRadius: BorderRadius.circular(
+                                        kIsWeb ? 10 : 10.r),
+                                    border: Border.all(
+                                        color: const Color(0xFFFFE5E5)),
+                                  ),
+                                  child: Row(children: [
+                                    Icon(Icons.info_outline,
+                                        color: const Color(0xFFE74C3C),
+                                        size: kIsWeb ? 20 : 20.sp),
+                                    SizedBox(width: kIsWeb ? 8 : 8.w),
+                                    Expanded(
+                                      child: Text(
+                                        "No available tables. Please choose Parcel order.",
+                                        style: GoogleFonts.poppins(
+                                          fontSize: kIsWeb ? 12 : 12.sp,
+                                          color: const Color(0xFFE74C3C),
+                                        ),
+                                      ),
+                                    ),
+                                  ]),
+                                );
+                              }
+
+                              return Wrap(
+                                spacing: kIsWeb ? 8 : 8.w,
+                                runSpacing: kIsWeb ? 8 : 8.h,
+                                children: availableTables.map((table) {
+                                  final isSelected =
+                                      selectedTableId == table.tableId;
+                                  return GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        selectedTableId = table.tableId;
+                                        selectedTableName = table.name;
+                                      });
+                                    },
+                                    child: AnimatedContainer(
+                                      duration: const Duration(
+                                          milliseconds: 180),
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal:
+                                        kIsWeb ? 16 : 16.w,
+                                        vertical: kIsWeb ? 12 : 12.h,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? primaryColor
+                                            .withOpacity(0.1)
+                                            : Colors.white,
+                                        borderRadius:
+                                        BorderRadius.circular(
+                                            kIsWeb ? 12 : 12.r),
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? primaryColor
+                                              : const Color(0xFFE5E7EB),
+                                          width: isSelected ? 1.8 : 1,
+                                        ),
+                                      ),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons
+                                                .table_restaurant_rounded,
+                                            color: isSelected
+                                                ? primaryColor
+                                                : cardInfoColor,
+                                            size: kIsWeb ? 24 : 24.sp,
+                                          ),
+                                          SizedBox(
+                                              height:
+                                              kIsWeb ? 4 : 4.h),
+                                          Text(
+                                            table.tableId,
+                                            style: GoogleFonts.poppins(
+                                              fontSize:
+                                              kIsWeb ? 12 : 12.sp,
+                                              fontWeight: FontWeight.w600,
+                                              color: isSelected
+                                                  ? primaryColor
+                                                  : textColor,
+                                            ),
+                                          ),
+                                          SizedBox(
+                                              height:
+                                              kIsWeb ? 2 : 2.h),
+                                          Text(
+                                            table.name,
+                                            style: GoogleFonts.poppins(
+                                              fontSize:
+                                              kIsWeb ? 10 : 10.sp,
+                                              color: isSelected
+                                                  ? primaryColor
+                                                  : cardInfoColor,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                          SizedBox(
+                                              height:
+                                              kIsWeb ? 2 : 2.h),
+                                          Row(
+                                            mainAxisSize:
+                                            MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons
+                                                    .people_outline_rounded,
+                                                color: isSelected
+                                                    ? primaryColor
+                                                    : cardInfoColor,
+                                                size:
+                                                kIsWeb ? 12 : 12.sp,
+                                              ),
+                                              SizedBox(
+                                                  width:
+                                                  kIsWeb ? 2 : 2.w),
+                                              Text(
+                                                '${table.capacity}',
+                                                style:
+                                                GoogleFonts.poppins(
+                                                  fontSize:
+                                                  kIsWeb ? 10 : 10.sp,
+                                                  color: isSelected
+                                                      ? primaryColor
+                                                      : cardInfoColor,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                      : const SizedBox.shrink(key: ValueKey('parcel-table-empty')),
                 ),
 
                 AnimatedSwitcher(

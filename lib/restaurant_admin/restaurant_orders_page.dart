@@ -3,6 +3,7 @@ import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:restaurant_admin_panel/restaurant_admin/table_management.dart';
 import 'dart:async';
 import '../uttils/session_manager.dart';
 import '../widgets/WebAudioStub.dart';
@@ -21,7 +22,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
   String? _playerId;
   StreamSubscription<QuerySnapshot>? _newOrdersSubscription;
   String? _currentUserRole;
-  
+
   final LocalizationService _localizationService = LocalizationService();
 
   // ── Pagination ──────────────────────────────────────────────────────────────
@@ -313,7 +314,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
 
   Map<String, int> _buildStatusCounts(List<QueryDocumentSnapshot> allOrders) {
     final loc = AppLocalizations.of(context);
-    
+
     int countStatus(String status) {
       return allOrders.where((doc) {
         final data = doc.data() as Map<String, dynamic>;
@@ -374,7 +375,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
               ),
 
               // Status summary pills — all screen sizes, always scrollable
-          /*    Flexible(
+              /*    Flexible(
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -409,22 +410,22 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
                 ),
               ),*/
               !kIsWeb
-              ? GestureDetector(
-              onTap: _handleLogout,
-              child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-              color: const Color(0xFFF5F5F5),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFEEEEEE)),
-              ),
-              child: const Icon(
-              Icons.logout_rounded,
-              size: 18,
-              color: Color(0xFF444444),
-              ),
-              ),
+                  ? GestureDetector(
+                onTap: _handleLogout,
+                child: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5F5F5),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFEEEEEE)),
+                  ),
+                  child: const Icon(
+                    Icons.logout_rounded,
+                    size: 18,
+                    color: Color(0xFF444444),
+                  ),
+                ),
               ) : const SizedBox.shrink(),
             ],
           ),
@@ -716,21 +717,28 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
   Widget _buildOrderCard(
       QueryDocumentSnapshot order, Map<String, dynamic> data) {
     final loc = AppLocalizations.of(context);
-    final tableNumber = (data["tableNumber"] ?? "").toString();
-    final status = (data["status"] ?? "pending").toString();
+    // ── Support both old field (tableNumber) and new fields (tableId/tableName)
+    final tableNumber  = (data["tableNumber"] ?? "").toString();
+    final tableId      = (data["tableId"]     ?? "").toString();
+    final tableName    = (data["tableName"]   ?? "").toString();
+    final displayTable = tableName.isNotEmpty ? tableName
+        : tableId.isNotEmpty   ? tableId
+        : tableNumber;
+
+    final status       = (data["status"] ?? "pending").toString();
     final customerName = (data["customerName"] ?? "Guest").toString();
-    final items = (data["items"] as List?) ?? [];
-    final totalAmount = (data["totalAmount"] ?? 0) as num;
-    final createdAt = data["createdAt"] as Timestamp?;
-    final orderNumber =
+    final items        = (data["items"] as List?) ?? [];
+    final totalAmount  = (data["totalAmount"] ?? 0) as num;
+    final createdAt    = data["createdAt"] as Timestamp?;
+    final orderNumber  =
     (data["orderNumber"] ?? "#${1000 + order.id.hashCode.abs() % 1000}")
         .toString();
 
     final orderType = (data["orderType"] ?? "").toString().toLowerCase();
-    final isDineIn = orderType == "dine in" ||
+    final isDineIn  = orderType == "dine in" ||
         orderType == "dine-in" ||
         orderType == "dinein" ||
-        (orderType.isEmpty && tableNumber.isNotEmpty);
+        (orderType.isEmpty && displayTable.isNotEmpty);
 
     final bool isCompleted = status.toLowerCase() == 'completed';
     final Color btnBg = _getStatusPillText(status);
@@ -738,6 +746,25 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
 
     final displayedItems = items.take(3).toList();
     final extraCount = items.length - 3;
+
+    Future<void> updateStatus(String nextStatus) async {
+      await FirebaseFirestore.instance
+          .collection("orders")
+          .doc(order.id)
+          .update({"status": nextStatus});
+
+      // When order is completed, free the linked table
+      if (nextStatus == 'completed' && isDineIn && tableId.isNotEmpty) {
+        try {
+          await TableService().freeTable(
+            restaurantId: widget.restaurantId,
+            tableId: tableId,
+          );
+        } catch (_) {
+          // Don't block order completion if table update fails
+        }
+      }
+    }
 
     return Container(
       decoration: BoxDecoration(
@@ -769,14 +796,32 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
                     children: [
                       Text(
                         isDineIn
-                            ? (tableNumber.isNotEmpty
-                            ? '${loc.table} $tableNumber'
+                            ? (displayTable.isNotEmpty
+                            ? '${loc.table} $displayTable'
                             : loc.dineIn)
                             : loc.takeaway,
                         style:
                         _p(14, FontWeight.w700, const Color(0xFF232323)),
                       ),
-                      if (isDineIn)
+                      if (isDineIn && displayTable.isNotEmpty)
+                      /*  Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF0E8),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            const Icon(Icons.table_restaurant_rounded,
+                                size: 10, color: Color(0xFFE8622A)),
+                            const SizedBox(width: 3),
+                            Text(
+                              displayTable,
+                              style: _p(10, FontWeight.w600,
+                                  const Color(0xFFE8622A)),
+                            ),
+                          ]),
+                        )*/
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 7, vertical: 2),
@@ -910,13 +955,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
                   SizedBox(
                     height: 32,
                     child: ElevatedButton(
-                      onPressed: () {
-                        FirebaseFirestore.instance
-                            .collection("orders")
-                            .doc(order.id)
-                            .update(
-                            {"status": _getNextStatusValue(status)});
-                      },
+                      onPressed: () => updateStatus(_getNextStatusValue(status)),
                       style: ElevatedButton.styleFrom(
                         elevation: 0,
                         backgroundColor: btnBg,
