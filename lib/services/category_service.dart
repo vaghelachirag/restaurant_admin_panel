@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../data/models/category_model.dart';
 import '../data/models/menu_item_model.dart';
 
@@ -86,6 +87,10 @@ class CategoryService {
 
     return (items: resolved, categoryMap: catMap);
   }
+
+  // ──────────────────────────────────────────────────────────
+  //  Internal: Create new categories via WriteBatch
+  // ──────────────────────────────────────────────────────────
 
   Future<void> _createCategories({
     required String restaurantId,
