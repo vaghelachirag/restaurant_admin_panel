@@ -2,12 +2,15 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
+import 'package:restaurant_admin_panel/restaurant_admin/upload_csv_upload.dart';
 import '../../uttils/responsive.dart';
 import '../services/localization_service.dart';
 import '../utils/snackbar_helper.dart';
+
 
 class MenuPage extends StatefulWidget {
   final String restaurantId;
@@ -1510,6 +1513,41 @@ class _MenuPageState extends State<MenuPage> {
                         ),
                       ),
                       const Spacer(),
+                      // ── Import CSV ────────────────────────────────
+                      OutlinedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ProviderScope(
+                                child: CsvUploadPage(
+                                  restaurantId: widget.restaurantId,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF070B2D),
+                          side: const BorderSide(color: Color(0xFF070B2D), width: 1.5),
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.upload_file_rounded, size: 16),
+                            const SizedBox(width: 8),
+                            Text(
+                              isMobile ? 'CSV' : 'Import CSV',
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      // ── Add Menu Item ─────────────────────────────────
                       ElevatedButton(
                         onPressed: addMenuItem,
                         style: ElevatedButton.styleFrom(
@@ -1585,245 +1623,245 @@ class _MenuPageState extends State<MenuPage> {
                   builder: (context, snapshot) {
                     if (snapshot.hasError) {
                       return Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Text(AppLocalizations.of(context).failedToLoadMenu, style: const TextStyle(color: Colors.red), textAlign: TextAlign.center),
-                            ),
-                          );
-                      }
-                          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Text(AppLocalizations.of(context).failedToLoadMenu, style: const TextStyle(color: Colors.red), textAlign: TextAlign.center),
+                        ),
+                      );
+                    }
+                    if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
-                      final allItems = snapshot.data!.docs;
-                      final items = allItems.where((doc) {
-                        final data = doc.data() as Map<String, dynamic>;
-                        final name = (data['name'] ?? '').toString().toLowerCase();
-                        final desc = (data['description'] ?? '').toString().toLowerCase();
-                        final categoryId = (data['categoryId'] ?? '').toString();
-                        final categoryName = (categoryMap[categoryId] ?? '').toLowerCase();
-                        if (_searchQuery.isEmpty) return true;
-                        return name.contains(_searchQuery) || desc.contains(_searchQuery) || categoryName.contains(_searchQuery);
-                      }).toList();
+                    final allItems = snapshot.data!.docs;
+                    final items = allItems.where((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      final name = (data['name'] ?? '').toString().toLowerCase();
+                      final desc = (data['description'] ?? '').toString().toLowerCase();
+                      final categoryId = (data['categoryId'] ?? '').toString();
+                      final categoryName = (categoryMap[categoryId] ?? '').toLowerCase();
+                      if (_searchQuery.isEmpty) return true;
+                      return name.contains(_searchQuery) || desc.contains(_searchQuery) || categoryName.contains(_searchQuery);
+                    }).toList();
 
-                      if (items.isEmpty) {
-                        return Padding(
-                          padding: const EdgeInsets.fromLTRB(28, 20, 28, 30),
-                          child: Center(
-                            child: Text(
-                              _searchQuery.isEmpty ? AppLocalizations.of(context).noMenuItems : AppLocalizations.of(context).noResultsForSearch,
-                              style: const TextStyle(fontSize: 15, color: Color(0xFF6B7280)),
-                            ),
-                          ),
-                        );
-                      }
-
-                      final isTablet = Responsive.isTablet(context);
-                      final crossAxisCount = isDesktop ? 4 : (isTablet ? 2 : 1);
-
+                    if (items.isEmpty) {
                       return Padding(
-                        padding: EdgeInsets.fromLTRB(isDesktop ? 28 : 16, 10, isDesktop ? 28 : 16, 30),
-                        child: GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: crossAxisCount,
-                            // Image ~58%, info ~42% — matches screenshot card proportions
-                            childAspectRatio: isDesktop ? 0.68 : 0.72,
-                            crossAxisSpacing: 14,
-                            mainAxisSpacing: 14,
+                        padding: const EdgeInsets.fromLTRB(28, 20, 28, 30),
+                        child: Center(
+                          child: Text(
+                            _searchQuery.isEmpty ? AppLocalizations.of(context).noMenuItems : AppLocalizations.of(context).noResultsForSearch,
+                            style: const TextStyle(fontSize: 15, color: Color(0xFF6B7280)),
                           ),
-                          itemCount: items.length,
-                          itemBuilder: (context, index) {
-                            final doc = items[index];
-                            final data = doc.data() as Map<String, dynamic>;
-                            final List variants = (data['variants'] ?? []) as List;
-                            final String name = (data['name'] ?? '').toString();
-                            final String imageUrl = (data['image'] ?? '').toString();
-                            final String description = (data['description'] ?? '').toString();
-                            final String categoryId = (data['categoryId'] ?? '').toString();
-                            final String categoryName = (categoryMap[categoryId] ?? '').toString();
-                            final num firstPrice = variants.isNotEmpty ? (variants.first['price'] ?? 0) as num : 0;
-                            final bool isVeg = data['isVeg'] ?? true;
+                        ),
+                      );
+                    }
 
-                            return Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: const Color(0xFFE5E7EB)),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.04),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 3),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    flex: 58,
-                                    child: ClipRRect(
-                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-                                      child: imageUrl.isNotEmpty
-                                          ? Image.network(
-                                        imageUrl,
-                                        width: double.infinity,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) => Container(
-                                          color: const Color(0xFFF3F4F6),
-                                          child: const Center(child: Icon(Icons.fastfood_rounded, color: Color(0xFFCCCCCC), size: 36)),
-                                        ),
-                                      )
-                                          : Container(
+                    final isTablet = Responsive.isTablet(context);
+                    final crossAxisCount = isDesktop ? 4 : (isTablet ? 2 : 1);
+
+                    return Padding(
+                      padding: EdgeInsets.fromLTRB(isDesktop ? 28 : 16, 10, isDesktop ? 28 : 16, 30),
+                      child: GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: crossAxisCount,
+                          // Image ~58%, info ~42% — matches screenshot card proportions
+                          childAspectRatio: isDesktop ? 0.68 : 0.72,
+                          crossAxisSpacing: 14,
+                          mainAxisSpacing: 14,
+                        ),
+                        itemCount: items.length,
+                        itemBuilder: (context, index) {
+                          final doc = items[index];
+                          final data = doc.data() as Map<String, dynamic>;
+                          final List variants = (data['variants'] ?? []) as List;
+                          final String name = (data['name'] ?? '').toString();
+                          final String imageUrl = (data['image'] ?? '').toString();
+                          final String description = (data['description'] ?? '').toString();
+                          final String categoryId = (data['categoryId'] ?? '').toString();
+                          final String categoryName = (categoryMap[categoryId] ?? '').toString();
+                          final num firstPrice = variants.isNotEmpty ? (variants.first['price'] ?? 0) as num : 0;
+                          final bool isVeg = data['isVeg'] ?? true;
+
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: const Color(0xFFE5E7EB)),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.04),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  flex: 58,
+                                  child: ClipRRect(
+                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+                                    child: imageUrl.isNotEmpty
+                                        ? Image.network(
+                                      imageUrl,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) => Container(
                                         color: const Color(0xFFF3F4F6),
                                         child: const Center(child: Icon(Icons.fastfood_rounded, color: Color(0xFFCCCCCC), size: 36)),
                                       ),
+                                    )
+                                        : Container(
+                                      color: const Color(0xFFF3F4F6),
+                                      child: const Center(child: Icon(Icons.fastfood_rounded, color: Color(0xFFCCCCCC), size: 36)),
                                     ),
                                   ),
+                                ),
 
-                                  // ── Card info section (bottom ~42 flex) ───────
-                                  Expanded(
-                                    flex: 42,
-                                    child: Padding(
-                                      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          // Item name + edit/delete
-                                          Row(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  name,
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  style: const TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w700,
-                                                    color: Color(0xFF1A1A1A),
-                                                  ),
-                                                ),
-                                              ),
-                                              InkWell(
-                                                onTap: () => editMenuItem(doc),
-                                                borderRadius: BorderRadius.circular(6),
-                                                child: Padding(
-                                                  padding: const EdgeInsets.all(2),
-                                                  child: Icon(Icons.edit_outlined, size: 30, color: Colors.grey[500]),
-                                                ),
-                                              ),
-                                              const SizedBox(width: 6),
-                                              InkWell(
-                                                onTap: () => deleteMenuItem(doc.id, name),
-                                                borderRadius: BorderRadius.circular(6),
-                                                child: const Padding(
-                                                  padding: EdgeInsets.all(2),
-                                                  child: Icon(Icons.delete_outline, size: 30, color: Color(0xFFEF4444)),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 5),
-                                          Row(
-                                            children: [
-                                              if (categoryName.isNotEmpty)
-                                                Container(
-                                                  margin: const EdgeInsets.only(bottom: 5, right: 5),
-                                                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                                                  decoration: BoxDecoration(
-                                                    color: const Color(0xFFFFF0E6),
-                                                    borderRadius: BorderRadius.circular(20),
-                                                    border: Border.all(color: const Color(0xFFE8622A).withOpacity(0.35)),
-                                                  ),
-                                                  child: Text(
-                                                    categoryName,
-                                                    style: const TextStyle(
-                                                      fontSize: 11,
-                                                      fontWeight: FontWeight.w600,
-                                                      color: Color(0xFFE8622A),
-                                                    ),
-                                                  ),
-                                                ),
-                                              Container(
-                                                margin: const EdgeInsets.only(bottom: 5),
-                                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                                                decoration: BoxDecoration(
-                                                  color: isVeg ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE),
-                                                  borderRadius: BorderRadius.circular(20),
-                                                  border: Border.all(
-                                                    color: isVeg ? const Color(0xFF388E3C).withOpacity(0.5) : const Color(0xFFC62828).withOpacity(0.5),
-                                                  ),
-                                                ),
-                                                child: Row(
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  children: [
-                                                    Container(
-                                                      width: 9, height: 9,
-                                                      decoration: BoxDecoration(
-                                                        border: Border.all(
-                                                          color: isVeg ? const Color(0xFF388E3C) : const Color(0xFFC62828),
-                                                          width: 1.5,
-                                                        ),
-                                                        borderRadius: BorderRadius.circular(2),
-                                                      ),
-                                                      child: Center(
-                                                        child: Container(
-                                                          width: 4, height: 4,
-                                                          decoration: BoxDecoration(
-                                                            color: isVeg ? const Color(0xFF388E3C) : const Color(0xFFC62828),
-                                                            shape: BoxShape.circle,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 4),
-                                                    Text(
-                                                      isVeg ? AppLocalizations.of(context).veg : AppLocalizations.of(context).nonVeg,
-                                                      style: TextStyle(
-                                                        fontSize: 10,
-                                                        fontWeight: FontWeight.w600,
-                                                        color: isVeg ? const Color(0xFF388E3C) : const Color(0xFFC62828),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          if (description.isNotEmpty)
-                                            Flexible(
+                                // ── Card info section (bottom ~42 flex) ───────
+                                Expanded(
+                                  flex: 42,
+                                  child: Padding(
+                                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        // Item name + edit/delete
+                                        Row(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Expanded(
                                               child: Text(
-                                                description,
-                                                maxLines: 2,
+                                                name,
+                                                maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
                                                 style: const TextStyle(
-                                                  fontSize: 12,
-                                                  color: Color(0xFF6B7280),
-                                                  height: 1.4,
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: Color(0xFF1A1A1A),
                                                 ),
                                               ),
                                             ),
-                                          const Spacer(),
-                                          Text(
-                                            '₹${firstPrice.toStringAsFixed(2)}',
-                                            style: const TextStyle(
-                                              fontSize: 17,
-                                              fontWeight: FontWeight.w700,
-                                              color: Colors.red,
+                                            InkWell(
+                                              onTap: () => editMenuItem(doc),
+                                              borderRadius: BorderRadius.circular(6),
+                                              child: Padding(
+                                                padding: const EdgeInsets.all(2),
+                                                child: Icon(Icons.edit_outlined, size: 30, color: Colors.grey[500]),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 6),
+                                            InkWell(
+                                              onTap: () => deleteMenuItem(doc.id, name),
+                                              borderRadius: BorderRadius.circular(6),
+                                              child: const Padding(
+                                                padding: EdgeInsets.all(2),
+                                                child: Icon(Icons.delete_outline, size: 30, color: Color(0xFFEF4444)),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 5),
+                                        Row(
+                                          children: [
+                                            if (categoryName.isNotEmpty)
+                                              Container(
+                                                margin: const EdgeInsets.only(bottom: 5, right: 5),
+                                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFFFFF0E6),
+                                                  borderRadius: BorderRadius.circular(20),
+                                                  border: Border.all(color: const Color(0xFFE8622A).withOpacity(0.35)),
+                                                ),
+                                                child: Text(
+                                                  categoryName,
+                                                  style: const TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Color(0xFFE8622A),
+                                                  ),
+                                                ),
+                                              ),
+                                            Container(
+                                              margin: const EdgeInsets.only(bottom: 5),
+                                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: isVeg ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE),
+                                                borderRadius: BorderRadius.circular(20),
+                                                border: Border.all(
+                                                  color: isVeg ? const Color(0xFF388E3C).withOpacity(0.5) : const Color(0xFFC62828).withOpacity(0.5),
+                                                ),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Container(
+                                                    width: 9, height: 9,
+                                                    decoration: BoxDecoration(
+                                                      border: Border.all(
+                                                        color: isVeg ? const Color(0xFF388E3C) : const Color(0xFFC62828),
+                                                        width: 1.5,
+                                                      ),
+                                                      borderRadius: BorderRadius.circular(2),
+                                                    ),
+                                                    child: Center(
+                                                      child: Container(
+                                                        width: 4, height: 4,
+                                                        decoration: BoxDecoration(
+                                                          color: isVeg ? const Color(0xFF388E3C) : const Color(0xFFC62828),
+                                                          shape: BoxShape.circle,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    isVeg ? AppLocalizations.of(context).veg : AppLocalizations.of(context).nonVeg,
+                                                    style: TextStyle(
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: isVeg ? const Color(0xFF388E3C) : const Color(0xFFC62828),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        if (description.isNotEmpty)
+                                          Flexible(
+                                            child: Text(
+                                              description,
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                color: Color(0xFF6B7280),
+                                                height: 1.4,
+                                              ),
                                             ),
                                           ),
-                                        ],
-                                      ),
+                                        const Spacer(),
+                                        Text(
+                                          '₹${firstPrice.toStringAsFixed(2)}',
+                                          style: const TextStyle(
+                                            fontSize: 17,
+                                            fontWeight: FontWeight.w700,
+                                            color: Colors.red,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      );
-                    },
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
                 );
               },
             ),

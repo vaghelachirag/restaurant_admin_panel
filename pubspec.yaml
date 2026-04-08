@@ -57,6 +57,9 @@ dependencies:
   url_launcher: ^6.2.0
 #  flutter_local_notifications: ^17.0.0
 
+  file_picker: ^8.1.2            # File picking (web + mobile)
+  csv: ^6.0.0                    # CSV parsing
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

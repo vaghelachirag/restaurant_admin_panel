@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:restaurant_admin_panel/restaurant_admin/dashboard_page.dart';
@@ -33,14 +34,10 @@ String? _getMenuRestaurantIdFromInitialUrl() {
 
 
 Future<void> setupNotificationChannel() async {
-  // OneSignal init — channel is already registered by MainActivity.kt
   OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
   OneSignal.initialize("1dbbdcbd-590f-475c-88d0-7c6d953d63ca");
-
-  // Request permission (Android 13+ / iOS)
   await OneSignal.Notifications.requestPermission(true);
 
-  // Tap handler — fired when user taps a notification
   OneSignal.Notifications.addClickListener((OSNotificationClickEvent event) {
     final data = event.notification.additionalData;
     if (data != null && data['type'] == 'new_order') {
@@ -87,12 +84,14 @@ void main() async {
     restaurantId = await SessionManager.getRestaurantId();
   }
 
-  runApp(MyApp(
-    loggedIn: loggedIn,
-    role: role,
-    restaurantId: restaurantId,
-    menuRestaurantId: menuRestaurantId,
-  ));
+  runApp(
+    ProviderScope(   // ← add this
+      child:MyApp(
+        loggedIn: loggedIn,
+        role: role,
+        restaurantId: restaurantId,
+        menuRestaurantId: menuRestaurantId,
+      )));
 }
 
 class MyApp extends StatefulWidget {
