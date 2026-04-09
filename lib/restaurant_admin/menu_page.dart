@@ -10,6 +10,7 @@ import 'package:restaurant_admin_panel/restaurant_admin/upload_csv_upload.dart';
 import '../../uttils/responsive.dart';
 import '../services/localization_service.dart';
 import '../utils/snackbar_helper.dart';
+import 'package:restaurant_admin_panel/widgets/loading_card.dart';
 
 
 class MenuPage extends StatefulWidget {
@@ -1607,7 +1608,23 @@ class _MenuPageState extends State<MenuPage> {
                   .where("restaurantId", isEqualTo: widget.restaurantId)
                   .snapshots(),
               builder: (context, catSnapshot) {
-                if (!catSnapshot.hasData) return const Center(child: CircularProgressIndicator());
+                if (!catSnapshot.hasData) {
+                  return Padding(
+                    padding: EdgeInsets.fromLTRB(isDesktop ? 28 : 16, 10, isDesktop ? 28 : 16, 30),
+                    child: GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: isDesktop ? 4 : 2,
+                        childAspectRatio: isDesktop ? 0.68 : 0.72,
+                        crossAxisSpacing: 14,
+                        mainAxisSpacing: 14,
+                      ),
+                      itemCount: 6,
+                      itemBuilder: (context, index) => const MenuCardSkeleton(),
+                    ),
+                  );
+                }
 
                 final categories = catSnapshot.data!.docs;
                 final Map<String, String> categoryMap = {
@@ -1629,7 +1646,23 @@ class _MenuPageState extends State<MenuPage> {
                         ),
                       );
                     }
-                    if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                    if (!snapshot.hasData) {
+                      return Padding(
+                        padding: EdgeInsets.fromLTRB(isDesktop ? 28 : 16, 10, isDesktop ? 28 : 16, 30),
+                        child: GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: isDesktop ? 4 : 2,
+                            childAspectRatio: isDesktop ? 0.68 : 0.72,
+                            crossAxisSpacing: 14,
+                            mainAxisSpacing: 14,
+                          ),
+                          itemCount: 6,
+                          itemBuilder: (context, index) => const MenuCardSkeleton(),
+                        ),
+                      );
+                    }
 
                     final allItems = snapshot.data!.docs;
                     final items = allItems.where((doc) {

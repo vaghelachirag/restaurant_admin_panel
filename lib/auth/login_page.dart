@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../core/constants/app_colors.dart';
 import '../restaurant_admin/dashboard_page.dart';
+import '../restaurant_admin/manager_main_page.dart';
 import '../restaurant_admin/restaurant_orders_page.dart';
 import '../super_admin/restaurants_page.dart';
 import '../uttils/session_manager.dart';
@@ -62,9 +63,9 @@ class _LoginPageState extends State<LoginPage>
   }
 
   Future<void> login() async {
-    emailController.text = "silver@gmail.com";
+    /*emailController.text = "jaybhavani@gmail.com";
     passwordController.text = "123456";
-
+*/
     final l10n = AppLocalizations.of(context);
     if (emailController.text.trim().isEmpty ||
         passwordController.text.trim().isEmpty) {
@@ -105,7 +106,7 @@ class _LoginPageState extends State<LoginPage>
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (_) => RestaurantOrdersPage(restaurantId: restaurantId!),
+            builder: (_) => WaiterShell(restaurantId: restaurantId!,waiterId: "1",),
           ),
         );
       } else {

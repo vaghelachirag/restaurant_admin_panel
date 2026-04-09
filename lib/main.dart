@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:restaurant_admin_panel/restaurant_admin/dashboard_page.dart';
+import 'package:restaurant_admin_panel/restaurant_admin/manager_main_page.dart';
 import 'package:restaurant_admin_panel/uttils/session_manager.dart';
 import 'package:restaurant_admin_panel/services/localization_service.dart';
 
@@ -37,6 +38,7 @@ Future<void> setupNotificationChannel() async {
   OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
   OneSignal.initialize("1dbbdcbd-590f-475c-88d0-7c6d953d63ca");
   await OneSignal.Notifications.requestPermission(true);
+
 
   OneSignal.Notifications.addClickListener((OSNotificationClickEvent event) {
     final data = event.notification.additionalData;
@@ -144,8 +146,8 @@ class _MyAppState extends State<MyApp> {
 
     if (widget.role == 'manager') {
       if (widget.restaurantId == null) return const LoginPage();
-      return RestaurantOrdersPage(
-          restaurantId: widget.restaurantId!
+      return WaiterShell(
+          restaurantId: widget.restaurantId!, waiterId: '1SS',
       );
     }
 

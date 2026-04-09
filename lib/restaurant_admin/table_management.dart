@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../services/localization_service.dart';
 
-// ─── Design tokens ────────────────────────────────────────────────────────────
 class _C {
   static const bg          = Color(0xFFFFF3EE);
   static const card        = Color(0xFFFFFFFF);
@@ -201,36 +201,44 @@ class _TableManagementPageState extends State<TableManagementPage> {
                 // Header
                 Row(children: [
                   Container(
-                    padding: const EdgeInsets.all(10),
+                    width: 48,
+                    height: 48,
                     decoration: BoxDecoration(
-                        color: _C.orangeLight,
+                        color: const Color(0xFF070B2D),
                         borderRadius: BorderRadius.circular(12)),
-                    child: const Icon(Icons.table_restaurant_rounded,
-                        color: _C.orange, size: 20),
+                    child: Icon(
+                      isEdit ? Icons.edit_rounded : Icons.table_restaurant_rounded,
+                      color: Colors.white,
+                      size: 22,
+                    ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(isEdit ? 'Edit Table' : 'Add New Table',
-                              style: _p(16, FontWeight.w700, _C.textDark)),
+                          Text(isEdit ? AppLocalizations.of(ctx).editTable : AppLocalizations.of(ctx).addNewTable,
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(ctx).colorScheme.onSurface,
+                              )),
                           Text(
                               isEdit
-                                  ? 'Update table details'
-                                  : 'Fill in table information',
-                              style: _p(11, FontWeight.w400, _C.textLight)),
+                                  ? AppLocalizations.of(ctx).editTableDetails
+                                  : AppLocalizations.of(ctx).fillTableInfo,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Theme.of(ctx).colorScheme.onSurface.withOpacity(0.6),
+                              )),
                         ]),
                   ),
-                  GestureDetector(
-                    onTap: () => Navigator.pop(ctx),
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                          color: const Color(0xFFF5F5F5),
-                          borderRadius: BorderRadius.circular(8)),
-                      child: const Icon(Icons.close_rounded,
-                          color: _C.textLight, size: 18),
+                  IconButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    icon: Icon(
+                      Icons.close,
+                      color: Theme.of(ctx).colorScheme.onSurface.withOpacity(0.6),
+                      size: 22,
                     ),
                   ),
                 ]),
@@ -239,38 +247,38 @@ class _TableManagementPageState extends State<TableManagementPage> {
                 // Fields
                 _FormField(
                   controller: idCtrl,
-                  label: 'Table ID',
-                  hint: 'e.g. T01, T02',
+                  label: AppLocalizations.of(ctx).tableId,
+                  hint: AppLocalizations.of(ctx).tableIdHint,
                   icon: Icons.tag_rounded,
                   readOnly: isEdit,
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Table ID is required';
+                    if (v == null || v.trim().isEmpty) return AppLocalizations.of(ctx).tableIdRequired;
                     if (!RegExp(r'^[A-Za-z0-9]+$').hasMatch(v.trim()))
-                      return 'Only letters and numbers allowed';
+                      return AppLocalizations.of(ctx).alphanumericOnly;
                     return null;
                   },
                 ),
                 const SizedBox(height: 14),
                 _FormField(
                   controller: nmCtrl,
-                  label: 'Table Name',
-                  hint: 'e.g. Window Table, Garden Patio',
+                  label: AppLocalizations.of(ctx).tableName,
+                  hint: AppLocalizations.of(ctx).tableNameHint,
                   icon: Icons.drive_file_rename_outline_rounded,
                   validator: (v) => (v == null || v.trim().isEmpty)
-                      ? 'Name is required'
+                      ? AppLocalizations.of(ctx).tableNameRequired
                       : null,
                 ),
                 const SizedBox(height: 14),
                 _FormField(
                   controller: capCtrl,
-                  label: 'Capacity (seats)',
-                  hint: 'e.g. 4',
+                  label: AppLocalizations.of(ctx).capacity,
+                  hint: AppLocalizations.of(ctx).capacityHint,
                   icon: Icons.people_outline_rounded,
                   keyboardType: TextInputType.number,
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Capacity is required';
+                    if (v == null || v.trim().isEmpty) return AppLocalizations.of(ctx).capacityRequired;
                     final n = int.tryParse(v.trim());
-                    if (n == null || n < 1) return 'Enter a valid number (min 1)';
+                    if (n == null || n < 1) return AppLocalizations.of(ctx).validCapacity;
                     return null;
                   },
                 ),
@@ -279,23 +287,33 @@ class _TableManagementPageState extends State<TableManagementPage> {
                 // Buttons
                 Row(children: [
                   Expanded(
-                    child: GestureDetector(
-                      onTap: () => Navigator.pop(ctx),
-                      child: Container(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        decoration: BoxDecoration(
-                            color: const Color(0xFFF4F4F4),
-                            borderRadius: BorderRadius.circular(12)),
-                        child: Center(
-                            child: Text('Cancel',
-                                style: _p(13, FontWeight.w600, _C.textMid))),
+                        side: BorderSide(
+                            color: Theme.of(ctx).colorScheme.outline),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        AppLocalizations.of(ctx).commonCancel,
+                        style: TextStyle(
+                          color: Theme.of(ctx)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.7),
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: GestureDetector(
-                      onTap: saving
+                    child: ElevatedButton(
+                      onPressed: saving
                           ? null
                           : () async {
                         if (!formKey.currentState!.validate()) return;
@@ -320,8 +338,8 @@ class _TableManagementPageState extends State<TableManagementPage> {
                           if (ctx.mounted) Navigator.pop(ctx);
                           _snack(
                             isEdit
-                                ? 'Table updated successfully'
-                                : 'Table added successfully',
+                                ? AppLocalizations.of(ctx).tableUpdatedSuccess
+                                : AppLocalizations.of(ctx).tableAddedSuccess,
                             _C.green,
                             Icons.check_circle_rounded,
                           );
@@ -333,31 +351,28 @@ class _TableManagementPageState extends State<TableManagementPage> {
                               Icons.error_rounded);
                         }
                       },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 150),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: saving
+                            ? const Color(0xFF070B2D).withOpacity(0.6)
+                            : const Color(0xFF070B2D),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        decoration: BoxDecoration(
-                            color: saving
-                                ? _C.orange.withOpacity(0.6)
-                                : _C.orange,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: saving
-                                ? []
-                                : [
-                              BoxShadow(
-                                  color: _C.orange.withOpacity(0.28),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 4))
-                            ]),
-                        child: Center(
-                          child: saving
-                              ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white))
-                              : Text(isEdit ? 'Save Changes' : 'Add Table',
-                              style: _p(13, FontWeight.w600, Colors.white)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: saving
+                          ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                          : Text(
+                        isEdit ? AppLocalizations.of(ctx).commonSave : AppLocalizations.of(ctx).addTable,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
                         ),
                       ),
                     ),
@@ -371,7 +386,6 @@ class _TableManagementPageState extends State<TableManagementPage> {
     );
   }
 
-  // ── Disable confirm dialog ────────────────────────────────────────────────
   void _confirmDelete(TableModel table) {
     showDialog(
       context: context,
@@ -385,69 +399,117 @@ class _TableManagementPageState extends State<TableManagementPage> {
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                  color: Colors.black.withOpacity(0.10), blurRadius: 40)
+                color: Colors.black.withOpacity(0.10),
+                blurRadius: 40,
+              ),
             ],
           ),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration:
-              const BoxDecoration(color: _C.redBg, shape: BoxShape.circle),
-              child: const Icon(Icons.delete_outline_rounded,
-                  color: _C.red, size: 26),
-            ),
-            const SizedBox(height: 16),
-            Text('Disable Table?',
-                style: _p(17, FontWeight.w700, _C.textDark)),
-            const SizedBox(height: 8),
-            Text(
-              '"${table.name}" will be hidden from the table list. This can be undone from Firestore.',
-              textAlign: TextAlign.center,
-              style: _p(12, FontWeight.w400, _C.textMid),
-            ),
-            const SizedBox(height: 24),
-            Row(children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => Navigator.pop(ctx),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    decoration: BoxDecoration(
-                        color: const Color(0xFFF4F4F4),
-                        borderRadius: BorderRadius.circular(12)),
-                    child: Center(
-                        child: Text('Cancel',
-                            style: _p(13, FontWeight.w600, _C.textMid))),
-                  ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: const BoxDecoration(
+                  color: _C.redBg,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.delete_outline_rounded,
+                  color: _C.red,
+                  size: 26,
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () async {
-                    Navigator.pop(ctx);
-                    try {
-                      await _service.disableTable(
-                          widget.restaurantId, table.tableId);
-                      _snack('${table.name} disabled', _C.textMid,
-                          Icons.info_outline_rounded);
-                    } catch (e) {
-                      _snack(e.toString(), _C.red, Icons.error_rounded);
-                    }
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    decoration: BoxDecoration(
-                        color: _C.red,
-                        borderRadius: BorderRadius.circular(12)),
-                    child: Center(
-                        child: Text('Disable',
-                            style: _p(13, FontWeight.w600, Colors.white))),
-                  ),
+              const SizedBox(height: 16),
+              Text(
+                AppLocalizations.of(ctx).disableTableQuestion,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(ctx).colorScheme.onSurface,
                 ),
               ),
-            ]),
-          ]),
+              const SizedBox(height: 8),
+              Text(
+                AppLocalizations.of(ctx).disableTableDescription.replaceAll('{tableName}', table.name),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Theme.of(ctx).colorScheme.onSurface.withOpacity(0.6),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        side: BorderSide(
+                          color: Theme.of(ctx).colorScheme.outline,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        AppLocalizations.of(ctx).commonCancel,
+                        style: TextStyle(
+                          color: Theme.of(ctx)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.7),
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        try {
+                          await _service.disableTable(
+                            widget.restaurantId,
+                            table.tableId,
+                          );
+                          _snack(
+                            AppLocalizations.of(ctx).tableDisabled.replaceAll('{tableName}', table.name),
+                            _C.textMid,
+                            Icons.info_outline_rounded,
+                          );
+                        } catch (e) {
+                          _snack(
+                            e.toString(),
+                            _C.red,
+                            Icons.error_rounded,
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _C.red,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        AppLocalizations.of(ctx).disableTable,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -523,7 +585,7 @@ class _TableManagementPageState extends State<TableManagementPage> {
     final isAvailable = t.isAvailable;
     final statusColor = isAvailable ? _C.green : _C.red;
     final statusBg    = isAvailable ? _C.greenBg : _C.redBg;
-    final statusLabel = isAvailable ? 'Available' : 'Occupied';
+    final statusLabel = isAvailable ? AppLocalizations.of(context).tablesAvailable : AppLocalizations.of(context).tablesOccupied;
 
     // Capacity drives accent bar thickness and icon size
     final tier     = t.capacity <= 2 ? 0 : t.capacity <= 4 ? 1 : t.capacity <= 7 ? 2 : 3;
@@ -559,137 +621,135 @@ class _TableManagementPageState extends State<TableManagementPage> {
               ),
             ),
 
-            // ── Card body — Expanded so it fills the GridView cell
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 12, 10, 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Top row: status pill + 3-dot menu
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        // Status pill
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 9, vertical: 3),
-                          decoration: BoxDecoration(
-                              color: statusBg,
-                              borderRadius: BorderRadius.circular(20)),
-                          child: Row(mainAxisSize: MainAxisSize.min, children: [
-                            Container(
-                              width: 6,
-                              height: 6,
-                              decoration: BoxDecoration(
-                                  color: statusColor, shape: BoxShape.circle),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(statusLabel,
-                                style: _p(9, FontWeight.w600, statusColor)),
-                          ]),
-                        ),
-
-                        // 3-dot menu
-                        PopupMenuButton<String>(
-                          onSelected: (v) {
-                            if (v == 'edit') _showTableDialog(existing: t);
-                            if (v == 'delete') _confirmDelete(t);
-                          },
-                          itemBuilder: (_) => [
-                            PopupMenuItem(
-                              value: 'edit',
-                              child: Row(children: [
-                                const Icon(Icons.edit_outlined,
-                                    size: 15, color: _C.textMid),
-                                const SizedBox(width: 8),
-                                Text('Edit',
-                                    style: _p(13, FontWeight.w400, _C.textDark)),
-                              ]),
-                            ),
-                            PopupMenuItem(
-                              value: 'delete',
-                              child: Row(children: [
-                                const Icon(Icons.delete_outline_rounded,
-                                    size: 15, color: _C.red),
-                                const SizedBox(width: 8),
-                                Text('Disable',
-                                    style: _p(13, FontWeight.w400, _C.red)),
-                              ]),
-                            ),
-                          ],
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                          elevation: 4,
-                          padding: EdgeInsets.zero,
-                          child: Container(
-                            padding: const EdgeInsets.all(5),
-                            decoration: BoxDecoration(
-                                color: const Color(0xFFF5F5F5),
-                                borderRadius: BorderRadius.circular(7)),
-                            child: const Icon(Icons.more_horiz_rounded,
-                                size: 15, color: _C.textMid),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    // Spacer: pushes icon + text to the bottom half
-                    const Spacer(),
-
-                    // Table icon (size = capacity tier)
-                    Container(
-                      padding: const EdgeInsets.all(9),
-                      decoration: BoxDecoration(
-                          color: _C.orangeLight,
-                          borderRadius: BorderRadius.circular(10)),
-                      child: Icon(Icons.table_restaurant_rounded,
-                          color: _C.orange, size: iconSize),
-                    ),
-                    const SizedBox(height: 10),
-
-                    // Table ID
-                    Text(t.tableId,
-                        style: _p(9, FontWeight.w500, _C.textLight)),
-                    const SizedBox(height: 1),
-
-                    // Table name
-                    Text(t.name,
-                        style: _p(13, FontWeight.w700, _C.textDark),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis),
-                    const SizedBox(height: 6),
-
-                    // Capacity
-                    Row(children: [
-                      const Icon(Icons.people_outline_rounded,
-                          size: 12, color: _C.textLight),
-                      const SizedBox(width: 4),
-                      Text('${t.capacity} seats',
-                          style: _p(11, FontWeight.w400, _C.textMid)),
-                    ]),
-
-                    // Order ID badge (occupied only)
-                    if (t.currentOrderId != null &&
-                        t.currentOrderId!.isNotEmpty) ...[
-                      const SizedBox(height: 6),
+            // ── Card body — intrinsic height, no Expanded/Spacer needed
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 10, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Top row: status pill + 3-dot menu
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Status pill
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
+                            horizontal: 9, vertical: 4),
                         decoration: BoxDecoration(
-                            color: _C.orangeLight,
-                            borderRadius: BorderRadius.circular(6)),
-                        child: Text(
-                          '# ${t.currentOrderId}',
-                          style: _p(9, FontWeight.w600, _C.orange),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                            color: statusBg,
+                            borderRadius: BorderRadius.circular(20)),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                                color: statusColor, shape: BoxShape.circle),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(statusLabel,
+                              style: _p(11, FontWeight.w600, statusColor)),
+                        ]),
+                      ),
+
+                      // 3-dot menu
+                      PopupMenuButton<String>(
+                        onSelected: (v) {
+                          if (v == 'edit') _showTableDialog(existing: t);
+                          if (v == 'delete') _confirmDelete(t);
+                        },
+                        itemBuilder: (_) => [
+                          PopupMenuItem(
+                            value: 'edit',
+                            child: Row(children: [
+                              const Icon(Icons.edit_outlined,
+                                  size: 15, color: _C.textMid),
+                              const SizedBox(width: 8),
+                              Text(AppLocalizations.of(context).edit,
+                                  style: _p(13, FontWeight.w400, _C.textDark)),
+                            ]),
+                          ),
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: Row(children: [
+                              const Icon(Icons.delete_outline_rounded,
+                                  size: 15, color: _C.red),
+                              const SizedBox(width: 8),
+                              Text(AppLocalizations.of(context).disableTable,
+                                  style: _p(13, FontWeight.w400, _C.red)),
+                            ]),
+                          ),
+                        ],
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        elevation: 4,
+                        padding: EdgeInsets.zero,
+                        child: Container(
+                          padding: const EdgeInsets.all(5),
+                          decoration: BoxDecoration(
+                              color: const Color(0xFFF5F5F5),
+                              borderRadius: BorderRadius.circular(7)),
+                          child: const Icon(Icons.more_horiz_rounded,
+                              size: 15, color: _C.textMid),
                         ),
                       ),
                     ],
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // Table icon (size = capacity tier)
+                  Container(
+                    padding: const EdgeInsets.all(9),
+                    decoration: BoxDecoration(
+                        color: _C.orangeLight,
+                        borderRadius: BorderRadius.circular(10)),
+                    child: Icon(Icons.table_restaurant_rounded,
+                        color: _C.orange, size: iconSize),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Table ID
+                  Text(t.tableId,
+                      style: _p(11, FontWeight.w500, _C.textLight)),
+                  const SizedBox(height: 2),
+
+                  // Table name
+                  Text(t.name,
+                      style: _p(15, FontWeight.w700, _C.textDark),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 6),
+
+                  // Capacity
+                  Row(children: [
+                    const Icon(Icons.people_outline_rounded,
+                        size: 13, color: _C.textLight),
+                    const SizedBox(width: 4),
+                    Text('${t.capacity} ${AppLocalizations.of(context).seats}',
+                        style: _p(13, FontWeight.w400, _C.textMid)),
+                  ]),
+
+                  // Order ID badge (occupied only)
+                  if (t.currentOrderId != null &&
+                      t.currentOrderId!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                          color: _C.orangeLight,
+                          borderRadius: BorderRadius.circular(6)),
+                      child: Text(
+                        '# ${t.currentOrderId}',
+                        style: _p(11, FontWeight.w600, _C.orange),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ],
-                ),
+                ],
               ),
             ),
           ],
@@ -710,76 +770,88 @@ class _TableManagementPageState extends State<TableManagementPage> {
         final occupied  = all.where((t) => !t.isAvailable).length;
 
         List<TableModel> filtered = all;
-        if (_filter == 'Available') filtered = all.where((t) => t.isAvailable).toList();
-        if (_filter == 'Occupied')  filtered = all.where((t) => !t.isAvailable).toList();
+        if (_filter == AppLocalizations.of(context).tablesAvailable) filtered = all.where((t) => t.isAvailable).toList();
+        if (_filter == AppLocalizations.of(context).tablesOccupied)  filtered = all.where((t) => !t.isAvailable).toList();
 
         return SingleChildScrollView(
-          padding: EdgeInsets.all(isMobile ? 16 : 28),
+          padding: EdgeInsets.only(left: isMobile ? 16 : 8, right: isMobile ? 16 : 8, bottom: 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
-              // ── Header ────────────────────────────────────────────────────
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('Table Management',
-                        style: _p(isMobile ? 20 : 22, FontWeight.w700, _C.textDark)),
+                    Text(AppLocalizations.of(context).tablesTitle,
+                        style: GoogleFonts.poppins(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w200,
+                          color: const Color(0xFF0E1A2F),
+                        )),
                     const SizedBox(height: 3),
-                    Text('Monitor and manage your restaurant tables',
-                        style: _p(12, FontWeight.w400, _C.textLight)),
+                    Text(AppLocalizations.of(context).tablesSubtitle,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: const Color(0xFF808896),
+                        )),
                   ]),
-                  GestureDetector(
-                    onTap: () => _showTableDialog(),
-                    child: Container(
+                  ElevatedButton(
+                    onPressed: () => _showTableDialog(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF070B2D),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 11),
-                      decoration: BoxDecoration(
-                          color: _C.orange,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                                color: _C.orange.withOpacity(0.28),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4))
-                          ]),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        const Icon(Icons.add_rounded, color: Colors.white, size: 17),
-                        const SizedBox(width: 6),
-                        Text('Add Table',
-                            style: _p(13, FontWeight.w600, Colors.white)),
-                      ]),
+                        horizontal: 18,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.add_rounded, size: 16),
+                        const SizedBox(width: 8),
+                        Text(
+                          AppLocalizations.of(context).addTable,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
 
               // ── Stat cards ────────────────────────────────────────────────
               if (snapshot.hasData)
                 Wrap(spacing: 10, runSpacing: 10, children: [
-                  _statCard('Total Tables', all.length, _C.textMid,
+                  _statCard(AppLocalizations.of(context).totalTables, all.length, _C.textMid,
                       const Color(0xFFF5F5F5), Icons.table_restaurant_rounded),
-                  _statCard('Available', available, _C.green, _C.greenBg,
+                  _statCard(AppLocalizations.of(context).tablesAvailable, available, _C.green, _C.greenBg,
                       Icons.check_circle_outline_rounded),
-                  _statCard('Occupied', occupied, _C.red, _C.redBg,
+                  _statCard(AppLocalizations.of(context).tablesOccupied, occupied, _C.red, _C.redBg,
                       Icons.people_rounded),
                 ]),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
 
               // ── Filter chips ──────────────────────────────────────────────
               Wrap(
                 spacing: 8,
-                children: ['All', 'Available', 'Occupied']
+                children: [AppLocalizations.of(context).tablesAll, AppLocalizations.of(context).tablesAvailable, AppLocalizations.of(context).tablesOccupied]
                     .map(_filterChip)
                     .toList(),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
 
               // ── Content ───────────────────────────────────────────────────
               if (snapshot.connectionState == ConnectionState.waiting)
@@ -811,37 +883,41 @@ class _TableManagementPageState extends State<TableManagementPage> {
                         ),
                         const SizedBox(height: 18),
                         Text(
-                          _filter == 'All'
-                              ? 'No tables yet'
-                              : 'No $_filter tables',
+                          _filter == AppLocalizations.of(context).tablesAll
+                              ? AppLocalizations.of(context).noTablesYet
+                              : _filter == AppLocalizations.of(context).tablesAvailable ? AppLocalizations.of(context).noAvailableTables : AppLocalizations.of(context).noOccupiedTables,
                           style: _p(16, FontWeight.w600, _C.textDark),
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          _filter == 'All'
-                              ? 'Tap "Add Table" to create your first table'
-                              : 'All tables are ${_filter == 'Available' ? 'occupied' : 'available'}',
+                          _filter == AppLocalizations.of(context).tablesAll
+                              ? AppLocalizations.of(context).tapAddTable
+                              : _filter == AppLocalizations.of(context).tablesAvailable ? AppLocalizations.of(context).allOccupied : AppLocalizations.of(context).allAvailable,
                           style: _p(12, FontWeight.w400, _C.textLight),
                         ),
                       ]),
                     ),
                   )
                 else
-                // ── Uniform grid — Spacer works fine inside a bounded cell ──
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: isMobile ? 2 : 4,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: isMobile ? 0.80 : 0.75,
-                    ),
-                    itemCount: filtered.length,
-                    itemBuilder: (_, i) => _tableCard(filtered[i], isMobile),
+                // ── Wrap grid — cards size to their own content ──
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final cols    = isMobile ? 2 : 4;
+                      final spacing = 12.0;
+                      final cardW   = (constraints.maxWidth - spacing * (cols - 1)) / cols;
+                      return Wrap(
+                        spacing: spacing,
+                        runSpacing: spacing,
+                        children: filtered
+                            .map((t) => SizedBox(
+                          width: cardW,
+                          child: _tableCard(t, isMobile),
+                        ))
+                            .toList(),
+                      );
+                    },
                   ),
-
-              const SizedBox(height: 28),
+              const SizedBox(height: 10),
             ],
           ),
         );
@@ -872,48 +948,55 @@ class _FormField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: _p(11, FontWeight.w600, _C.textDark)),
-      const SizedBox(height: 6),
+      Text(label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: colorScheme.onSurface,
+          )),
+      const SizedBox(height: 8),
       TextFormField(
         controller: controller,
         readOnly: readOnly,
         keyboardType: keyboardType,
         validator: validator,
-        style: _p(13, FontWeight.w500, _C.textDark),
+        style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500,
+            color: colorScheme.onSurface),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: _p(13, FontWeight.w400, _C.textLight),
-          prefixIcon: Padding(
-            padding: const EdgeInsets.only(left: 14, right: 10),
-            child: Icon(icon,
-                size: 17, color: readOnly ? _C.textLight : _C.orange),
-          ),
-          prefixIconConstraints:
-          const BoxConstraints(minWidth: 0, minHeight: 0),
+          hintStyle: GoogleFonts.poppins(fontSize: 14,
+              color: colorScheme.onSurface.withOpacity(0.4)),
+          prefixIcon: Icon(icon,
+              size: 20,
+              color: readOnly
+                  ? colorScheme.onSurface.withOpacity(0.4)
+                  : colorScheme.onSurface.withOpacity(0.5)),
           filled: true,
-          fillColor: readOnly ? const Color(0xFFF8F8F8) : Colors.white,
-          contentPadding:
-          const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: _C.cardBorder),
+            borderSide:
+            BorderSide(color: colorScheme.outline.withOpacity(0.2)),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: _C.cardBorder),
+            borderSide:
+            BorderSide(color: colorScheme.outline.withOpacity(0.2)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: _C.orange, width: 1.5),
+            borderSide: BorderSide(color: colorScheme.primary),
           ),
           errorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: _C.red),
+            borderSide: BorderSide(color: colorScheme.error),
           ),
           focusedErrorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: _C.red, width: 1.5),
+            borderSide: BorderSide(color: colorScheme.error, width: 1.5),
           ),
         ),
       ),

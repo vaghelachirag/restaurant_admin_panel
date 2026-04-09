@@ -7,8 +7,6 @@ import '../services/localization_service.dart';
 
 
 class _C {
-  static const bg          = Color(0xFFFFF3EE);
-  static const card        = Color(0xFFFFFFFF);
   static const orange      = Color(0xFFE8622A);
   static const orangeLight = Color(0xFFFFF0E8);
   static const textDark    = Color(0xFF1A1A1A);
@@ -89,198 +87,198 @@ class _ManagerPageState extends State<ManagerPage> {
               key: formKey,
               child: Column(mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start, children: [
-                // Header
-                Row(children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                        color: _C.orangeLight,
-                        borderRadius: BorderRadius.circular(12)),
-                    child: Icon(
-                      isEdit ? Icons.edit_rounded : Icons.person_add_rounded,
-                      color: _C.orange, size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(isEdit ? AppLocalizations.of(context).editManager : AppLocalizations.of(context).addManager,
-                        style: _p(17, FontWeight.w700, _C.textDark)),
-                  ),
-                  GestureDetector(
-                    onTap: () => Navigator.pop(ctx),
-                    child: const Icon(Icons.close_rounded,
-                        color: _C.textLight, size: 22),
-                  ),
-                ]),
-                const SizedBox(height: 24),
-
-                // Name field
-                _label(AppLocalizations.of(context).managerName),
-                const SizedBox(height: 6),
-                _field(
-                  controller: nameCtrl,
-                  hint: AppLocalizations.of(context).enterFullName,
-                  icon: Icons.person_outline_rounded,
-                  validator: (v) =>
-                  v == null || v.trim().isEmpty ? AppLocalizations.of(context).nameRequired : null,
-                ),
-                const SizedBox(height: 16),
-
-                // Email field
-                _label(AppLocalizations.of(context).emailAddress),
-                const SizedBox(height: 6),
-                _field(
-                  controller: emailCtrl,
-                  hint: AppLocalizations.of(context).enterEmailAddress,
-                  icon: Icons.email_outlined,
-                  enabled: !isEdit, // can't change email after creation
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return AppLocalizations.of(context).emailRequired;
-                    final emailReg = RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$');
-                    if (!emailReg.hasMatch(v.trim())) return AppLocalizations.of(context).enterValidEmail;
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Password field (only shown on add; for edit it's optional)
-                _label(isEdit ? AppLocalizations.of(context).newPasswordOptional : AppLocalizations.of(context).password),
-                const SizedBox(height: 6),
-                _field(
-                  controller: passCtrl,
-                  hint: isEdit ? AppLocalizations.of(context).enterNewPasswordOptional : AppLocalizations.of(context).enterPassword,
-                  icon: Icons.lock_outline_rounded,
-                  obscure: true,
-                  validator: (v) {
-                    if (!isEdit && (v == null || v.trim().isEmpty)) {
-                      return AppLocalizations.of(context).passwordRequired;
-                    }
-                    if (v != null && v.isNotEmpty && v.length < 6) {
-                      return AppLocalizations.of(context).passwordMinLength;
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Active toggle
-                Row(children: [
-                  Text(AppLocalizations.of(context).status, style: _p(13, FontWeight.w500, _C.textMid)),
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: () => setDlg(() => isActive = !isActive),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 50,
-                      height: 26,
-                      decoration: BoxDecoration(
-                        color: isActive ? _C.green : _C.textLight,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: AnimatedAlign(
-                        duration: const Duration(milliseconds: 200),
-                        alignment: isActive
-                            ? Alignment.centerRight
-                            : Alignment.centerLeft,
-                        child: Container(
-                          margin: const EdgeInsets.all(3),
-                          width: 20,
-                          height: 20,
-                          decoration: const BoxDecoration(
-                              color: Colors.white, shape: BoxShape.circle),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    isActive ? AppLocalizations.of(context).active : AppLocalizations.of(context).inactive,
-                    style: _p(13, FontWeight.w600,
-                        isActive ? _C.green : _C.textLight),
-                  ),
-                ]),
-                const SizedBox(height: 26),
-
-                // Action buttons
-                Row(children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => Navigator.pop(ctx),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 13),
+                    // Header
+                    Row(children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                            color: const Color(0xFFF2F2F2),
-                            borderRadius: BorderRadius.circular(10)),
-                        child: Center(
-                          child: Text(AppLocalizations.of(context).cancel,
-                              style: _p(13, FontWeight.w600, _C.textMid)),
+                            color: _C.orangeLight,
+                            borderRadius: BorderRadius.circular(12)),
+                        child: Icon(
+                          isEdit ? Icons.edit_rounded : Icons.person_add_rounded,
+                          color: _C.orange, size: 20,
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: isLoading
-                          ? null
-                          : () async {
-                        if (!formKey.currentState!.validate()) return;
-                        setDlg(() => isLoading = true);
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(isEdit ? AppLocalizations.of(context).editManager : AppLocalizations.of(context).addManager,
+                            style: _p(17, FontWeight.w700, _C.textDark)),
+                      ),
+                      GestureDetector(
+                        onTap: () => Navigator.pop(ctx),
+                        child: const Icon(Icons.close_rounded,
+                            color: _C.textLight, size: 22),
+                      ),
+                    ]),
+                    const SizedBox(height: 24),
 
-                        try {
-                          if (isEdit) {
-                            await _updateManager(
-                              docId: docId!,
-                              name: nameCtrl.text.trim(),
-                              isActive: isActive,
-                              newPassword: passCtrl.text.trim().isEmpty
-                                  ? null
-                                  : passCtrl.text.trim(),
-                            );
-                          } else {
-                            await _addManager(
-                              name: nameCtrl.text.trim(),
-                              email: emailCtrl.text.trim(),
-                              password: passCtrl.text.trim(),
-                              isActive: isActive,
-                            );
-                          }
-                          if (ctx.mounted) Navigator.pop(ctx);
-                        } catch (e) {
-                          setDlg(() => isLoading = false);
-                          if (mounted) {
-                            _snack(e.toString(), _C.red,
-                                icon: Icons.error_rounded);
-                          }
-                        }
+                    // Name field
+                    _label(AppLocalizations.of(context).managerName),
+                    const SizedBox(height: 6),
+                    _field(
+                      controller: nameCtrl,
+                      hint: AppLocalizations.of(context).enterFullName,
+                      icon: Icons.person_outline_rounded,
+                      validator: (v) =>
+                      v == null || v.trim().isEmpty ? AppLocalizations.of(context).nameRequired : null,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Email field
+                    _label(AppLocalizations.of(context).emailAddress),
+                    const SizedBox(height: 6),
+                    _field(
+                      controller: emailCtrl,
+                      hint: AppLocalizations.of(context).enterEmailAddress,
+                      icon: Icons.email_outlined,
+                      enabled: !isEdit, // can't change email after creation
+                      keyboardType: TextInputType.emailAddress,
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return AppLocalizations.of(context).emailRequired;
+                        final emailReg = RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$');
+                        if (!emailReg.hasMatch(v.trim())) return AppLocalizations.of(context).enterValidEmail;
+                        return null;
                       },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 150),
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        decoration: BoxDecoration(
-                            color: _C.orange,
-                            borderRadius: BorderRadius.circular(10)),
-                        child: Center(
-                          child: isLoading
-                              ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white),
-                          )
-                              : Text(
-                            isEdit ? AppLocalizations.of(context).saveChanges : AppLocalizations.of(context).addManager,
-                            style:
-                            _p(13, FontWeight.w600, Colors.white),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Password field (only shown on add; for edit it's optional)
+                    _label(isEdit ? AppLocalizations.of(context).newPasswordOptional : AppLocalizations.of(context).password),
+                    const SizedBox(height: 6),
+                    _field(
+                      controller: passCtrl,
+                      hint: isEdit ? AppLocalizations.of(context).enterNewPasswordOptional : AppLocalizations.of(context).enterPassword,
+                      icon: Icons.lock_outline_rounded,
+                      obscure: true,
+                      validator: (v) {
+                        if (!isEdit && (v == null || v.trim().isEmpty)) {
+                          return AppLocalizations.of(context).passwordRequired;
+                        }
+                        if (v != null && v.isNotEmpty && v.length < 6) {
+                          return AppLocalizations.of(context).passwordMinLength;
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Active toggle
+                    Row(children: [
+                      Text(AppLocalizations.of(context).status, style: _p(13, FontWeight.w500, _C.textMid)),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () => setDlg(() => isActive = !isActive),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: 50,
+                          height: 26,
+                          decoration: BoxDecoration(
+                            color: isActive ? _C.green : _C.textLight,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: AnimatedAlign(
+                            duration: const Duration(milliseconds: 200),
+                            alignment: isActive
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
+                            child: Container(
+                              margin: const EdgeInsets.all(3),
+                              width: 20,
+                              height: 20,
+                              decoration: const BoxDecoration(
+                                  color: Colors.white, shape: BoxShape.circle),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ),
-                ]),
-              ]),
+                      const SizedBox(width: 10),
+                      Text(
+                        isActive ? AppLocalizations.of(context).active : AppLocalizations.of(context).inactive,
+                        style: _p(13, FontWeight.w600,
+                            isActive ? _C.green : _C.textLight),
+                      ),
+                    ]),
+                    const SizedBox(height: 26),
+
+                    // Action buttons
+                    Row(children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => Navigator.pop(ctx),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            decoration: BoxDecoration(
+                                color: const Color(0xFFF2F2F2),
+                                borderRadius: BorderRadius.circular(10)),
+                            child: Center(
+                              child: Text(AppLocalizations.of(context).cancel,
+                                  style: _p(13, FontWeight.w600, _C.textMid)),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: isLoading
+                              ? null
+                              : () async {
+                            if (!formKey.currentState!.validate()) return;
+                            setDlg(() => isLoading = true);
+
+                            try {
+                              if (isEdit) {
+                                await _updateManager(
+                                  docId: docId!,
+                                  name: nameCtrl.text.trim(),
+                                  isActive: isActive,
+                                  newPassword: passCtrl.text.trim().isEmpty
+                                      ? null
+                                      : passCtrl.text.trim(),
+                                );
+                              } else {
+                                await _addManager(
+                                  name: nameCtrl.text.trim(),
+                                  email: emailCtrl.text.trim(),
+                                  password: passCtrl.text.trim(),
+                                  isActive: isActive,
+                                );
+                              }
+                              if (ctx.mounted) Navigator.pop(ctx);
+                            } catch (e) {
+                              setDlg(() => isLoading = false);
+                              if (mounted) {
+                                _snack(e.toString(), _C.red,
+                                    icon: Icons.error_rounded);
+                              }
+                            }
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            decoration: BoxDecoration(
+                                color: _C.orange,
+                                borderRadius: BorderRadius.circular(10)),
+                            child: Center(
+                              child: isLoading
+                                  ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white),
+                              )
+                                  : Text(
+                                isEdit ? AppLocalizations.of(context).saveChanges : AppLocalizations.of(context).addManager,
+                                style:
+                                _p(13, FontWeight.w600, Colors.white),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ]),
+                  ]),
             ),
           ),
         ),
@@ -295,7 +293,6 @@ class _ManagerPageState extends State<ManagerPage> {
     required String password,
     required bool isActive,
   }) async {
-    // 1. Create Firebase Auth user
     final currentUser = FirebaseAuth.instance.currentUser;
 
     UserCredential? cred;
@@ -315,7 +312,6 @@ class _ManagerPageState extends State<ManagerPage> {
       'isActive': isActive,
       'createdAt': FieldValue.serverTimestamp(),
     });
-
 
     if (currentUser != null) {
     }
@@ -523,13 +519,14 @@ class _ManagerPageState extends State<ManagerPage> {
         ),
 
         // ── Manager list ─────────────────────────────────────────────────
+        // FIX: Removed .orderBy('createdAt') from the query to avoid requiring
+        // a Firestore composite index. Sorting is now done client-side below.
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection('users')
                 .where('restaurantId', isEqualTo: widget.restaurantId)
                 .where('role', isEqualTo: 'manager')
-                .orderBy('createdAt', descending: true)
                 .snapshots(),
             builder: (context, snap) {
               if (snap.connectionState == ConnectionState.waiting) {
@@ -538,12 +535,21 @@ class _ManagerPageState extends State<ManagerPage> {
               }
 
               if (snap.hasError) {
+                debugPrint('Manager stream error: ${snap.error}');
                 return Center(
                     child: Text(AppLocalizations.of(context).errorLoadingManagers,
                         style: _p(14, FontWeight.w500, _C.red)));
               }
 
-              final docs = snap.data?.docs ?? [];
+              // FIX: Sort client-side by createdAt descending
+              final docs = (snap.data?.docs ?? [])
+                ..sort((a, b) {
+                  final aData = a.data() as Map<String, dynamic>;
+                  final bData = b.data() as Map<String, dynamic>;
+                  final aTime = (aData['createdAt'] as Timestamp?)?.millisecondsSinceEpoch ?? 0;
+                  final bTime = (bData['createdAt'] as Timestamp?)?.millisecondsSinceEpoch ?? 0;
+                  return bTime.compareTo(aTime);
+                });
 
               if (docs.isEmpty) {
                 return Center(

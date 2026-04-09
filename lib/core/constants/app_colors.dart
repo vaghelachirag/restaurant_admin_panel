@@ -41,4 +41,10 @@ class AppColors {
   // Others
   static const red = Colors.red;
 
+
+  static const Color brown      = Color(0xFFA34613);
+  static const Color brownLight = Color(0xFF8B4513);
+  static const Color cream      = Color(0xFFFAF3E8);
+  static const Color orange     = Color(0xFFE8621A);
+  static const Color green      = Color(0xFF2E7D32);
 }

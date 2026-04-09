@@ -32,6 +32,114 @@ class ImageService {
   // ─────────────────────────────────────────────────────────────────────────
 
   static const Map<String, String> _keywordImages = {
+
+    // ───────────────── Gujarati Main Sabzi ─────────────────
+    'sev tameta': 'https://i.ibb.co/jPppW02F/sev-tamata.jpg',
+    'sev tomato': 'https://i.ibb.co/jPppW02F/sev-tamata.jpg',
+    'suki bhaji': 'https://i.ibb.co/qVR3Ykk/sukhi-bhaji.jpg',
+    'bataka nu shaak': 'https://i.ibb.co/qVR3Ykk/sukhi-bhaji.jpg',
+    'bataka bhaji': 'https://i.ibb.co/qVR3Ykk/sukhi-bhaji.jpg',
+    'aloo sabji': 'https://i.ibb.co/qVR3Ykk/sukhi-bhaji.jpg',
+    'ringna bataka': 'https://i.ibb.co/d04sDbST/mix-veg.jpg',
+    'undhiyu': 'https://i.ibb.co/d04sDbST/mix-veg.jpg',
+    'mix veg': 'https://i.ibb.co/d04sDbST/mix-veg.jpg',
+    'gujarati sabji': 'https://i.ibb.co/d04sDbST/mix-veg.jpg',
+
+// ───────────────── Dal / Kadhi / Rice ─────────────────
+    'gujarati dal': 'https://i.ibb.co/cSKkggND/dal-tadka.jpg',
+    'daal': 'https://i.ibb.co/cSKkggND/dal-tadka.jpg',
+    'dal fry': 'https://i.ibb.co/cSKkggND/dal-tadka.jpg',
+    'kadhi': 'https://i.ibb.co/Vppg6n75/dahi.jpg',
+    'kadhi khichdi': 'https://i.ibb.co/Vppg6n75/dahi.jpg',
+    'khichdi': 'https://i.ibb.co/DHCdDmwZ/Rice.jpg',
+    'vaghareli khichdi': 'https://i.ibb.co/DHCdDmwZ/Rice.jpg',
+    'jeera rice': 'https://i.ibb.co/DHCdDmwZ/Rice.jpg',
+    'steam rice': 'https://i.ibb.co/DHCdDmwZ/Rice.jpg',
+
+// ───────────────── Rotli / Breads ─────────────────
+    'rotli': 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400&q=80',
+    'phulka': 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400&q=80',
+    'chapati': 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400&q=80',
+    'bhakhri': 'https://i.ibb.co/LX79cbxn/parotha.jpg',
+    'thepla': 'https://i.ibb.co/LX79cbxn/parotha.jpg',
+    'methi thepla': 'https://i.ibb.co/LX79cbxn/parotha.jpg',
+    'paratha': 'https://i.ibb.co/LX79cbxn/parotha.jpg',
+    'puri': 'https://i.ibb.co/YFrtBSS0/puri-shak.jpg',
+
+// ───────────────── Snacks / Farsan ─────────────────
+    'dhokla': 'https://i.ibb.co/fzjQWzx4/salad.jpg',
+    'khaman': 'https://i.ibb.co/fzjQWzx4/salad.jpg',
+    'khaman dhokla': 'https://i.ibb.co/fzjQWzx4/salad.jpg',
+    'fafda': 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80',
+    'fafda jalebi': 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80',
+    'patra': 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80',
+    'handvo': 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80',
+    'ganthiya': 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80',
+    'sev': 'https://i.ibb.co/jPppW02F/sev-tamata.jpg',
+
+// ───────────────── Street Food Gujarati ─────────────────
+    'locho': 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80',
+    'sev usal': 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80',
+    'usal': 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80',
+    'vada pav': 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&q=80',
+    'dabeli': 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&q=80',
+    'pav bhaji': 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80',
+
+// ───────────────── Dairy / Sides ─────────────────
+    'dahi': 'https://i.ibb.co/Vppg6n75/dahi.jpg',
+    'curd': 'https://i.ibb.co/Vppg6n75/dahi.jpg',
+    'chaas': 'https://i.ibb.co/4RTPQqCS/butter-milk.jpg',
+    'buttermilk': 'https://i.ibb.co/4RTPQqCS/butter-milk.jpg',
+    'salad': 'https://i.ibb.co/fzjQWzx4/salad.jpg',
+    'papad': 'https://i.ibb.co/7NLnSw1b/paapad.jpg',
+    'pickle': 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80',
+
+// ───────────────── Sweets (Gujarati) ─────────────────
+    'shree khand': 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80',
+    'shrikhand': 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80',
+    'basundi': 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80',
+    'lapsi': 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80',
+    'mohanthal': 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80',
+    'gulab jamun': 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80',
+    'jalebi': 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80',
+
+    // ───────────────── Thali Keywords ─────────────────
+    'full thali': 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&q=80',
+    'gujarati thali': 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&q=80',
+    'mini gujarati thali': 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&q=80',
+    'deluxe gujarati thali': 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&q=80',
+    'special gujarati thali': 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&q=80',
+    'unlimited gujarati thali': 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&q=80',
+    'regular thali': 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&q=80',
+    'special thali': 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&q=80',
+    'deluxe thali': 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&q=80',
+    'mini thali': 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&q=80',
+    'unlimited thali': 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&q=80',
+    'full meal': 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&q=80',
+    'complete meal': 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&q=80',
+
+    'kathiyawadi thali': 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&q=80',
+    'kathiawadi thali': 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&q=80',
+    'kathiyawadi special thali': 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&q=80',
+    'kathiawadi special thali': 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&q=80',
+    'kathiyawadi meal': 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&q=80',
+    'kathiawadi meal': 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&q=80',
+
+    'punjabi thali': 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=400&q=80',
+    'punjabi special thali': 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=400&q=80',
+    'punjabi deluxe thali': 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=400&q=80',
+    'punjabi meal': 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=400&q=80',
+    'punjabi lunch': 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=400&q=80',
+    'punjabi dinner': 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=400&q=80',
+
+    'thali': 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&q=80',
+    'meal': 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&q=80',
+    'gujarati': 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&q=80',
+    'kathiyawadi': 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&q=80',
+    'kathiawadi': 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&q=80',
+    'punjabi': 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=400&q=80',
+
+
     // Indian mains
     'paneer':   'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=400&q=80',
     'biryani':  'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=400&q=80',
@@ -40,7 +148,6 @@ class ImageService {
     'idli':     'https://images.unsplash.com/photo-1630383249896-424e482df921?w=400&q=80',
     'vada':     'https://images.unsplash.com/photo-1630383249896-424e482df921?w=400&q=80',
     'roti':     'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400&q=80',
-    'chapati':  'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400&q=80',
     'naan':     'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80',
     'rice':     'https://images.unsplash.com/photo-1536304993881-ff86e6c89c0d?w=400&q=80',
     'dal':      'https://images.unsplash.com/photo-1626500154744-e4b394ffea16?w=400&q=80',
@@ -51,15 +158,9 @@ class ImageService {
     'kebab':    'https://images.unsplash.com/photo-1544025162-d76694265947?w=400&q=80',
     'tandoor':  'https://images.unsplash.com/photo-1544025162-d76694265947?w=400&q=80',
     'samosa':   'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80',
-    'suki bhaji':   'https://i.ibb.co/qVR3Ykk/sukhi-bhaji.jpg',
     'chana':   'https://i.ibb.co/4RBqprCD/chanapuri.jpg',
-    'sev':   'https://i.ibb.co/jPppW02F/sev-tamata.jpg',
     'maggi':   'https://i.ibb.co/FL4RhV0D/maggie.jpg',
     'parotha':   'https://i.ibb.co/LX79cbxn/parotha.jpg',
-
-    // Soups & starters
-    'soup':     'https://images.unsplash.com/photo-1547592180-85f173990554?w=400&q=80',
-    'salad':    'https://i.ibb.co/fzjQWzx4/salad.jpg',
     // International
     'pizza':    'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&q=80',
     'burger':   'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&q=80',
@@ -88,8 +189,6 @@ class ImageService {
     'sweet':    'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80',
     'mithai':   'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80',
     // Breads / Snacks
-    'paratha':  'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400&q=80',
-    'puri':     'https://i.ibb.co/YFrtBSS0/puri-shak.jpg',
     'bhatura':  'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80',
     'pakora':   'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80',
     'chaat':    'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80',
@@ -100,18 +199,17 @@ class ImageService {
     'fish':     'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=400&q=80',
     'prawn':    'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=400&q=80',
     'egg':      'https://images.unsplash.com/photo-1607690022687-5c37be86c7e1?w=400&q=80',
-    'dahi':      'https://i.ibb.co/Vppg6n75/dahi.jpg',
     'milk':      'https://i.ibb.co/4RTPQqCS/butter-milk.jpg',
     'manchurian': 'https://i.ibb.co/f6YBw0t/manchuriyan.jpg',
     'pulav': 'https://i.ibb.co/PG9pMZfP/pulav.jpg',
     'noodles': 'https://i.ibb.co/BKGvxZDK/noodles.jpg',
-    'daal': 'https://i.ibb.co/cSKkggND/dal-tadka.jpg',
-    'papad': 'https://i.ibb.co/7NLnSw1b/paapad.jpg',
-    'mix veg': 'https://i.ibb.co/d04sDbST/mix-veg.jpg',
     'veg': 'https://i.ibb.co/d04sDbST/mix-veg.jpg',
     'Rice': 'https://i.ibb.co/DHCdDmwZ/Rice.jpg',
     'Noodles': 'https://i.ibb.co/BKGvxZDK/noodles.jpg',
+
   };
+
+
 
   // ─────────────────────────────────────────────────────────────────────────
   //  Category fallback images

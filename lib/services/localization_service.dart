@@ -184,7 +184,7 @@ class LocalizationService extends ChangeNotifier {
             "no_orders": "No {filter} orders",
             "all": "All",
             "pending": "Pending",
-            "preparing": "Preparing", 
+            "preparing": "Preparing",
             "ready": "Ready",
             "served": "Served",
             "completed": "Completed",
@@ -194,7 +194,7 @@ class LocalizationService extends ChangeNotifier {
             "guest": "Guest",
             "more_items": "+{count} more item{plural}",
             "mark_as_preparing": "Mark as Preparing",
-            "mark_as_ready": "Mark as Ready", 
+            "mark_as_ready": "Mark as Ready",
             "mark_as_served": "Mark as Served",
             "mark_as_completed": "Mark as Completed",
             "showing_results": "Showing {start}–{end} of {total}",
@@ -284,6 +284,45 @@ class LocalizationService extends ChangeNotifier {
             "activate": "Activate",
             "edit": "Edit",
             "delete": "Delete"
+          },
+          "tables": {
+            "title": "Table Management",
+            "subtitle": "Monitor and manage your restaurant tables",
+            "add_table": "Add Table",
+            "total_tables": "Total Tables",
+            "available": "Available",
+            "occupied": "Occupied",
+            "all": "All",
+            "table_id": "Table ID",
+            "table_name": "Table Name",
+            "capacity": "Capacity (seats)",
+            "status": "Status",
+            "edit_table": "Edit Table",
+            "disable_table": "Disable",
+            "add_new_table": "Add New Table",
+            "edit_table_details": "Update table details",
+            "fill_table_info": "Fill in table information",
+            "table_id_hint": "e.g. T01, T02",
+            "table_name_hint": "e.g. Window Table, Garden Patio",
+            "capacity_hint": "e.g. 4",
+            "table_id_required": "Table ID is required",
+            "table_name_required": "Name is required",
+            "capacity_required": "Capacity is required",
+            "valid_capacity": "Enter a valid number (min 1)",
+            "alphanumeric_only": "Only letters and numbers allowed",
+            "table_exists": "Table \"{tableId}\" already exists. Choose a different ID.",
+            "table_added_success": "Table added successfully",
+            "table_updated_success": "Table updated successfully",
+            "table_disabled": "\"{tableName}\" disabled",
+            "no_tables_yet": "No tables yet",
+            "no_available_tables": "No Available tables",
+            "no_occupied_tables": "No Occupied tables",
+            "tap_add_table": "Tap \"Add Table\" to create your first table",
+            "all_occupied": "All tables are occupied",
+            "all_available": "All tables are available",
+            "seats": "seats",
+            "disable_table_question": "Disable Table?",
+            "disable_table_description": "\"{tableName}\" will be hidden from the table list. This can be undone from Firestore."
           },
           "common": {
             "and": "and",
@@ -527,6 +566,77 @@ class LocalizationService extends ChangeNotifier {
             "edit": "संपादित करें",
             "delete": "हटाएं"
           },
+          "tables": {
+            "title": "टेबल प्रबंधन",
+            "subtitle": "अपने रेस्तरां की टेबल की निगरानी और प्रबंधन करें",
+            "add_table": "टेबल जोड़ें",
+            "total_tables": "कुल टेबल",
+            "available": "उपलब्ध",
+            "occupied": "व्यस्त",
+            "all": "सभी",
+            "table_id": "टेबल आईडी",
+            "table_name": "टेबल नाम",
+            "capacity": "क्षमता (सीटें)",
+            "status": "स्थिति",
+            "edit_table": "टेबल संपादित करें",
+            "disable_table": "अक्षम करें",
+            "add_new_table": "नया टेबल जोड़ें",
+            "edit_table_details": "टेबल विवरण अपडेट करें",
+            "fill_table_info": "टेबल जानकारी भरें",
+            "table_id_hint": "उदा. T01, T02",
+            "table_name_hint": "उदा. विंडो टेबल, गार्डन पेटियो",
+            "capacity_hint": "उदा. 4",
+            "table_id_required": "टेबल आईडी आवश्यक है",
+            "table_name_required": "नाम आवश्यक है",
+            "capacity_required": "क्षमता आवश्यक है",
+            "valid_capacity": "एक वैध संख्या दर्ज करें (न्यूनतम 1)",
+            "alphanumeric_only": "केवल अक्षर और संख्याएं",
+            "table_exists": "टेबल \"{tableId}\" पहले से मौजूद है। एक अलग आईडी चुनें।",
+            "table_added_success": "टेबल सफलतापूर्वक जोड़ा गया",
+            "table_updated_success": "टेबल सफलतापूर्वक अपडेट किया गया",
+            "table_disabled": "\"{tableName}\" अक्षम किया गया",
+            "no_tables_yet": "अभी तक कोई टेबल नहीं",
+            "no_available_tables": "कोई उपलब्ध टेबल नहीं",
+            "no_occupied_tables": "कोई व्यस्त टेबल नहीं",
+            "tap_add_table": "अपनी पहली टेबल बनाने के लिए \"टेबल जोड़ें\" पर टैप करें",
+            "all_occupied": "सभी टेबल व्यस्त हैं",
+            "all_available": "सभी टेबल उपलब्ध हैं",
+            "seats": "सीटें",
+            "disable_table_question": "टेबल अक्षम करें?",
+            "disable_table_description": "\"{tableName}\" टेबल सूची से छुपा दिया जाएगा। यह फायरस्टोर से पूर्ववत किया जा सकता है।",
+            "occupied": "Occupied",
+            "all": "All",
+            "table_id": "Table ID",
+            "table_name": "Table Name",
+            "capacity": "Capacity (seats)",
+            "status": "Status",
+            "edit_table": "Edit Table",
+            "disable_table": "Disable",
+            "add_new_table": "Add New Table",
+            "edit_table_details": "Update table details",
+            "fill_table_info": "Fill in table information",
+            "table_id_hint": "e.g. T01, T02",
+            "table_name_hint": "e.g. Window Table, Garden Patio",
+            "capacity_hint": "e.g. 4",
+            "table_id_required": "Table ID is required",
+            "table_name_required": "Name is required",
+            "capacity_required": "Capacity is required",
+            "valid_capacity": "Enter a valid number (min 1)",
+            "alphanumeric_only": "Only letters and numbers allowed",
+            "table_exists": "Table \"{tableId}\" already exists. Choose a different ID.",
+            "table_added_success": "Table added successfully",
+            "table_updated_success": "Table updated successfully",
+            "table_disabled": "\"{tableName}\" disabled",
+            "no_tables_yet": "No tables yet",
+            "no_available_tables": "No Available tables",
+            "no_occupied_tables": "No Occupied tables",
+            "tap_add_table": "Tap \"Add Table\" to create your first table",
+            "all_occupied": "All tables are occupied",
+            "all_available": "All tables are available",
+            "seats": "seats",
+            "disable_table_question": "Disable Table?",
+            "disable_table_description": "\"{tableName}\" will be hidden from the table list. This can be undone from Firestore."
+          },
           "common": {
             "and": "और",
             "yes": "हां",
@@ -767,6 +877,45 @@ class LocalizationService extends ChangeNotifier {
             "activate": "સક્રિય કરો",
             "edit": "સંપાદિત કરો",
             "delete": "હટાવો"
+          },
+          "tables": {
+            "title": "ટેબલ મેનેજમેન્ટ",
+            "subtitle": "તમારા રેસ્ટોરન્ટની ટેબલોનું નિરીક્ષણ અને સંચાલન કરો",
+            "add_table": "ટેબલ ઉમેરો",
+            "total_tables": "કુલ ટેબલો",
+            "available": "ઉપલબ્ધ",
+            "occupied": "વ્યસ્ત",
+            "all": "બધી",
+            "table_id": "ટેબલ આઈડી",
+            "table_name": "ટેબલ નામ",
+            "capacity": "ક્ષમતા (બેઠકો)",
+            "status": "સ્થિતિ",
+            "edit_table": "ટેબલ સંપાદિત કરો",
+            "disable_table": "નિષ્ક્રિય કરો",
+            "add_new_table": "નવી ટેબલ ઉમેરો",
+            "edit_table_details": "ટેબલની વિગતો અપડેટ કરો",
+            "fill_table_info": "ટેબલની માહિતી ભરો",
+            "table_id_hint": "દા.ત. T01, T02",
+            "table_name_hint": "દા.ત. વિન્ડો ટેબલ, ગાર્ડન પેટિયો",
+            "capacity_hint": "દા.ત. 4",
+            "table_id_required": "ટેબલ આઈડી જરૂરી છે",
+            "table_name_required": "નામ જરૂરી છે",
+            "capacity_required": "ક્ષમતા જરૂરી છે",
+            "valid_capacity": "માન્ય નંબર દાખલ કરો (ન્યૂનતમ 1)",
+            "alphanumeric_only": "માત્ર અક્ષરો અને આંકડા જ માન્ય છે",
+            "table_exists": "ટેબલ \"{tableId}\" પહેલેથી જ અસ્તિત્વમાં છે. કૃપા કરીને બીજી આઈડી પસંદ કરો.",
+            "table_added_success": "ટેબલ સફળતાપૂર્વક ઉમેરાઈ",
+            "table_updated_success": "ટેબલ સફળતાપૂર્વક અપડેટ થઈ",
+            "table_disabled": "\"{tableName}\" નિષ્ક્રિય કરવામાં આવી",
+            "no_tables_yet": "હજુ સુધી કોઈ ટેબલ નથી",
+            "no_available_tables": "કોઈ ઉપલબ્ધ ટેબલ નથી",
+            "no_occupied_tables": "કોઈ વ્યસ્ત ટેબલ નથી",
+            "tap_add_table": "તમારી પહેલી ટેબલ બનાવવા માટે \"ટેબલ ઉમેરો\" પર ટેપ કરો",
+            "all_occupied": "બધી ટેબલો વ્યસ્ત છે",
+            "all_available": "બધી ટેબલો ઉપલબ્ધ છે",
+            "seats": "બેઠકો",
+            "disable_table_question": "ટેબલ નિષ્ક્રિય કરશો?",
+            "disable_table_description": "\"{tableName}\" ટેબલ યાદીમાંથી છુપાઈ જશે. આ Firestore માંથી પાછું કરી શકાય છે."
           },
           "common": {
             "and": "અને",
@@ -1095,6 +1244,45 @@ class AppLocalizations {
   String get addingMenuItem => _service.translate('menu.adding_menu_item');
   String get updatingMenuItem => _service.translate('menu.updating_menu_item');
   String get quantity => _service.translate('common.quantity');
+
+  // Table Management
+  String get tablesTitle => _service.translate('tables.title');
+  String get tablesSubtitle => _service.translate('tables.subtitle');
+  String get addTable => _service.translate('tables.add_table');
+  String get totalTables => _service.translate('tables.total_tables');
+  String get tablesAvailable => _service.translate('tables.available');
+  String get tablesOccupied => _service.translate('tables.occupied');
+  String get tablesAll => _service.translate('tables.all');
+  String get tableId => _service.translate('tables.table_id');
+  String get tableName => _service.translate('tables.table_name');
+  String get capacity => _service.translate('tables.capacity');
+  String get tableStatus => _service.translate('tables.status');
+  String get editTable => _service.translate('tables.edit_table');
+  String get disableTable => _service.translate('tables.disable_table');
+  String get addNewTable => _service.translate('tables.add_new_table');
+  String get editTableDetails => _service.translate('tables.edit_table_details');
+  String get fillTableInfo => _service.translate('tables.fill_table_info');
+  String get tableIdHint => _service.translate('tables.table_id_hint');
+  String get tableNameHint => _service.translate('tables.table_name_hint');
+  String get capacityHint => _service.translate('tables.capacity_hint');
+  String get tableIdRequired => _service.translate('tables.table_id_required');
+  String get tableNameRequired => _service.translate('tables.table_name_required');
+  String get capacityRequired => _service.translate('tables.capacity_required');
+  String get validCapacity => _service.translate('tables.valid_capacity');
+  String get alphanumericOnly => _service.translate('tables.alphanumeric_only');
+  String get tableExists => _service.translate('tables.table_exists');
+  String get tableAddedSuccess => _service.translate('tables.table_added_success');
+  String get tableUpdatedSuccess => _service.translate('tables.table_updated_success');
+  String get tableDisabled => _service.translate('tables.table_disabled');
+  String get noTablesYet => _service.translate('tables.no_tables_yet');
+  String get noAvailableTables => _service.translate('tables.no_available_tables');
+  String get noOccupiedTables => _service.translate('tables.no_occupied_tables');
+  String get tapAddTable => _service.translate('tables.tap_add_table');
+  String get allOccupied => _service.translate('tables.all_occupied');
+  String get allAvailable => _service.translate('tables.all_available');
+  String get seats => _service.translate('tables.seats');
+  String get disableTableQuestion => _service.translate('tables.disable_table_question');
+  String get disableTableDescription => _service.translate('tables.disable_table_description');
 
   /// Generic key-based lookup — allows widgets to call
   /// AppLocalizations.of(context).translate('some.key')
