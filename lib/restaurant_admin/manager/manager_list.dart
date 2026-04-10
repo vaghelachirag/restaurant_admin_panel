@@ -3,10 +3,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../services/localization_service.dart';
+import '../../services/localization_service.dart';
+
 
 
 class _C {
+  static const bg          = Color(0xFFFFF3EE);
+  static const card        = Color(0xFFFFFFFF);
   static const orange      = Color(0xFFE8622A);
   static const orangeLight = Color(0xFFFFF0E8);
   static const textDark    = Color(0xFF1A1A1A);
@@ -21,15 +24,15 @@ TextStyle _p(double size, FontWeight weight, Color color) =>
     GoogleFonts.poppins(fontSize: size, fontWeight: weight, color: color);
 
 // ════════════════════════════════════════════════════════════════════════════
-class ManagerPage extends StatefulWidget {
+class ManagerListPage extends StatefulWidget {
   final String restaurantId;
-  const ManagerPage({super.key, required this.restaurantId});
+  const ManagerListPage({super.key, required this.restaurantId});
 
   @override
-  State<ManagerPage> createState() => _ManagerPageState();
+  State<ManagerListPage> createState() => _ManagerListPageState();
 }
 
-class _ManagerPageState extends State<ManagerPage> {
+class _ManagerListPageState extends State<ManagerListPage> {
   void _snack(String msg, Color color, {IconData icon = Icons.info_rounded}) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Row(children: [
@@ -293,6 +296,7 @@ class _ManagerPageState extends State<ManagerPage> {
     required String password,
     required bool isActive,
   }) async {
+    // 1. Create Firebase Auth user
     final currentUser = FirebaseAuth.instance.currentUser;
 
     UserCredential? cred;
@@ -312,6 +316,7 @@ class _ManagerPageState extends State<ManagerPage> {
       'isActive': isActive,
       'createdAt': FieldValue.serverTimestamp(),
     });
+
 
     if (currentUser != null) {
     }
@@ -519,14 +524,13 @@ class _ManagerPageState extends State<ManagerPage> {
         ),
 
         // ── Manager list ─────────────────────────────────────────────────
-        // FIX: Removed .orderBy('createdAt') from the query to avoid requiring
-        // a Firestore composite index. Sorting is now done client-side below.
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection('users')
                 .where('restaurantId', isEqualTo: widget.restaurantId)
                 .where('role', isEqualTo: 'manager')
+                .orderBy('createdAt', descending: true)
                 .snapshots(),
             builder: (context, snap) {
               if (snap.connectionState == ConnectionState.waiting) {
@@ -535,21 +539,12 @@ class _ManagerPageState extends State<ManagerPage> {
               }
 
               if (snap.hasError) {
-                debugPrint('Manager stream error: ${snap.error}');
                 return Center(
                     child: Text(AppLocalizations.of(context).errorLoadingManagers,
                         style: _p(14, FontWeight.w500, _C.red)));
               }
 
-              // FIX: Sort client-side by createdAt descending
-              final docs = (snap.data?.docs ?? [])
-                ..sort((a, b) {
-                  final aData = a.data() as Map<String, dynamic>;
-                  final bData = b.data() as Map<String, dynamic>;
-                  final aTime = (aData['createdAt'] as Timestamp?)?.millisecondsSinceEpoch ?? 0;
-                  final bTime = (bData['createdAt'] as Timestamp?)?.millisecondsSinceEpoch ?? 0;
-                  return bTime.compareTo(aTime);
-                });
+              final docs = snap.data?.docs ?? [];
 
               if (docs.isEmpty) {
                 return Center(

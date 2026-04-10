@@ -1,13 +1,12 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../core/constants/app_colors.dart';
 import '../restaurant_admin/dashboard_page.dart';
 import '../restaurant_admin/manager_main_page.dart';
-import '../restaurant_admin/restaurant_orders_page.dart';
 import '../super_admin/restaurants_page.dart';
+import '../uttils/appConfig.dart';
 import '../uttils/session_manager.dart';
 import '../services/localization_service.dart';
 import '../widgets/language_switcher.dart';
@@ -90,19 +89,19 @@ class _LoginPageState extends State<LoginPage>
 
       if (!mounted) return;
 
-      if (role == "super_admin") {
+      if (role == AppConfig.superAdmin) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const RestaurantListPage()),
         );
-      } else if (role == "admin") {
+      } else if (role == AppConfig.admin) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (_) => DashboardPage(restaurantId: restaurantId!),
           ),
         );
-      } else if (role == "manager") {
+      } else if (role == AppConfig.manager) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(

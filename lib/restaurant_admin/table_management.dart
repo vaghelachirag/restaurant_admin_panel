@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/localization_service.dart';
 
@@ -217,6 +219,7 @@ class _TableManagementPageState extends State<TableManagementPage> {
                     child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          SizedBox(height: 20,),
                           Text(isEdit ? AppLocalizations.of(ctx).editTable : AppLocalizations.of(ctx).addNewTable,
                               style: TextStyle(
                                 fontSize: 20,
@@ -253,8 +256,9 @@ class _TableManagementPageState extends State<TableManagementPage> {
                   readOnly: isEdit,
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) return AppLocalizations.of(ctx).tableIdRequired;
-                    if (!RegExp(r'^[A-Za-z0-9]+$').hasMatch(v.trim()))
+                    if (!RegExp(r'^[A-Za-z0-9]+$').hasMatch(v.trim())) {
                       return AppLocalizations.of(ctx).alphanumericOnly;
+                    }
                     return null;
                   },
                 ),
@@ -577,10 +581,6 @@ class _TableManagementPageState extends State<TableManagementPage> {
     );
   }
 
-  // ── Table card ────────────────────────────────────────────────────────────
-  // GridView gives every card the same bounding box (childAspectRatio).
-  // Inside we use a Column with Spacer so content distributes naturally —
-  // no overflow, no unbounded-height error.
   Widget _tableCard(TableModel t, bool isMobile) {
     final isAvailable = t.isAvailable;
     final statusColor = isAvailable ? _C.green : _C.red;
@@ -589,8 +589,8 @@ class _TableManagementPageState extends State<TableManagementPage> {
 
     // Capacity drives accent bar thickness and icon size
     final tier     = t.capacity <= 2 ? 0 : t.capacity <= 4 ? 1 : t.capacity <= 7 ? 2 : 3;
-    final iconSize = 18.0 + tier * 3.0;   // 18 / 21 / 24 / 27
-    final accentH  =  3.0 + tier * 0.5;  //  3 / 3.5 / 4 / 4.5
+    final iconSize = 18.0 + tier * 3.0;
+    final accentH  =  3.0 + tier * 0.5;
 
     return Container(
       decoration: BoxDecoration(
@@ -783,19 +783,16 @@ class _TableManagementPageState extends State<TableManagementPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    SizedBox(height: 10,),
                     Text(AppLocalizations.of(context).tablesTitle,
                         style: GoogleFonts.poppins(
-                          fontSize: 24,
+                          fontSize: kIsWeb ? 24 : 16,
                           fontWeight: FontWeight.w200,
                           color: const Color(0xFF0E1A2F),
                         )),
                     const SizedBox(height: 3),
-                    Text(AppLocalizations.of(context).tablesSubtitle,
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          color: const Color(0xFF808896),
-                        )),
                   ]),
+                  SizedBox(height: 10,),
                   ElevatedButton(
                     onPressed: () => _showTableDialog(),
                     style: ElevatedButton.styleFrom(

@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:restaurant_admin_panel/restaurant_admin/manager_main_page.dart';
 import 'package:restaurant_admin_panel/restaurant_admin/table_management.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:restaurant_admin_panel/restaurant_admin/restaurant_orders_page.dart';
@@ -18,9 +19,9 @@ import '../service/restaurant_service.dart';
 import '../services/localization_service.dart';
 import 'category_page.dart';
 import 'customer_menu.dart';
+import 'manager/manager_list.dart';
 import 'menu_page.dart';
 import 'qr_download_io.dart' if (dart.library.html) 'qr_download_web.dart' as qr_download;
-import 'manager_page.dart';
 import 'settings_page.dart';
 
 class _C {
@@ -404,7 +405,7 @@ class _DashboardPageState extends State<DashboardPage> {
       case 5:
         return CustomerMenuPage(restaurantId: widget.restaurantId);
       case 7:
-        return ManagerPage(restaurantId: widget.restaurantId);
+        return ManagerListPage(restaurantId: widget.restaurantId);
       case 8:
         return SettingsPage(restaurantId: widget.restaurantId);
       case 0:

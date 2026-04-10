@@ -13,7 +13,7 @@ import 'package:restaurant_admin_panel/restaurant_admin/restaurant_orders_page.d
 
 import '../uttils/responsive.dart';
 import '../uttils/session_manager.dart';
-import '../utils/snackbar_helper.dart';
+import '../uttils/snackbar_helper.dart';
 import 'category_page.dart';
 import 'customer_menu.dart';
 import 'menu_page.dart';

@@ -8,7 +8,7 @@ import 'package:http/http.dart' as http;
 import '../core/constants/app_colors.dart';
 import '../services/localization_service.dart';
 import '../widgets/language_switcher.dart';
-import '../utils/snackbar_helper.dart';
+import '../uttils/snackbar_helper.dart';
 
 class SettingsPage extends StatefulWidget {
   final String restaurantId;

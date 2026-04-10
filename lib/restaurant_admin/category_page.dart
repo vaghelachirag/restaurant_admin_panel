@@ -10,7 +10,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../uttils/responsive.dart';
 import '../services/localization_service.dart';
-import '../utils/snackbar_helper.dart';
+import '../uttils/snackbar_helper.dart';
 
 class CategoryPage extends StatefulWidget {
   final String restaurantId;

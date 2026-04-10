@@ -409,24 +409,6 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
                   ),
                 ),
               ),*/
-              !kIsWeb
-                  ? GestureDetector(
-                onTap: _handleLogout,
-                child: Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF5F5F5),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFEEEEEE)),
-                  ),
-                  child: const Icon(
-                    Icons.logout_rounded,
-                    size: 18,
-                    color: Color(0xFF444444),
-                  ),
-                ),
-              ) : const SizedBox.shrink(),
             ],
           ),
         ],

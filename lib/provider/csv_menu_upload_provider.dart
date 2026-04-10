@@ -7,9 +7,7 @@ import '../services/image_service.dart';
 import '../services/menu_batch_service.dart';
 import '../uttils/appConfig.dart';
 
-// ─────────────────────────────────────────────
-//  Service Providers (singletons)
-// ─────────────────────────────────────────────
+
 
 final csvParsingServiceProvider = Provider<CsvParsingService>(
       (_) => CsvParsingService(),
@@ -27,9 +25,7 @@ final imageServiceProvider = Provider<ImageService>(
       (_) => ImageService(),
 );
 
-// ─────────────────────────────────────────────
-//  Upload State
-// ─────────────────────────────────────────────
+
 
 enum UploadStep {
   idle,

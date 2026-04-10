@@ -12,7 +12,7 @@ import 'table_management.dart';
 
 // ─── Color palette (matches existing files) ──────────────────────────────────
 class _C {
-  static const bg          = Color(0xFFF9F9F9);
+  static const bg          = Color(0xFFFFF3EE); // warm peach — matches dashboard
   static const orange      = Color(0xFFE8622A);
   static const orangeLight = Color(0xFFFFF0E8);
   static const orangeMid   = Color(0xFFFFD5C0);
@@ -25,11 +25,11 @@ class _C {
   static const greenBg     = Color(0xFFE8F8EF);
   static const red         = Color(0xFFE74C3C);
   static const redBg       = Color(0xFFFEEEEE);
-  static const divider     = Color(0xFFF0F0F0);
-  static const drawerBg    = Color(0xFF070B2D);       // dark navy drawer
-  static const drawerItem  = Color(0xFFFFFFFF);
-  static const drawerSub   = Color(0xFF8A9BB5);
-  static const drawerActive = Color(0xFFE8622A);
+  static const divider     = Color(0xFFEEEEEE);
+  static const drawerBg    = Color(0xFFFFFFFF);       // white sidebar — matches dashboard
+  static const drawerItem  = Color(0xFF374151);       // dark grey nav labels
+  static const drawerSub   = Color(0xFF6B7280);       // muted grey sub-labels
+  static const drawerActive = Color(0xFFE8622A);      // orange active
 }
 
 TextStyle _p(double size, FontWeight w, Color c) =>
@@ -174,7 +174,7 @@ class _WaiterShellState extends State<WaiterShell>
     const drawerW = 280.0;
 
     return Scaffold(
-      backgroundColor: _C.bg,
+      backgroundColor:Colors.white,
       body: Stack(
         children: [
           // ── Main content ─────────────────────────────────────────────────
@@ -235,9 +235,6 @@ class _WaiterShellState extends State<WaiterShell>
   }
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// NAV ITEMS ENUM
-// ════════════════════════════════════════════════════════════════════════════
 enum _NavItem { home, tableManagement, settings, profile }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -266,9 +263,9 @@ class _AppBar extends StatelessWidget {
         right: 20,
       ),
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFFFFF3EE), // warm peach — matches dashboard bg
         border: Border(bottom: BorderSide(color: _C.cardBorder)),
-        boxShadow: [BoxShadow(color: Color(0x0A000000), blurRadius: 8, offset: Offset(0, 2))],
+        boxShadow: [BoxShadow(color: Color(0x06000000), blurRadius: 8, offset: Offset(0, 2))],
       ),
       child: Row(children: [
         // Hamburger
@@ -327,7 +324,8 @@ class _DrawerPanel extends StatelessWidget {
       child: Container(
         decoration: const BoxDecoration(
           color: _C.drawerBg,
-          boxShadow: [BoxShadow(color: Color(0x33000000), blurRadius: 32, offset: Offset(4, 0))],
+          border: Border(right: BorderSide(color: _C.cardBorder, width: 1)),
+          boxShadow: [BoxShadow(color: Color(0x18000000), blurRadius: 24, offset: Offset(4, 0))],
         ),
         child: SafeArea(
           child: Column(
@@ -341,88 +339,70 @@ class _DrawerPanel extends StatelessWidget {
                 photoUrl: photoUrl,
               ),
 
-              const SizedBox(height: 8),
-              _sectionLabel('MAIN MENU'),
-              const SizedBox(height: 6),
+              const Divider(color: _C.cardBorder, height: 1, thickness: 1),
+              const SizedBox(height: 10),
 
               // ── Nav items ──────────────────────────────────────────────
-              _DrawerItem(
-                icon: Icons.home_rounded,
-                label: 'Home',
-                sublabel: 'Order management',
-                item: _NavItem.home,
-                active: active,
-                onTap: () => onNavigate(_NavItem.home),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  children: [
+                    _sectionLabel('MAIN MENU'),
+                    const SizedBox(height: 4),
+                    _DrawerItem(
+                      icon: Icons.home_outlined,
+                      label: 'Home',
+                      sublabel: 'Order management',
+                      item: _NavItem.home,
+                      active: active,
+                      onTap: () => onNavigate(_NavItem.home),
+                    ),
+                    _DrawerItem(
+                      icon: Icons.table_restaurant_outlined,
+                      label: 'Table Management',
+                      sublabel: 'View & manage tables',
+                      item: _NavItem.tableManagement,
+                      active: active,
+                      onTap: () => onNavigate(_NavItem.tableManagement),
+                    ),
+                    const SizedBox(height: 10),
+                    _sectionLabel('ACCOUNT'),
+                    const SizedBox(height: 4),
+                    _DrawerItem(
+                      icon: Icons.settings_outlined,
+                      label: 'Settings',
+                      sublabel: 'Notifications, availability',
+                      item: _NavItem.settings,
+                      active: active,
+                      onTap: () => onNavigate(_NavItem.settings),
+                    ),
+                    _DrawerItem(
+                      icon: Icons.person_outline_rounded,
+                      label: 'Profile',
+                      sublabel: 'Edit your details',
+                      item: _NavItem.profile,
+                      active: active,
+                      onTap: () => onNavigate(_NavItem.profile),
+                    ),
+                  ],
+                ),
               ),
-              _DrawerItem(
-                icon: Icons.table_restaurant_rounded,
-                label: 'Table Management',
-                sublabel: 'View & manage tables',
-                item: _NavItem.tableManagement,
-                active: active,
-                onTap: () => onNavigate(_NavItem.tableManagement),
-              ),
-
-              const SizedBox(height: 10),
-              _sectionLabel('ACCOUNT'),
-              const SizedBox(height: 6),
-
-              _DrawerItem(
-                icon: Icons.settings_rounded,
-                label: 'Settings',
-                sublabel: 'Notifications, availability',
-                item: _NavItem.settings,
-                active: active,
-                onTap: () => onNavigate(_NavItem.settings),
-              ),
-              _DrawerItem(
-                icon: Icons.person_rounded,
-                label: 'Profile',
-                sublabel: 'Edit your details',
-                item: _NavItem.profile,
-                active: active,
-                onTap: () => onNavigate(_NavItem.profile),
-              ),
-
-              const Spacer(),
 
               // ── Divider ────────────────────────────────────────────────
-              Container(
-                height: 1,
-                margin: const EdgeInsets.symmetric(horizontal: 20),
-                color: Colors.white.withOpacity(0.08),
-              ),
-              const SizedBox(height: 8),
+              const Divider(color: _C.cardBorder, height: 1, thickness: 1),
 
               // ── Logout ─────────────────────────────────────────────────
-              GestureDetector(
+              InkWell(
                 onTap: onLogout,
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-                  decoration: BoxDecoration(
-                    color: _C.red.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 18),
                   child: Row(children: [
-                    Container(
-                      width: 36, height: 36,
-                      decoration: BoxDecoration(
-                        color: _C.red.withOpacity(0.18),
-                        borderRadius: BorderRadius.circular(9),
-                      ),
-                      child: const Icon(Icons.logout_rounded, color: _C.red, size: 18),
-                    ),
-                    const SizedBox(width: 12),
-                    Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('Logout', style: _p(13, FontWeight.w600, _C.red)),
-                      Text('Sign out of your account',
-                          style: _p(10, FontWeight.w400, _C.red.withOpacity(0.7))),
-                    ]),
+                    const Icon(Icons.logout_outlined, color: _C.drawerSub, size: 20),
+                    const SizedBox(width: 13),
+                    Text('Logout', style: _p(14, FontWeight.w400, _C.drawerSub)),
                   ]),
                 ),
               ),
-              const SizedBox(height: 16),
             ],
           ),
         ),
@@ -431,9 +411,9 @@ class _DrawerPanel extends StatelessWidget {
   }
 
   Widget _sectionLabel(String label) => Padding(
-    padding: const EdgeInsets.only(left: 22),
+    padding: const EdgeInsets.only(left: 2, bottom: 2),
     child: Text(label,
-        style: _p(10, FontWeight.w600, _C.drawerSub)
+        style: _p(10, FontWeight.w600, _C.textLight)
             .copyWith(letterSpacing: 1.2)),
   );
 }
@@ -450,28 +430,24 @@ class _DrawerHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.08))),
-      ),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
       child: Row(children: [
-        _UserAvatar(photoUrl: photoUrl, name: firstName, radius: 24),
-        const SizedBox(width: 14),
+        _UserAvatar(photoUrl: photoUrl, name: firstName, radius: 22),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('$firstName $lastName'.trim(),
-                style: _p(14, FontWeight.w700, Colors.white),
+                style: _p(14, FontWeight.w700, _C.textDark),
                 overflow: TextOverflow.ellipsis),
             const SizedBox(height: 2),
             Text(email,
-                style: _p(11, FontWeight.w400, _C.drawerSub),
+                style: _p(11, FontWeight.w400, _C.textLight),
                 overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 6),
+            const SizedBox(height: 5),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: _C.green.withOpacity(0.2),
+                color: _C.green.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -507,44 +483,37 @@ class _DrawerItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isActive = item == active;
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-        decoration: BoxDecoration(
-          color: isActive ? _C.orange : Colors.white.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(children: [
-          Container(
-            width: 36, height: 36,
-            decoration: BoxDecoration(
-              color: isActive ? Colors.white.withOpacity(0.2) : Colors.white.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(9),
-            ),
-            child: Icon(icon,
-                color: isActive ? Colors.white : _C.drawerSub, size: 18),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: isActive ? _C.orangeLight : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
           ),
-          const SizedBox(width: 12),
-          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(label,
-                style: _p(13, FontWeight.w600,
-                    isActive ? Colors.white : _C.drawerItem)),
-            Text(sublabel,
-                style: _p(10, FontWeight.w400,
-                    isActive ? Colors.white70 : _C.drawerSub)),
-          ]),
-          if (isActive) ...[
-            const Spacer(),
-            Container(
-              width: 6, height: 6,
-              decoration: const BoxDecoration(
-                  color: Colors.white, shape: BoxShape.circle),
+          child: Row(children: [
+            Icon(
+              icon,
+              color: isActive ? _C.orange : _C.drawerSub,
+              size: 20,
             ),
-          ],
-        ]),
+            const SizedBox(width: 13),
+            Expanded(
+              child: Text(
+                label,
+                style: _p(
+                  14,
+                  isActive ? FontWeight.w600 : FontWeight.w400,
+                  isActive ? _C.orange : _C.drawerItem,
+                ),
+              ),
+            ),
+          ]),
+        ),
       ),
     );
   }

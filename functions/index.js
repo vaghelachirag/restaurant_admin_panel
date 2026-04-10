@@ -5,7 +5,7 @@ const axios = require("axios");
 admin.initializeApp();
 
 const ONE_SIGNAL_APP_ID = "1dbbdcbd-590f-475c-88d0-7c6d953d63ca";
-const ONE_SIGNAL_API_KEY = "os_v2_app_dw55zpkzb5dvzcgqprwzkpldzjvihzcuyswecvf65qjbkiu43glrkbarg6cxvafovkjrhohza5qjtmmz7yjcmnehzb75qyztpx23api";
+const ONE_SIGNAL_API_KEY = "os_v2_app_dw55zpkzb5dvzcgqprwzkpldzjtmiyvwolieianl22jt2snxciskcvuxswomxrqr6v6vyipdzl3nloav24wk3v3d4rmmpy3ft6klfbi";
 
 exports.sendNewOrderNotification = onDocumentCreated(
   "orders/{orderId}",

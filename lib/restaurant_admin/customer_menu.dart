@@ -797,82 +797,82 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
               offset: const Offset(0, 3)),
         ],
       ),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(kIsWeb ? 14 : 14.sp),
-                bottomLeft: Radius.circular(kIsWeb ? 14 : 14.sp),
-              ),
-              child: SizedBox(
-                width: kIsWeb ? 120 : 120.w,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    item['image'] != null
-                        ? _networkImage(item['image'] as String)
-                        : _imagePlaceholder(),
-                    Positioned(top: 8, left: 8, child: _vegBadge(isVeg)),
-                  ],
-                ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(kIsWeb ? 14 : 14.sp),
+              bottomLeft: Radius.circular(kIsWeb ? 14 : 14.sp),
+            ),
+            child: SizedBox(
+              width: 110,
+              height: 110,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  item['image'] != null
+                      ? _networkImage(item['image'] as String)
+                      : _imagePlaceholder(),
+                  Positioned(top: 8, left: 8, child: _vegBadge(isVeg)),
+                ],
               ),
             ),
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                    horizontal: kIsWeb ? 14 : 14.w,
-                    vertical: kIsWeb ? 10 : 10.h),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item['name'] ?? "Item",
-                      style: GoogleFonts.poppins(
-                          fontSize: kIsWeb ? 14 : 14.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                          height: 1.3),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (description != null && description.isNotEmpty) ...[
-                      SizedBox(height: kIsWeb ? 2 : 2.h),
-                      Text(description,
+          ),
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                  horizontal: kIsWeb ? 14 : 14.w,
+                  vertical: kIsWeb ? 10 : 10.h),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    item['name'] ?? "Item",
+                    style: GoogleFonts.poppins(
+                        fontSize: kIsWeb ? 14 : 14.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                        height: 1.3),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (description != null && description.isNotEmpty) ...[
+                    SizedBox(height: kIsWeb ? 2 : 2.h),
+                    Text(description,
+                        style: GoogleFonts.poppins(
+                            fontSize: kIsWeb ? 11 : 11.sp,
+                            color: Colors.grey[500],
+                            height: 1.3),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
+                  ],
+                  SizedBox(height: kIsWeb ? 7 : 7.h),
+                  _buildVariantDropdown(
+                    itemId: itemId,
+                    variants: v,
+                    selectedIndex: si,
+                  ),
+                  SizedBox(height: kIsWeb ? 8 : 8.h),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text("₹$safePrice",
                           style: GoogleFonts.poppins(
-                              fontSize: kIsWeb ? 11 : 11.sp,
-                              color: Colors.grey[500],
-                              height: 1.3),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
+                              fontSize: kIsWeb ? 15 : 15.sp,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.red[600])),
+                      _buildAddOrCounterWidget(
+                          context, item, itemId, variantName, safePrice),
                     ],
-                    SizedBox(height: kIsWeb ? 7 : 7.h),
-                    _buildVariantDropdown(
-                      itemId: itemId,
-                      variants: v,
-                      selectedIndex: si,
-                    ),
-                    SizedBox(height: kIsWeb ? 8 : 8.h),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text("₹$safePrice",
-                            style: GoogleFonts.poppins(
-                                fontSize: kIsWeb ? 15 : 15.sp,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.red[600])),
-                        _buildAddOrCounterWidget(
-                            context, item, itemId, variantName, safePrice),
-                      ],
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -924,8 +924,8 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                 ClipRRect(
                   borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
                   child: SizedBox(
-                    width: kIsWeb ? 72 : 72.w,
-                    height: kIsWeb ? 72 : 72.h,
+                    width: 80,
+                    height: 80,
                     child: item['image'] != null
                         ? _networkImage(item['image'] as String)
                         : _imagePlaceholder(),

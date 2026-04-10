@@ -7,13 +7,13 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:restaurant_admin_panel/restaurant_admin/dashboard_page.dart';
 import 'package:restaurant_admin_panel/restaurant_admin/manager_main_page.dart';
+import 'package:restaurant_admin_panel/uttils/appConfig.dart';
 import 'package:restaurant_admin_panel/uttils/session_manager.dart';
 import 'package:restaurant_admin_panel/services/localization_service.dart';
 
 import 'auth/login_page.dart';
 import 'firebase_options.dart';
 import 'restaurant_admin/customer_menu.dart';
-import 'restaurant_admin/restaurant_orders_page.dart';
 import 'super_admin/restaurants_page.dart';
 import 'widgets/splash_screen.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
@@ -36,7 +36,7 @@ String? _getMenuRestaurantIdFromInitialUrl() {
 
 Future<void> setupNotificationChannel() async {
   OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
-  OneSignal.initialize("1dbbdcbd-590f-475c-88d0-7c6d953d63ca");
+  OneSignal.initialize(AppConfig.oneSignalAppId);
   await OneSignal.Notifications.requestPermission(true);
 
 
@@ -58,7 +58,7 @@ void main() async {
 
   OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
 
-  OneSignal.initialize("1dbbdcbd-590f-475c-88d0-7c6d953d63ca");
+  OneSignal.initialize(AppConfig.oneSignalAppId);
 
   OneSignal.Notifications.requestPermission(true);
   //
@@ -140,11 +140,11 @@ class _MyAppState extends State<MyApp> {
   Widget get _targetPage {
     if (!widget.loggedIn) return const LoginPage();
 
-    if (widget.role == 'super_admin') {
+    if (widget.role == AppConfig.superAdmin) {
       return const RestaurantListPage();
     }
 
-    if (widget.role == 'manager') {
+    if (widget.role == AppConfig.manager) {
       if (widget.restaurantId == null) return const LoginPage();
       return WaiterShell(
           restaurantId: widget.restaurantId!, waiterId: '1SS',
@@ -183,7 +183,6 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    /// 🔥 CASE 1: Customer Menu (LOCK FLOW)
     if (widget.menuRestaurantId != null) {
       return _buildApp(
         home: CustomerMenuPage(
@@ -216,7 +215,6 @@ class _MyAppState extends State<MyApp> {
             final routeName = settings.name ?? '/';
             final uri = Uri.parse(routeName);
 
-            // ── /menu/{id} — customer-facing menu ──────────────────────────
             if (uri.pathSegments.length == 2 &&
                 uri.pathSegments.first == 'menu') {
               final id = uri.pathSegments[1];
@@ -225,7 +223,6 @@ class _MyAppState extends State<MyApp> {
               );
             }
 
-            // ── /login — always lands on a fresh LoginPage ─────────────────
             if (routeName == '/login') {
               return MaterialPageRoute(
                 builder: (_) => const LoginPage(),
@@ -233,7 +230,6 @@ class _MyAppState extends State<MyApp> {
               );
             }
 
-            // ── / — show splash once, then route by session ─────────────────
             if (routeName == '/' && !_splashShown) {
               _splashShown = true;
               return MaterialPageRoute(
