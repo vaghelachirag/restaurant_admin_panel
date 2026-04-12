@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'order_update_service.dart';
 
 const _kPrimary = Color(0xFF7C3AED);
 const _kPrimaryLight = Color(0xFFA855F7);
@@ -738,6 +739,8 @@ class _OrderResultSection extends StatelessWidget {
             _SectionLabel(label: 'Order Details'),
             SizedBox(height: _h(12)),
             _OrderDetailCard(
+              orderId: snap.data!.docs.first.id,
+              restaurantId: restaurantId,
               status: status,
               tokenNumber: tokenNumber.toString(),
               totalAmount: totalAmount.toString(),
@@ -756,6 +759,8 @@ class _OrderResultSection extends StatelessWidget {
 
 // ─── Order Detail Card ────────────────────────────────────────────────────────
 class _OrderDetailCard extends StatelessWidget {
+  final String orderId;
+  final String restaurantId;
   final String status;
   final String tokenNumber;
   final String totalAmount;
@@ -766,6 +771,8 @@ class _OrderDetailCard extends StatelessWidget {
   final VoidCallback? onContinueShopping;
 
   const _OrderDetailCard({
+    required this.orderId,
+    required this.restaurantId,
     required this.status,
     required this.tokenNumber,
     required this.totalAmount,
@@ -932,6 +939,50 @@ class _OrderDetailCard extends StatelessWidget {
 
           Divider(height: _s(24), color: _kBorder),
 
+          // ── Edit Order Button (only for editable statuses) ─────────────
+          if (OrderUpdateService.isEditable(status)) ...[
+            Padding(
+              padding: EdgeInsets.fromLTRB(_s(16), 0, _s(16), _s(12)),
+              child: SizedBox(
+                width: double.infinity,
+                height: _s(46),
+                child: ElevatedButton.icon(
+                  onPressed: () => showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (_) => _EditOrderSheet(
+                      orderId: orderId,
+                      restaurantId: restaurantId,
+                      items: items
+                          .map((i) =>
+                              Map<String, dynamic>.from(i as Map))
+                          .toList(),
+                      status: status,
+                    ),
+                  ),
+                  icon: Icon(Icons.edit_note_rounded, size: _s(18)),
+                  label: Text(
+                    'Edit Order',
+                    style: GoogleFonts.poppins(
+                      fontSize: _s(14),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _kPrimary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(_s(12)),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Divider(height: 1, color: _kBorder),
+          ],
+
           // ── Body ───────────────────────────────────────────────────────
           Padding(
             padding: EdgeInsets.fromLTRB(_s(16), 0, _s(16), _s(16)),
@@ -1028,6 +1079,9 @@ class _OrderDetailCard extends StatelessWidget {
                   ),
                 ),
 
+                // ── KOT History ──────────────────────────────────────────
+                _KotHistorySection(orderId: orderId),
+
                 // ── Continue Shopping Button ────────────────────────────
                 if (onContinueShopping != null) ...[
                   SizedBox(height: _h(16)),
@@ -1071,37 +1125,63 @@ class _ItemRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isCancelled = (item['status'] ?? 'active') == 'cancelled';
     return Padding(
       padding: EdgeInsets.only(bottom: _h(8)),
-      child: Row(
-        children: [
-          Container(
-            width: _s(4),
-            height: _s(16),
-            decoration: BoxDecoration(
-              color: _kPrimary,
-              borderRadius: BorderRadius.circular(_s(2)),
-            ),
-          ),
-          SizedBox(width: _w(10)),
-          Expanded(
-            child: Text(
-              "${item['name']} (${item['variant']}) x${item['qty']}",
-              style: GoogleFonts.poppins(
-                fontSize: _s(13),
-                color: _kSubText,
+      child: Opacity(
+        opacity: isCancelled ? 0.55 : 1.0,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: _s(4),
+              height: _s(16),
+              margin: EdgeInsets.only(top: _s(2)),
+              decoration: BoxDecoration(
+                color: isCancelled ? _kSubText : _kPrimary,
+                borderRadius: BorderRadius.circular(_s(2)),
               ),
             ),
-          ),
-          Text(
-            "₹${item['price'] * item['qty']}",
-            style: GoogleFonts.poppins(
-              fontSize: _s(13),
-              fontWeight: FontWeight.w600,
-              color: _kPrimary,
+            SizedBox(width: _w(10)),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "${item['name']} (${item['variant']}) x${item['qty']}",
+                    style: GoogleFonts.poppins(
+                      fontSize: _s(13),
+                      color: _kSubText,
+                      decoration: isCancelled
+                          ? TextDecoration.lineThrough
+                          : null,
+                    ),
+                  ),
+                  if (isCancelled)
+                    Text(
+                      'Cancelled',
+                      style: GoogleFonts.poppins(
+                        fontSize: _s(10),
+                        color: Colors.red.shade400,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
-        ],
+            Text(
+              "₹${(item['price'] as num) * (item['qty'] as num)}",
+              style: GoogleFonts.poppins(
+                fontSize: _s(13),
+                fontWeight: FontWeight.w600,
+                color: isCancelled ? _kSubText : _kPrimary,
+                decoration: isCancelled
+                    ? TextDecoration.lineThrough
+                    : null,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1209,4 +1289,866 @@ class _EmptyState extends StatelessWidget {
       ),
     );
   }
+}
+
+// ─── KOT History Section ──────────────────────────────────────────────────────
+/// Streams the `kots` sub-collection of an order and displays each KOT ticket.
+class _KotHistorySection extends StatelessWidget {
+  final String orderId;
+  const _KotHistorySection({required this.orderId});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('orders')
+          .doc(orderId)
+          .collection('kots')
+          .orderBy('createdAt', descending: false)
+          .snapshots(),
+      builder: (context, snap) {
+        if (!snap.hasData || snap.data!.docs.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        final docs = snap.data!.docs;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(height: _h(16)),
+            Text(
+              'KOT History (${docs.length})',
+              style: GoogleFonts.poppins(
+                fontSize: _s(13),
+                fontWeight: FontWeight.w600,
+                color: _kText,
+              ),
+            ),
+            SizedBox(height: _h(8)),
+            ...docs.asMap().entries.map(
+                  (e) => _KotCard(
+                    kotNumber: e.key + 1,
+                    data: e.value.data() as Map<String, dynamic>,
+                  ),
+                ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// ─── KOT Card ─────────────────────────────────────────────────────────────────
+class _KotCard extends StatelessWidget {
+  final int kotNumber;
+  final Map<String, dynamic> data;
+  const _KotCard({required this.kotNumber, required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = data['items'] as List<dynamic>? ?? [];
+    final ts = data['createdAt'];
+    String timeStr = '';
+    if (ts is Timestamp) {
+      final dt = ts.toDate();
+      timeStr =
+          '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    }
+
+    return Container(
+      margin: EdgeInsets.only(bottom: _h(8)),
+      padding: EdgeInsets.all(_s(12)),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7ED),
+        borderRadius: BorderRadius.circular(_s(12)),
+        border: Border.all(color: const Color(0xFFFED7AA)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.symmetric(
+                    horizontal: _s(8), vertical: _s(3)),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEA580C),
+                  borderRadius: BorderRadius.circular(_s(6)),
+                ),
+                child: Text(
+                  'KOT #$kotNumber',
+                  style: GoogleFonts.poppins(
+                    fontSize: _s(11),
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              if (timeStr.isNotEmpty)
+                Text(
+                  timeStr,
+                  style: GoogleFonts.poppins(
+                      fontSize: _s(11), color: _kSubText),
+                ),
+            ],
+          ),
+          SizedBox(height: _h(8)),
+          ...items.map((i) {
+            final m = Map<String, dynamic>.from(i as Map);
+            return Padding(
+              padding: EdgeInsets.only(bottom: _h(2)),
+              child: Text(
+                '• ${m['name']} (${m['variant']}) × ${m['qty']}',
+                style: GoogleFonts.poppins(
+                    fontSize: _s(12), color: _kText),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Edit Order Sheet ─────────────────────────────────────────────────────────
+/// Full-screen bottom sheet that lets staff add items, adjust quantities,
+/// and cancel items on a running order.
+///
+/// Flow:
+///   1. Shows existing (active) items with ± qty stepper and cancel button.
+///   2. Lets user search menu and stage new items (shown in green, with KOT badge).
+///   3. "Save & Send KOT" commits everything via [OrderUpdateService] in one
+///      Firestore transaction.  A KOT sub-document is only created when new
+///      items are staged.
+class _EditOrderSheet extends StatefulWidget {
+  final String orderId;
+  final String restaurantId;
+
+  /// Working copy of the order's items passed in from the live Firestore stream.
+  final List<Map<String, dynamic>> items;
+  final String status;
+
+  const _EditOrderSheet({
+    required this.orderId,
+    required this.restaurantId,
+    required this.items,
+    required this.status,
+  });
+
+  @override
+  State<_EditOrderSheet> createState() => _EditOrderSheetState();
+}
+
+class _EditOrderSheetState extends State<_EditOrderSheet> {
+  // Mutable copies of the order's existing items.
+  late List<Map<String, dynamic>> _workingItems;
+
+  // New items staged by the user (will generate a KOT on save).
+  final List<Map<String, dynamic>> _newItems = [];
+
+  // Menu search state.
+  String _searchQuery = '';
+  List<QueryDocumentSnapshot> _menuDocs = [];
+  bool _loadingMenu = false;
+
+  // Inline add-item config.
+  QueryDocumentSnapshot? _selectedMenuItem;
+  int _selectedVariantIdx = 0;
+  int _newItemQty = 1;
+
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _workingItems = widget.items
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+    _loadMenu();
+  }
+
+  // ── Menu loading ──────────────────────────────────────────────────────────
+
+  Future<void> _loadMenu([String query = '']) async {
+    if (mounted) setState(() => _loadingMenu = true);
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('menu_items')
+          .where('restaurantId', isEqualTo: widget.restaurantId)
+          .where('isAvailable', isEqualTo: true)
+          .limit(100)
+          .get();
+
+      var docs = snap.docs;
+      if (query.isNotEmpty) {
+        final lower = query.toLowerCase();
+        docs = docs
+            .where((d) =>
+                (d['name'] ?? '').toString().toLowerCase().contains(lower))
+            .toList();
+      }
+      if (mounted) setState(() => _menuDocs = docs);
+    } catch (_) {}
+    if (mounted) setState(() => _loadingMenu = false);
+  }
+
+  // ── Actions ───────────────────────────────────────────────────────────────
+
+  void _stageNewItem() {
+    if (_selectedMenuItem == null) return;
+    final data =
+        _selectedMenuItem!.data() as Map<String, dynamic>;
+    final variants =
+        data['variants'] as List<dynamic>? ?? [];
+    final variant = variants.isNotEmpty
+        ? Map<String, dynamic>.from(
+            variants[_selectedVariantIdx] as Map)
+        : <String, dynamic>{'name': 'Regular', 'price': 0};
+
+    setState(() {
+      _newItems.add({
+        'name': data['name'] ?? '',
+        'variant': (variant['name'] ?? 'Regular').toString(),
+        'qty': _newItemQty,
+        'price': variant['price'] ?? 0,
+        'status': 'active',
+      });
+      _selectedMenuItem = null;
+      _selectedVariantIdx = 0;
+      _newItemQty = 1;
+    });
+  }
+
+  Future<void> _saveChanges() async {
+    setState(() => _saving = true);
+    try {
+      await OrderUpdateService.updateRunningOrder(
+        orderId: widget.orderId,
+        updatedExistingItems: _workingItems,
+        newItems: _newItems,
+      );
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _newItems.isEmpty
+                  ? 'Order updated successfully.'
+                  : 'Order updated — KOT sent to kitchen.',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.green.shade600,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e',
+                style: GoogleFonts.poppins()),
+            backgroundColor: Colors.red.shade600,
+          ),
+        );
+      }
+    }
+    if (mounted) setState(() => _saving = false);
+  }
+
+  void _confirmCancelItem(int index) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(_s(16))),
+        title: Text(
+          'Cancel Item?',
+          style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w700, fontSize: _s(16)),
+        ),
+        content: Text(
+          'Remove "${_workingItems[index]['name']}" from this order?',
+          style: GoogleFonts.poppins(
+              fontSize: _s(14), color: _kSubText),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Keep',
+                style: GoogleFonts.poppins(color: _kSubText)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              setState(() =>
+                  _workingItems[index]['status'] = 'cancelled');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade500,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(_s(10))),
+            ),
+            child: Text('Cancel Item',
+                style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    fontSize: _s(13))),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    final maxH = MediaQuery.of(context).size.height * 0.93;
+    return Container(
+      height: maxH,
+      decoration: BoxDecoration(
+        color: _kBg,
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(_s(20))),
+      ),
+      child: Column(
+        children: [
+          _handle(),
+          _sheetHeader(),
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.all(_s(16)),
+              children: [
+                // ── Active existing items ──────────────────────────────
+                if (_workingItems.any(
+                    (i) => (i['status'] ?? 'active') == 'active')) ...[
+                  _sectionTitle('Current Items'),
+                  SizedBox(height: _h(8)),
+                  ..._workingItems
+                      .asMap()
+                      .entries
+                      .where((e) =>
+                          (e.value['status'] ?? 'active') == 'active')
+                      .map((e) =>
+                          _existingItemRow(e.key, e.value)),
+                  SizedBox(height: _h(16)),
+                ],
+
+                // ── Staged new items (awaiting KOT) ───────────────────
+                if (_newItems.isNotEmpty) ...[
+                  _sectionTitle(
+                      'Items to Add  •  New KOT (${_newItems.length})'),
+                  SizedBox(height: _h(8)),
+                  ..._newItems
+                      .asMap()
+                      .entries
+                      .map((e) => _stagedItemRow(e.key, e.value)),
+                  SizedBox(height: _h(16)),
+                ],
+
+                // ── Menu search ────────────────────────────────────────
+                _sectionTitle('Add from Menu'),
+                SizedBox(height: _h(8)),
+                _menuSearchBar(),
+                SizedBox(height: _h(10)),
+                _menuList(),
+                SizedBox(height: _h(80)),
+              ],
+            ),
+          ),
+          _saveButton(),
+        ],
+      ),
+    );
+  }
+
+  // ── Sub-widgets ───────────────────────────────────────────────────────────
+
+  Widget _handle() => Center(
+        child: Container(
+          margin: EdgeInsets.only(top: _s(12), bottom: _s(4)),
+          width: _s(40),
+          height: _s(4),
+          decoration: BoxDecoration(
+            color: _kBorder,
+            borderRadius: BorderRadius.circular(_s(2)),
+          ),
+        ),
+      );
+
+  Widget _sheetHeader() => Container(
+        padding: EdgeInsets.symmetric(
+            horizontal: _s(20), vertical: _s(12)),
+        decoration: BoxDecoration(
+          color: _kCard,
+          border: Border(bottom: BorderSide(color: _kBorder)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Edit Order',
+                    style: GoogleFonts.poppins(
+                      fontSize: _s(17),
+                      fontWeight: FontWeight.w700,
+                      color: _kText,
+                    ),
+                  ),
+                  Text(
+                    'Status: ${widget.status[0].toUpperCase()}${widget.status.substring(1)}',
+                    style: GoogleFonts.poppins(
+                        fontSize: _s(11), color: _kSubText),
+                  ),
+                ],
+              ),
+            ),
+            if (_newItems.isNotEmpty)
+              Container(
+                padding: EdgeInsets.symmetric(
+                    horizontal: _s(10), vertical: _s(4)),
+                decoration: BoxDecoration(
+                  color: _kPrimary,
+                  borderRadius: BorderRadius.circular(_s(20)),
+                ),
+                child: Text(
+                  '${_newItems.length} new',
+                  style: GoogleFonts.poppins(
+                    fontSize: _s(11),
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+
+  Widget _sectionTitle(String title) => Text(
+        title,
+        style: GoogleFonts.poppins(
+          fontSize: _s(13),
+          fontWeight: FontWeight.w600,
+          color: _kText,
+        ),
+      );
+
+  Widget _existingItemRow(int index, Map<String, dynamic> item) =>
+      Container(
+        margin: EdgeInsets.only(bottom: _h(8)),
+        padding: EdgeInsets.symmetric(
+            horizontal: _s(14), vertical: _s(10)),
+        decoration: BoxDecoration(
+          color: _kCard,
+          borderRadius: BorderRadius.circular(_s(12)),
+          border: Border.all(color: _kBorder),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    (item['name'] ?? '').toString(),
+                    style: GoogleFonts.poppins(
+                      fontSize: _s(13),
+                      fontWeight: FontWeight.w600,
+                      color: _kText,
+                    ),
+                  ),
+                  if ((item['variant'] ?? '').toString().isNotEmpty)
+                    Text(
+                      item['variant'].toString(),
+                      style: GoogleFonts.poppins(
+                          fontSize: _s(11), color: _kSubText),
+                    ),
+                ],
+              ),
+            ),
+            // Quantity stepper.
+            _qtyRow(
+              qty: (item['qty'] ?? 1) as int,
+              onDecrement: () {
+                final q = (item['qty'] ?? 1) as int;
+                if (q > 1) {
+                  setState(() => _workingItems[index]['qty'] = q - 1);
+                }
+              },
+              onIncrement: () => setState(() =>
+                  _workingItems[index]['qty'] =
+                      (item['qty'] ?? 1) + 1),
+            ),
+            SizedBox(width: _w(10)),
+            GestureDetector(
+              onTap: () => _confirmCancelItem(index),
+              child: Icon(Icons.cancel_outlined,
+                  color: Colors.red.shade400, size: _s(22)),
+            ),
+          ],
+        ),
+      );
+
+  Widget _stagedItemRow(int index, Map<String, dynamic> item) =>
+      Container(
+        margin: EdgeInsets.only(bottom: _h(8)),
+        padding: EdgeInsets.symmetric(
+            horizontal: _s(14), vertical: _s(10)),
+        decoration: BoxDecoration(
+          color: const Color(0xFFECFDF5),
+          borderRadius: BorderRadius.circular(_s(12)),
+          border: Border.all(color: const Color(0xFF34D399)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: _s(8),
+              height: _s(8),
+              margin: EdgeInsets.only(right: _w(10)),
+              decoration: const BoxDecoration(
+                color: Color(0xFF10B981),
+                shape: BoxShape.circle,
+              ),
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    (item['name'] ?? '').toString(),
+                    style: GoogleFonts.poppins(
+                      fontSize: _s(13),
+                      fontWeight: FontWeight.w600,
+                      color: _kText,
+                    ),
+                  ),
+                  Text(
+                    '${item['variant']}  ×${item['qty']}  •  ₹${(item['price'] as num) * (item['qty'] as num)}',
+                    style: GoogleFonts.poppins(
+                        fontSize: _s(11), color: _kSubText),
+                  ),
+                ],
+              ),
+            ),
+            GestureDetector(
+              onTap: () =>
+                  setState(() => _newItems.removeAt(index)),
+              child: Icon(Icons.close,
+                  color: _kSubText, size: _s(18)),
+            ),
+          ],
+        ),
+      );
+
+  Widget _menuSearchBar() => Container(
+        decoration: BoxDecoration(
+          color: _kCard,
+          borderRadius: BorderRadius.circular(_s(12)),
+          border: Border.all(color: _kBorder),
+        ),
+        child: TextField(
+          onChanged: (v) {
+            _searchQuery = v;
+            _loadMenu(v);
+          },
+          style: GoogleFonts.poppins(
+              fontSize: _s(14), color: _kText),
+          decoration: InputDecoration(
+            hintText: 'Search menu items…',
+            hintStyle: GoogleFonts.poppins(
+                fontSize: _s(13), color: _kSubText),
+            prefixIcon:
+                Icon(Icons.search, color: _kPrimary, size: _s(20)),
+            border: InputBorder.none,
+            contentPadding: EdgeInsets.symmetric(
+                vertical: _s(12), horizontal: _s(4)),
+          ),
+        ),
+      );
+
+  Widget _menuList() {
+    if (_loadingMenu) {
+      return const Center(
+          child: CircularProgressIndicator(color: _kPrimary));
+    }
+    if (_menuDocs.isEmpty) {
+      return Center(
+        child: Text(
+          _searchQuery.isEmpty
+              ? 'No menu items found'
+              : 'No results for "$_searchQuery"',
+          style: GoogleFonts.poppins(
+              color: _kSubText, fontSize: _s(13)),
+        ),
+      );
+    }
+    return Column(
+      children: _menuDocs
+          .take(30)
+          .map((doc) => _menuItemTile(doc))
+          .toList(),
+    );
+  }
+
+  Widget _menuItemTile(QueryDocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    final variants =
+        data['variants'] as List<dynamic>? ?? [];
+    final isSelected = _selectedMenuItem?.id == doc.id;
+
+    return GestureDetector(
+      onTap: () => setState(() {
+        _selectedMenuItem = isSelected ? null : doc;
+        _selectedVariantIdx = 0;
+        _newItemQty = 1;
+      }),
+      child: Container(
+        margin: EdgeInsets.only(bottom: _h(8)),
+        padding: EdgeInsets.all(_s(12)),
+        decoration: BoxDecoration(
+          color: isSelected ? _kPrimaryBg : _kCard,
+          borderRadius: BorderRadius.circular(_s(12)),
+          border: Border.all(
+            color: isSelected ? _kPrimary : _kBorder,
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                // Veg/non-veg indicator
+                Container(
+                  width: _s(14),
+                  height: _s(14),
+                  margin: EdgeInsets.only(right: _w(6)),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: (data['isVeg'] ?? true) as bool
+                          ? Colors.green
+                          : Colors.red,
+                      width: 1.5,
+                    ),
+                    borderRadius: BorderRadius.circular(_s(2)),
+                  ),
+                  child: Center(
+                    child: Container(
+                      width: _s(7),
+                      height: _s(7),
+                      decoration: BoxDecoration(
+                        color: (data['isVeg'] ?? true) as bool
+                            ? Colors.green
+                            : Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    (data['name'] ?? '').toString(),
+                    style: GoogleFonts.poppins(
+                      fontSize: _s(13),
+                      fontWeight: FontWeight.w600,
+                      color: _kText,
+                    ),
+                  ),
+                ),
+                if (variants.isNotEmpty)
+                  Text(
+                    '₹${(Map<String, dynamic>.from(variants.first as Map))['price']}',
+                    style: GoogleFonts.poppins(
+                      fontSize: _s(13),
+                      fontWeight: FontWeight.w700,
+                      color: _kPrimary,
+                    ),
+                  ),
+                SizedBox(width: _w(6)),
+                Icon(
+                  isSelected
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.add_circle_outline_rounded,
+                  color: _kPrimary,
+                  size: _s(20),
+                ),
+              ],
+            ),
+            // ── Expanded config (variant + qty + add button) ──────────
+            if (isSelected) ...[
+              SizedBox(height: _h(10)),
+              if (variants.length > 1) ...[
+                Text('Variant:',
+                    style: GoogleFonts.poppins(
+                        fontSize: _s(11), color: _kSubText)),
+                SizedBox(height: _h(6)),
+                Wrap(
+                  spacing: _w(6),
+                  runSpacing: _h(6),
+                  children: variants.asMap().entries.map((e) {
+                    final v = Map<String, dynamic>.from(
+                        e.value as Map);
+                    final sel = e.key == _selectedVariantIdx;
+                    return GestureDetector(
+                      onTap: () => setState(
+                          () => _selectedVariantIdx = e.key),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: _s(10), vertical: _s(4)),
+                        decoration: BoxDecoration(
+                          color: sel ? _kPrimary : _kCard,
+                          borderRadius:
+                              BorderRadius.circular(_s(20)),
+                          border: Border.all(
+                              color: sel ? _kPrimary : _kBorder),
+                        ),
+                        child: Text(
+                          '${v['name']}  ₹${v['price']}',
+                          style: GoogleFonts.poppins(
+                            fontSize: _s(11),
+                            color: sel ? Colors.white : _kText,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                SizedBox(height: _h(10)),
+              ],
+              Row(
+                children: [
+                  Text('Qty:',
+                      style: GoogleFonts.poppins(
+                          fontSize: _s(12), color: _kSubText)),
+                  SizedBox(width: _w(8)),
+                  _qtyRow(
+                    qty: _newItemQty,
+                    onDecrement: () {
+                      if (_newItemQty > 1) {
+                        setState(() => _newItemQty--);
+                      }
+                    },
+                    onIncrement: () =>
+                        setState(() => _newItemQty++),
+                  ),
+                  const Spacer(),
+                  ElevatedButton(
+                    onPressed: _stageNewItem,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _kPrimary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(_s(10))),
+                      padding: EdgeInsets.symmetric(
+                          horizontal: _s(18), vertical: _s(8)),
+                    ),
+                    child: Text('Add',
+                        style: GoogleFonts.poppins(
+                            fontSize: _s(13),
+                            fontWeight: FontWeight.w600)),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _qtyRow({
+    required int qty,
+    required VoidCallback onDecrement,
+    required VoidCallback onIncrement,
+  }) =>
+      Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _iconBtn(Icons.remove, onDecrement),
+          SizedBox(
+            width: _s(30),
+            child: Text(
+              '$qty',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: _s(14),
+                fontWeight: FontWeight.w700,
+                color: _kText,
+              ),
+            ),
+          ),
+          _iconBtn(Icons.add, onIncrement),
+        ],
+      );
+
+  Widget _iconBtn(IconData icon, VoidCallback onTap) =>
+      GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: _s(28),
+          height: _s(28),
+          decoration: BoxDecoration(
+            color: _kPrimaryBg,
+            borderRadius: BorderRadius.circular(_s(8)),
+          ),
+          child: Icon(icon, size: _s(16), color: _kPrimary),
+        ),
+      );
+
+  Widget _saveButton() => SafeArea(
+        child: Container(
+          padding: EdgeInsets.all(_s(16)),
+          decoration: BoxDecoration(
+            color: _kCard,
+            border: Border(top: BorderSide(color: _kBorder)),
+          ),
+          child: SizedBox(
+            width: double.infinity,
+            height: _s(52),
+            child: ElevatedButton(
+              onPressed: _saving ? null : _saveChanges,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _kPrimary,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor:
+                    _kPrimary.withOpacity(0.6),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(_s(14))),
+              ),
+              child: _saving
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2),
+                    )
+                  : Row(
+                      mainAxisAlignment:
+                          MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.check_circle_outline,
+                            size: _s(20)),
+                        SizedBox(width: _w(8)),
+                        Text(
+                          _newItems.isEmpty
+                              ? 'Save Changes'
+                              : 'Save & Send KOT',
+                          style: GoogleFonts.poppins(
+                            fontSize: _s(15),
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+        ),
+      );
 }
