@@ -62,9 +62,9 @@ class _LoginPageState extends State<LoginPage>
   }
 
   Future<void> login() async {
-    /*emailController.text = "jaybhavani@gmail.com";
-    passwordController.text = "123456";
-*/
+  /*  emailController.text = "jaybhavani@gmail.com";
+    passwordController.text = "123456";*/
+
     final l10n = AppLocalizations.of(context);
     if (emailController.text.trim().isEmpty ||
         passwordController.text.trim().isEmpty) {
@@ -201,14 +201,26 @@ class _LoginPageState extends State<LoginPage>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Container(
-                            width: 56,
-                            height: 56,
+                            width: 80,
+                            height: 80,
                             decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFFE8622A).withOpacity(0.35),
+                                  blurRadius: 32,
+                                  spreadRadius: 2,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
                             ),
-                            child: const Icon(Icons.restaurant_menu,
-                                color: Colors.white, size: 28),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(20),
+                              child: Image.asset(
+                                'rasora_web.png',
+                                fit: BoxFit.contain,
+                              ),
+                            ),
                           ),
                           const SizedBox(height: 32),
                           Text(
@@ -435,144 +447,153 @@ class _LoginPageState extends State<LoginPage>
     return Scaffold(
         backgroundColor: const Color(0xFFF7F7F5),
         body: SafeArea(
-          child: Center(
-            child: FadeTransition(
-              opacity: _fadeAnim,
-              child: SlideTransition(
-                position: _slideAnim,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 480),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        // Logo
-                        Center(
-                          child: Container(
-                            width: 68,
-                            height: 68,
-                            decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                            child: const Icon(
-                              Icons.restaurant_menu,
-                              color: Colors.white,
-                              size: 32,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-
-                        // Welcome text
-                        Text(
-                          "Welcome back",
-                          style: GoogleFonts.playfairDisplay(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF1A1A2E),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          "Sign in to your account to continue",
-                          style: GoogleFonts.inter(
-                            fontSize: 15,
-                            color: Colors.grey[500],
-                          ),
-                        ),
-                        const SizedBox(height: 36),
-
-                        // Email field
-                        _mobileTextField(
-                          controller: emailController,
-                          label: AppLocalizations.of(context).email,
-                          icon: Icons.email_outlined,
-                          keyboardType: TextInputType.emailAddress,
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Password field
-                        _mobileTextField(
-                          controller: passwordController,
-                          label: AppLocalizations.of(context).password,
-                          icon: Icons.lock_outline,
-                          obscure: obscurePassword,
-                          suffix: IconButton(
-                            icon: Icon(
-                              obscurePassword
-                                  ? Icons.visibility_off_outlined
-                                  : Icons.visibility_outlined,
-                              size: 20,
-                              color: Colors.grey[400],
-                            ),
-                            onPressed: () =>
-                                setState(() => obscurePassword = !obscurePassword),
-                          ),
-                        ),
-
-                        const SizedBox(height: 32),
-
-                        // Sign in button
-                        SizedBox(
-                          width: double.infinity,
-                          height: 54,
-                          child: ElevatedButton(
-                            onPressed: loading ? null : login,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: Colors.white,
-                              disabledBackgroundColor:
-                              AppColors.primary.withOpacity(0.6),
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
+            child: Center(
+              child: FadeTransition(
+                opacity: _fadeAnim,
+                child: SlideTransition(
+                  position: _slideAnim,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 480),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // Logo
+                          Center(
+                            child: Container(
+                              width: 110,
+                              height: 110,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(24),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFFE8622A).withOpacity(0.35),
+                                    blurRadius: 36,
+                                    spreadRadius: 2,
+                                    offset: const Offset(0, 10),
+                                  ),
+                                ],
                               ),
-                            ),
-                            child: loading
-                                ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                                : Text(
-                              AppLocalizations.of(context).loginButton,
-                              style: GoogleFonts.inter(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.3,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(24),
+                                child: Image.asset(
+                                  'rasora_web.png',
+                                  fit: BoxFit.contain,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 20),
-                        const LanguageSwitcher(),
-                        const SizedBox(height: 12),
+                          const SizedBox(height: 32),
 
-                        // Footer text
-                        Center(
-                          child: Text(
-                            "Admin • Manager • Super Admin",
+                          // Welcome text
+                          Text(
+                            "Welcome back",
+                            style: GoogleFonts.playfairDisplay(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1A1A2E),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            "Sign in to your account to continue",
                             style: GoogleFonts.inter(
-                              fontSize: 13,
-                              color: Colors.grey[400],
-                              letterSpacing: 0.5,
+                              fontSize: 15,
+                              color: Colors.grey[500],
                             ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 36),
+
+                          // Email field
+                          _mobileTextField(
+                            controller: emailController,
+                            label: AppLocalizations.of(context).email,
+                            icon: Icons.email_outlined,
+                            keyboardType: TextInputType.emailAddress,
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Password field
+                          _mobileTextField(
+                            controller: passwordController,
+                            label: AppLocalizations.of(context).password,
+                            icon: Icons.lock_outline,
+                            obscure: obscurePassword,
+                            suffix: IconButton(
+                              icon: Icon(
+                                obscurePassword
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
+                                size: 20,
+                                color: Colors.grey[400],
+                              ),
+                              onPressed: () =>
+                                  setState(() => obscurePassword = !obscurePassword),
+                            ),
+                          ),
+
+                          const SizedBox(height: 32),
+
+                          // Sign in button
+                          SizedBox(
+                            width: double.infinity,
+                            height: 54,
+                            child: ElevatedButton(
+                              onPressed: loading ? null : login,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                disabledBackgroundColor:
+                                AppColors.primary.withOpacity(0.6),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              child: loading
+                                  ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                                  : Text(
+                                AppLocalizations.of(context).loginButton,
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          const LanguageSwitcher(),
+                          const SizedBox(height: 12),
+
+                          // Footer text
+                          Center(
+                            child: Text(
+                              "Admin • Manager • Super Admin",
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: Colors.grey[400],
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          )));
-    }
+            )));
+  }
 
   Widget _mobileTextField({
     required TextEditingController controller,

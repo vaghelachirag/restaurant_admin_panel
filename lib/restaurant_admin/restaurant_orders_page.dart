@@ -1,9 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:restaurant_admin_panel/restaurant_admin/table_management.dart';
 import 'dart:async';
 import '../uttils/session_manager.dart';
 import '../widgets/WebAudioStub.dart';
@@ -23,6 +23,10 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
   StreamSubscription<QuerySnapshot>? _newOrdersSubscription;
   String? _currentUserRole;
 
+  // ── Token refresh state ─────────────────────────────────────────────────────
+  bool _tokenReady = false;
+  String? _tokenError;
+
   final LocalizationService _localizationService = LocalizationService();
 
   // ── Pagination ──────────────────────────────────────────────────────────────
@@ -31,6 +35,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
 
   Set<String> _knownOrderIds = {};
   bool _isFirstSnapshot = true;
+
   void _playNewOrderSound() {
     if (!kIsWeb) return;
     try {
@@ -44,7 +49,6 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
   /// Called on every Firestore snapshot. Detects truly-new orders and plays sound.
   void _handleNewOrders(List<QueryDocumentSnapshot> docs) {
     if (_isFirstSnapshot) {
-      // Seed the known-set without playing sound on page open.
       _knownOrderIds = docs.map((d) => d.id).toSet();
       _isFirstSnapshot = false;
       return;
@@ -63,8 +67,57 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
   @override
   void initState() {
     super.initState();
-    getPlayerId();
     _localizationService.addListener(_onLanguageChanged);
+    // ── FIX: Force-refresh the ID token so custom claims (restaurantId, role)
+    //    are present before any Firestore read/write is attempted.
+    _refreshTokenThenInit();
+  }
+
+  /// Force-refreshes the Firebase ID token to ensure custom claims are loaded,
+  /// then kicks off the OneSignal player-ID fetch.
+  Future<void> _refreshTokenThenInit() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        // Not signed in — let the stream surface the permission error naturally.
+        if (mounted) setState(() => _tokenReady = true);
+        return;
+      }
+
+      // forceRefresh: true guarantees we get the latest custom claims from the
+      // server (e.g. restaurantId, role) that were set after login.
+      final tokenResult = await user.getIdTokenResult(true);
+      debugPrint('✅ Token claims: ${tokenResult.claims}');
+
+      // Optional: surface a warning if the restaurantId claim is missing.
+      final claimedRestaurantId = tokenResult.claims?['restaurantId'];
+      if (claimedRestaurantId == null) {
+        debugPrint(
+          '⚠️ Token is missing "restaurantId" claim. '
+              'Firestore rules will deny reads/writes. '
+              'Ensure the custom token is minted with restaurantId.',
+        );
+      } else if (claimedRestaurantId != widget.restaurantId) {
+        debugPrint(
+          '⚠️ Token restaurantId "$claimedRestaurantId" does not match '
+              'widget.restaurantId "${widget.restaurantId}".',
+        );
+      }
+
+      if (mounted) setState(() => _tokenReady = true);
+
+      // Only fetch the OneSignal player ID after the token is ready so that
+      // the subsequent Firestore write to restaurants/{id} is authorised.
+      await getPlayerId();
+    } catch (e, st) {
+      debugPrint('❌ Token refresh failed: $e\n$st');
+      if (mounted) {
+        setState(() {
+          _tokenReady = true; // still show the UI; stream will show the error
+          _tokenError = e.toString();
+        });
+      }
+    }
   }
 
   void _onLanguageChanged() {
@@ -79,7 +132,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
   }
 
   String _selectedFilter = 'All';
-  String _selectedFilterKey = 'All'; // Store the English key for filtering
+  String _selectedFilterKey = 'All';
 
   List<QueryDocumentSnapshot> _filterOrders(
       List<QueryDocumentSnapshot> orders, String filterKey) {
@@ -88,11 +141,10 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
     return orders.where((doc) {
       final data = doc.data() as Map<String, dynamic>;
       final status = (data["status"] ?? "pending").toString().toLowerCase();
-      return status.toLowerCase() == filterKey.toLowerCase();
+      return status == filterKey.toLowerCase();
     }).toList();
   }
 
-  /// Returns the slice of [orders] for the current page.
   List<QueryDocumentSnapshot> _paginateOrders(
       List<QueryDocumentSnapshot> orders) {
     final start = (_currentPage - 1) * _pageSize;
@@ -151,7 +203,6 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
     }
   }
 
-  /// Shows a confirmation dialog and logs the user out
   Future<void> _handleLogout() async {
     final loc = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
@@ -193,7 +244,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
     );
 
     if (confirmed == true) {
-      await SessionManager.logout(); // clear stored session
+      await SessionManager.logout();
       if (mounted) {
         Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
       }
@@ -206,63 +257,114 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
     final isDesktop = width >= 1024;
     final isTablet = width >= 768 && width < 1024;
 
-    return SafeArea(
+    // ── Wait for token refresh before starting the Firestore stream ────────────
+    if (!_tokenReady) {
+      return const SafeArea(
         child: Scaffold(
           backgroundColor: Colors.white,
-          body: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection("orders")
-                .where("restaurantId", isEqualTo: widget.restaurantId)
-                .orderBy("createdAt", descending: true)
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
+          body: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
 
-              final allOrders = snapshot.data!.docs;
-
-              // ── Sound detection (web only, runs on every snapshot) ────────────
-              // Deferred to post-frame to avoid setState-during-build.
-              if (kIsWeb) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  _handleNewOrders(allOrders);
-                });
-              }
-
-              final filteredOrders = _filterOrders(allOrders, _selectedFilterKey);
-              final counts = _buildStatusCounts(allOrders);
-
-              // Clamp current page whenever filtered list changes
-              final totalPages = _totalPages(filteredOrders.length);
-              if (_currentPage > totalPages) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) setState(() => _currentPage = 1);
-                });
-              }
-
-              final pageOrders = _paginateOrders(filteredOrders);
-
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(isDesktop, isTablet, counts),
-                  const SizedBox(height: 20),
-                  _buildFilterTabs(counts, isDesktop, isTablet),
-                  const SizedBox(height: 10),
-                  Expanded(
-                    child: _buildOrdersGrid(
-                        pageOrders, width, isDesktop, isTablet),
+    return SafeArea(
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection("orders")
+              .where("restaurantId", isEqualTo: widget.restaurantId)
+              .orderBy("createdAt", descending: true)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              final err = snapshot.error.toString();
+              final isPermission = err.toLowerCase().contains('permission') ||
+                  err.toLowerCase().contains('denied');
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isPermission ? Icons.lock_outline : Icons.error_outline,
+                        size: 48,
+                        color: Colors.red[300],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        isPermission
+                            ? 'Permission denied.\nYour account token may be missing the restaurantId claim.\nPlease log out and log in again.'
+                            : 'Error: $err',
+                        textAlign: TextAlign.center,
+                        style: _p(14, FontWeight.w500, const Color(0xFF555555)),
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton.icon(
+                        onPressed: _handleLogout,
+                        icon: const Icon(Icons.logout),
+                        label: const Text('Log out & retry'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF070B2D),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  // Pagination bar
-                  if (filteredOrders.isNotEmpty)
-                    _buildPaginationBar(
-                        filteredOrders.length, isDesktop, isTablet),
-                ],
+                ),
               );
-            },
-          ),
-        ));
+            }
+
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            final allOrders = snapshot.data!.docs;
+
+            if (kIsWeb) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _handleNewOrders(allOrders);
+              });
+            }
+
+            final filteredOrders =
+            _filterOrders(allOrders, _selectedFilterKey);
+            final counts = _buildStatusCounts(allOrders);
+
+            // Clamp current page whenever filtered list changes
+            final totalPages = _totalPages(filteredOrders.length);
+            if (_currentPage > totalPages) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) setState(() => _currentPage = 1);
+              });
+            }
+
+            final pageOrders = _paginateOrders(filteredOrders);
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(isDesktop, isTablet, counts),
+                const SizedBox(height: 20),
+                _buildFilterTabs(counts, isDesktop, isTablet),
+                const SizedBox(height: 10),
+                Expanded(
+                  child: _buildOrdersGrid(
+                      pageOrders, width, isDesktop, isTablet),
+                ),
+                if (filteredOrders.isNotEmpty)
+                  _buildPaginationBar(
+                      filteredOrders.length, isDesktop, isTablet),
+              ],
+            );
+          },
+        ),
+      ),
+    );
   }
 
   TextStyle _p(double size, FontWeight weight, Color color) {
@@ -270,14 +372,14 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
         fontSize: size, fontWeight: weight, color: color);
   }
 
-  /// Fetches the OneSignal Player ID (push subscription ID) and saves it
-  /// to Firestore under restaurants/{restaurantId}/onesignalPlayerId.
+  /// Fetches the OneSignal Player ID and saves it to Firestore.
+  /// Called only after the token has been refreshed.
   Future<void> getPlayerId() async {
     try {
       final String? existingId = OneSignal.User.pushSubscription.id;
       if (existingId != null && existingId.isNotEmpty) {
         debugPrint("✅ OneSignal Player ID (immediate): $existingId");
-        setState(() => _playerId = existingId);
+        if (mounted) setState(() => _playerId = existingId);
         await _savePlayerIdToFirestore(existingId);
       }
 
@@ -287,7 +389,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
             updatedId.isNotEmpty &&
             updatedId != _playerId) {
           debugPrint("🔄 OneSignal Player ID (updated): $updatedId");
-          setState(() => _playerId = updatedId);
+          if (mounted) setState(() => _playerId = updatedId);
           await _savePlayerIdToFirestore(updatedId);
         }
       });
@@ -353,7 +455,6 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Title + subtitle
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -367,48 +468,14 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
                       ),
                     ),
                     Text(
-                      loc.todayOrders.replaceAll('{count}', totalToday.toString()),
-                      style: _p(12, FontWeight.w400, const Color(0xFF9E9E9E)),
+                      loc.todayOrders
+                          .replaceAll('{count}', totalToday.toString()),
+                      style:
+                      _p(12, FontWeight.w400, const Color(0xFF9E9E9E)),
                     ),
                   ],
                 ),
               ),
-
-              // Status summary pills — all screen sizes, always scrollable
-              /*    Flexible(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _buildStatusPill(
-                          '${counts['Pending'] ?? 0}',
-                          'Pending',
-                          const Color(0xFFB45309),
-                          const Color(0xFFFEF3C7)),
-                      const SizedBox(width: 6),
-                      _buildStatusPill(
-                          '${counts['Preparing'] ?? 0}',
-                          'Preparing',
-                          const Color(0xFF1D4ED8),
-                          const Color(0xFFDBEAFE)),
-                      const SizedBox(width: 6),
-                      _buildStatusPill(
-                          '${counts['Ready'] ?? 0}',
-                          'Ready',
-                          const Color(0xFF065F46),
-                          const Color(0xFFD1FAE5)),
-                      const SizedBox(width: 6),
-                      _buildStatusPill(
-                          '${counts['Served'] ?? 0}',
-                          'Served',
-                          const Color(0xFF6B21A8),
-                          const Color(0xFFF3E8FF)),
-                      const SizedBox(width: 10),
-                    ],
-                  ),
-                ),
-              ),*/
             ],
           ),
         ],
@@ -416,7 +483,6 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
     );
   }
 
-  /// Small coloured pill used in the header to show per-status count
   Widget _buildStatusPill(
       String count, String label, Color textColor, Color bgColor) {
     return Column(
@@ -429,7 +495,8 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
           child: Text(count, style: _p(11, FontWeight.w700, textColor)),
         ),
         const SizedBox(height: 2),
-        Text(label, style: _p(8.5, FontWeight.w400, const Color(0xFF9E9E9E))),
+        Text(label,
+            style: _p(8.5, FontWeight.w400, const Color(0xFF9E9E9E))),
       ],
     );
   }
@@ -443,7 +510,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
       {'key': 'Preparing', 'label': loc.preparing},
       {'key': 'Ready', 'label': loc.ready},
       {'key': 'Served', 'label': loc.served},
-      {'key': 'Completed', 'label': loc.completed}
+      {'key': 'Completed', 'label': loc.completed},
     ];
     final sidePadding = isDesktop ? 24.0 : (isTablet ? 20.0 : 14.0);
 
@@ -464,7 +531,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
                 onTap: () => setState(() {
                   _selectedFilter = label;
                   _selectedFilterKey = key;
-                  _currentPage = 1; // reset to first page on filter change
+                  _currentPage = 1;
                 }),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
@@ -483,8 +550,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
                     boxShadow: selected
                         ? [
                       BoxShadow(
-                        color:
-                        const Color(0xFFE8622A).withOpacity(0.2),
+                        color: const Color(0xFFE8622A).withOpacity(0.2),
                         blurRadius: 6,
                         offset: const Offset(0, 2),
                       )
@@ -515,7 +581,8 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
     final loc = AppLocalizations.of(context);
     final sidePadding = isDesktop ? 24.0 : (isTablet ? 20.0 : 14.0);
     final totalPages = _totalPages(totalItems);
-    final start = ((_currentPage - 1) * _pageSize + 1).clamp(1, totalItems);
+    final start =
+    ((_currentPage - 1) * _pageSize + 1).clamp(1, totalItems);
     final end = (_currentPage * _pageSize).clamp(1, totalItems);
 
     return Container(
@@ -616,7 +683,8 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
                 size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
-              loc.noOrders.replaceAll('{filter}', _selectedFilter.toLowerCase()),
+              loc.noOrders
+                  .replaceAll('{filter}', _selectedFilter.toLowerCase()),
               style: _p(16, FontWeight.w500, const Color(0xFF777777)),
             ),
           ],
@@ -631,7 +699,6 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
     final crossAxisCount =
     (availableWidth / desiredCardWidth).floor().clamp(1, 4);
 
-    // Single-column → simple ListView (no horizontal scroll possible)
     if (crossAxisCount == 1) {
       return ListView.separated(
         padding: EdgeInsets.fromLTRB(sidePadding, 4, sidePadding, 24),
@@ -645,16 +712,9 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
       );
     }
 
-    // Multi-column desktop/tablet layout.
-    // ── FIX: LayoutBuilder derives card widths from the actual rendered
-    //    constraints so cards never overflow horizontally on web when the
-    //    browser window is resized. Cards use Expanded instead of a fixed
-    //    SizedBox so they fill available space correctly.
     return LayoutBuilder(builder: (context, constraints) {
       final usable = constraints.maxWidth - (sidePadding * 2);
       final gapTotal = (crossAxisCount - 1) * 14.0;
-      // cardWidth is computed but not directly used — Expanded handles sizing.
-      // It's kept here for reference / future use.
       // ignore: unused_local_variable
       final cardWidth = (usable - gapTotal) / crossAxisCount;
 
@@ -670,8 +730,6 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
                 final data = order.data() as Map<String, dynamic>;
                 return [
                   if (e.key > 0) const SizedBox(width: 14),
-                  // Expanded fills the row proportionally — no fixed width
-                  // that could cause overflow when the window narrows.
                   Expanded(child: _buildOrderCard(order, data)),
                 ];
               }).expand((w) => w).toList(),
@@ -681,9 +739,6 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
       }
 
       return SingleChildScrollView(
-        // primary: false prevents this vertical scroll view from competing
-        // with Flutter Web's root scrollable, which was causing an unwanted
-        // horizontal scrollbar to appear on the page.
         primary: false,
         padding: EdgeInsets.fromLTRB(sidePadding, 4, sidePadding, 24),
         child: Column(
@@ -699,32 +754,34 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
   Widget _buildOrderCard(
       QueryDocumentSnapshot order, Map<String, dynamic> data) {
     final loc = AppLocalizations.of(context);
-    // ── Support both old field (tableNumber) and new fields (tableId/tableName)
-    final tableNumber  = (data["tableNumber"] ?? "").toString();
-    final tableId      = (data["tableId"]     ?? "").toString();
-    final tableName    = (data["tableName"]   ?? "").toString();
-    final displayTable = tableName.isNotEmpty ? tableName
-        : tableId.isNotEmpty   ? tableId
+
+    final tableNumber = (data["tableNumber"] ?? "").toString();
+    final tableId = (data["tableId"] ?? "").toString();
+    final tableName = (data["tableName"] ?? "").toString();
+    final displayTable = tableName.isNotEmpty
+        ? tableName
+        : tableId.isNotEmpty
+        ? tableId
         : tableNumber;
 
-    final status       = (data["status"] ?? "pending").toString();
+    final status = (data["status"] ?? "pending").toString();
     final customerName = (data["customerName"] ?? "Guest").toString();
-    final items        = (data["items"] as List?) ?? [];
-    final totalAmount  = (data["totalAmount"] ?? 0) as num;
-    final createdAt    = data["createdAt"] as Timestamp?;
-    final orderNumber  =
+    final items = (data["items"] as List?) ?? [];
+    final totalAmount = (data["totalAmount"] ?? 0) as num;
+    final createdAt = data["createdAt"] as Timestamp?;
+    final orderNumber =
     (data["orderNumber"] ?? "#${1000 + order.id.hashCode.abs() % 1000}")
         .toString();
 
     final orderType = (data["orderType"] ?? "").toString().toLowerCase();
-    final isDineIn  = orderType == "dine in" ||
+    final isDineIn = orderType == "dine in" ||
         orderType == "dine-in" ||
         orderType == "dinein" ||
         (orderType.isEmpty && displayTable.isNotEmpty);
 
     final bool isCompleted = status.toLowerCase() == 'completed';
     final Color btnBg = _getStatusPillText(status);
-    final Color btnFg = Colors.white;
+    const Color btnFg = Colors.white;
 
     final displayedItems = items.take(3).toList();
     final extraCount = items.length - 3;
@@ -735,17 +792,6 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
           .doc(order.id)
           .update({"status": nextStatus});
 
-      // When order is completed, free the linked table
-      if (nextStatus == 'completed' && isDineIn && tableId.isNotEmpty) {
-        try {
-          await TableService().freeTable(
-            restaurantId: widget.restaurantId,
-            tableId: tableId,
-          );
-        } catch (_) {
-          // Don't block order completion if table update fails
-        }
-      }
     }
 
     return Container(
@@ -786,37 +832,19 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
                         _p(14, FontWeight.w700, const Color(0xFF232323)),
                       ),
                       if (isDineIn && displayTable.isNotEmpty)
-                      /*  Container(
+                        Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 7, vertical: 2),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFFF0E8),
+                            color: _getStatusPillBg(status),
                             borderRadius: BorderRadius.circular(999),
                           ),
-                          child: Row(mainAxisSize: MainAxisSize.min, children: [
-                            const Icon(Icons.table_restaurant_rounded,
-                                size: 10, color: Color(0xFFE8622A)),
-                            const SizedBox(width: 3),
-                            Text(
-                              displayTable,
-                              style: _p(10, FontWeight.w600,
-                                  const Color(0xFFE8622A)),
-                            ),
-                          ]),
-                        )*/
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: _getStatusPillBg(status),
-                          borderRadius: BorderRadius.circular(999),
+                          child: Text(
+                            _toTitle(status),
+                            style: _p(10, FontWeight.w600,
+                                _getStatusPillText(status)),
+                          ),
                         ),
-                        child: Text(
-                          _toTitle(status),
-                          style: _p(10, FontWeight.w600,
-                              _getStatusPillText(status)),
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -892,7 +920,8 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
                   children: [
                     Expanded(
                       child: Text(
-                        '${quantity}x $itemName${variant.isNotEmpty ? ' ($variant)' : ''}',
+                        '${quantity}x $itemName'
+                            '${variant.isNotEmpty ? ' ($variant)' : ''}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: _p(
@@ -913,12 +942,24 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
             if (extraCount > 0)
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),
-                child: Text(
-                  loc.moreItems
-                      .replaceAll('{count}', extraCount.toString())
-                      .replaceAll('{plural}', extraCount > 1 ? 's' : ''),
-                  style:
-                  _p(11, FontWeight.w500, const Color(0xFF969696)),
+                child: GestureDetector(
+                  onTap: () => _showFullOrderDialog(context, items, loc),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        loc.moreItems
+                            .replaceAll('{count}', extraCount.toString())
+                            .replaceAll(
+                            '{plural}', extraCount > 1 ? 's' : ''),
+                        style: _p(
+                            11, FontWeight.w600, const Color(0xFFE8622A)),
+                      ),
+                      const SizedBox(width: 3),
+                      const Icon(Icons.expand_more_rounded,
+                          size: 14, color: Color(0xFFE8622A)),
+                    ],
+                  ),
                 ),
               ),
 
@@ -933,11 +974,37 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
                   style: _p(16, FontWeight.w700, Colors.red),
                 ),
                 const Spacer(),
-                if (!isCompleted)
+                if (isCompleted)
+                  SizedBox(
+                    height: 32,
+                    child: ElevatedButton.icon(
+                      onPressed: () =>
+                          _showBillDialog(context, order.id, data),
+                      icon: const Icon(Icons.receipt_long_rounded, size: 14),
+                      label: Text(
+                        'Generate Bill',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: _p(10, FontWeight.w600, Colors.white),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        elevation: 0,
+                        backgroundColor: const Color(0xFF065F46),
+                        foregroundColor: Colors.white,
+                        padding:
+                        const EdgeInsets.symmetric(horizontal: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  )
+                else
                   SizedBox(
                     height: 32,
                     child: ElevatedButton(
-                      onPressed: () => updateStatus(_getNextStatusValue(status)),
+                      onPressed: () =>
+                          updateStatus(_getNextStatusValue(status)),
                       style: ElevatedButton.styleFrom(
                         elevation: 0,
                         backgroundColor: btnBg,
@@ -961,6 +1028,530 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
           ],
         ),
       ),
+    );
+  }
+
+  // ── Bill dialog ─────────────────────────────────────────────────────────────
+
+  /// Shows a printable bill for a completed order.
+  /// All GST / packaging values are read from the order document itself
+  /// (they were persisted at order-creation time from the restaurant settings).
+  void _showBillDialog(
+      BuildContext context, String orderId, Map<String, dynamic> data) {
+    // ── Order fields ──────────────────────────────────────────────────────────
+    final items = (data['items'] as List?) ?? [];
+    final customerName = (data['customerName'] ?? 'Guest').toString();
+    final tableName = (data['tableName'] ?? '').toString();
+    final tableId = (data['tableId'] ?? '').toString();
+    final displayTable = tableName.isNotEmpty ? tableName : tableId;
+    final orderType = (data['orderType'] ?? 'Dine In').toString();
+    final tokenNumber = (data['tokenNumber'] ?? '').toString();
+    final orderNumber =
+    (data['orderNumber'] ?? '#${1000 + orderId.hashCode.abs() % 1000}')
+        .toString();
+    final createdAt = data['createdAt'] as Timestamp?;
+
+    // ── Pricing fields (saved in order doc from cart_page) ────────────────────
+    final subtotal = (data['subtotal'] ?? 0) as num;
+    final bool enableGst = data['enableGst'] == true;
+    final double gstPct =
+        double.tryParse(data['gstPercentage']?.toString() ?? '0') ?? 0;
+    final double sgstPct =
+        double.tryParse(data['sgstPercentage']?.toString() ?? '0') ?? 0;
+    final double gstAmt =
+        double.tryParse(data['gstAmount']?.toString() ?? '0') ?? 0;
+    final double sgstAmt =
+        double.tryParse(data['sgstAmount']?.toString() ?? '0') ?? 0;
+    final bool enablePackaging = data['enablePackagingCharge'] == true;
+    final double packagingCharge =
+        (data['packagingCharge'] as num?)?.toDouble() ?? 0;
+    final totalAmount = (data['totalAmount'] ?? 0) as num;
+
+    // ── Date formatting ───────────────────────────────────────────────────────
+    String formattedDate = '';
+    if (createdAt != null) {
+      final dt = createdAt.toDate();
+      formattedDate =
+      '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}  '
+          '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          insetPadding:
+          const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 420,
+              maxHeight: MediaQuery.of(context).size.height * 0.85,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ── Header ──────────────────────────────────────────────────
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF065F46),
+                    borderRadius:
+                    BorderRadius.vertical(top: Radius.circular(18)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.receipt_long_rounded,
+                          color: Colors.white, size: 22),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Bill / Invoice',
+                          style: _p(17, FontWeight.w700, Colors.white),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => Navigator.of(ctx).pop(),
+                        child: const Icon(Icons.close,
+                            color: Colors.white70, size: 20),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // ── Scrollable Bill Body ─────────────────────────────────────
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Order meta
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    orderNumber.startsWith('#')
+                                        ? orderNumber
+                                        : '#$orderNumber',
+                                    style: _p(13, FontWeight.w700,
+                                        const Color(0xFF1C1C1C)),
+                                  ),
+                                  if (tokenNumber.isNotEmpty)
+                                    Text(
+                                      'Token: $tokenNumber',
+                                      style: _p(11, FontWeight.w400,
+                                          const Color(0xFF6B7280)),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  formattedDate,
+                                  style: _p(11, FontWeight.w400,
+                                      const Color(0xFF6B7280)),
+                                ),
+                                const SizedBox(height: 2),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: orderType
+                                        .toLowerCase()
+                                        .contains('dine')
+                                        ? const Color(0xFFDBEAFE)
+                                        : const Color(0xFFFEF3C7),
+                                    borderRadius: BorderRadius.circular(99),
+                                  ),
+                                  child: Text(
+                                    orderType,
+                                    style: _p(
+                                      10,
+                                      FontWeight.w600,
+                                      orderType
+                                          .toLowerCase()
+                                          .contains('dine')
+                                          ? const Color(0xFF1D4ED8)
+                                          : const Color(0xFFB45309),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+
+                        // Table / Customer
+                        const SizedBox(height: 8),
+                        if (displayTable.isNotEmpty)
+                          _BillInfoRow(
+                            label: 'Table',
+                            value: displayTable,
+                          ),
+                        if (customerName.isNotEmpty &&
+                            customerName != 'Guest')
+                          _BillInfoRow(
+                            label: 'Customer',
+                            value: customerName,
+                          ),
+
+                        const SizedBox(height: 12),
+                        Container(
+                            height: 1, color: const Color(0xFFF0F0F0)),
+                        const SizedBox(height: 10),
+
+                        // Column header
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text('Item',
+                                  style: _p(11, FontWeight.w600,
+                                      const Color(0xFF9E9E9E))),
+                            ),
+                            Text('Qty',
+                                style: _p(11, FontWeight.w600,
+                                    const Color(0xFF9E9E9E))),
+                            const SizedBox(width: 12),
+                            SizedBox(
+                              width: 72,
+                              child: Text('Amount',
+                                  textAlign: TextAlign.right,
+                                  style: _p(11, FontWeight.w600,
+                                      const Color(0xFF9E9E9E))),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+
+                        // Item rows
+                        ...items.map((item) {
+                          final name = (item['name'] ?? '').toString();
+                          final variant =
+                          (item['variant'] ?? '').toString();
+                          final qty = (item['qty'] ?? 1) as num;
+                          final price = (item['price'] ?? 0) as num;
+                          final lineTotal = qty * price;
+                          return Padding(
+                            padding:
+                            const EdgeInsets.symmetric(vertical: 5),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                    children: [
+                                      Text(name,
+                                          style: _p(12, FontWeight.w600,
+                                              const Color(0xFF232323))),
+                                      if (variant.isNotEmpty)
+                                        Text(variant,
+                                            style: _p(
+                                                10,
+                                                FontWeight.w400,
+                                                const Color(0xFF9E9E9E))),
+                                      Text(
+                                          '₹${price.toStringAsFixed(2)} each',
+                                          style: _p(
+                                              10,
+                                              FontWeight.w400,
+                                              const Color(0xFF9E9E9E))),
+                                    ],
+                                  ),
+                                ),
+                                Text('×$qty',
+                                    style: _p(12, FontWeight.w500,
+                                        const Color(0xFF555555))),
+                                const SizedBox(width: 12),
+                                SizedBox(
+                                  width: 72,
+                                  child: Text(
+                                    '₹${lineTotal.toStringAsFixed(2)}',
+                                    textAlign: TextAlign.right,
+                                    style: _p(12, FontWeight.w600,
+                                        const Color(0xFF2F2F2F)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+
+                        const SizedBox(height: 8),
+                        Container(
+                            height: 1, color: const Color(0xFFF0F0F0)),
+                        const SizedBox(height: 10),
+
+                        // Subtotal
+                        _BillAmountRow(
+                          label: 'Subtotal',
+                          value: '₹${subtotal.toStringAsFixed(2)}',
+                        ),
+
+                        // GST rows — shown only when enableGst is true in the order doc
+                        if (enableGst) ...[
+                          const SizedBox(height: 4),
+                          _BillAmountRow(
+                            label:
+                            'CGST (${gstPct.toStringAsFixed(1)}%)',
+                            value: '₹${gstAmt.toStringAsFixed(2)}',
+                            dimmed: true,
+                          ),
+                          const SizedBox(height: 4),
+                          _BillAmountRow(
+                            label:
+                            'SGST (${sgstPct.toStringAsFixed(1)}%)',
+                            value: '₹${sgstAmt.toStringAsFixed(2)}',
+                            dimmed: true,
+                          ),
+                        ],
+
+                        // Packaging charge — shown only when enabled in the order doc
+                        if (enablePackaging) ...[
+                          const SizedBox(height: 4),
+                          _BillAmountRow(
+                            label: 'Packaging Charge',
+                            value:
+                            '₹${packagingCharge.toStringAsFixed(2)}',
+                            dimmed: true,
+                          ),
+                        ],
+
+                        const SizedBox(height: 10),
+                        Container(
+                            height: 1.5,
+                            color: const Color(0xFF1C1C1C)),
+                        const SizedBox(height: 10),
+
+                        // Grand Total
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Grand Total',
+                                style: _p(15, FontWeight.w700,
+                                    const Color(0xFF1C1C1C)),
+                              ),
+                            ),
+                            Text(
+                              '₹${totalAmount.toStringAsFixed(2)}',
+                              style: _p(16, FontWeight.w800,
+                                  const Color(0xFF065F46)),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 14),
+                        Center(
+                          child: Text(
+                            'Thank you for dining with us!',
+                            style: _p(11, FontWeight.w400,
+                                const Color(0xFF9E9E9E)),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // ── Footer actions ───────────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          icon: const Icon(Icons.close, size: 16),
+                          label: Text('Close',
+                              style: _p(13, FontWeight.w500,
+                                  const Color(0xFF374151))),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF374151),
+                            side: const BorderSide(
+                                color: Color(0xFFD1D5DB)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10)),
+                            padding:
+                            const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            // TODO: integrate printing package (e.g. flutter_print / pdf)
+                            Navigator.of(ctx).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Print feature coming soon!'),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          },
+                          icon:
+                          const Icon(Icons.print_rounded, size: 16),
+                          label: Text('Print Bill',
+                              style: _p(
+                                  13, FontWeight.w600, Colors.white)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF065F46),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10)),
+                            padding:
+                            const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showFullOrderDialog(
+      BuildContext context, List<dynamic> items, AppLocalizations loc) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        return Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.75,
+          ),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 12, bottom: 4),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDDDDDD),
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    Text(
+                      loc.ordersTitle,
+                      style:
+                      _p(16, FontWeight.w700, const Color(0xFF1C1C1C)),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF0E8),
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                      child: Text(
+                        '${items.length} items',
+                        style: _p(
+                            12, FontWeight.w600, const Color(0xFFE8622A)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1, color: Color(0xFFF0F0F0)),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  padding:
+                  const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                  itemCount: items.length,
+                  separatorBuilder: (_, __) =>
+                  const Divider(height: 1, color: Color(0xFFF5F5F5)),
+                  itemBuilder: (_, i) {
+                    final item = items[i] as Map<String, dynamic>;
+                    final name = (item['name'] ?? '').toString();
+                    final qty = (item['qty'] ?? 1).toString();
+                    final price = (item['price'] ?? 0) as num;
+                    final variant = (item['variant'] ?? '').toString();
+                    return Padding(
+                      padding:
+                      const EdgeInsets.symmetric(vertical: 10),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 26,
+                            height: 26,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF5F5F5),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              '${i + 1}',
+                              style: _p(11, FontWeight.w600,
+                                  const Color(0xFF888888)),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment:
+                              CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${qty}x $name',
+                                  style: _p(13, FontWeight.w600,
+                                      const Color(0xFF2F2F2F)),
+                                ),
+                                if (variant.isNotEmpty)
+                                  Text(
+                                    variant,
+                                    style: _p(11, FontWeight.w400,
+                                        const Color(0xFF9E9E9E)),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            '₹${price.toStringAsFixed(2)}',
+                            style: _p(13, FontWeight.w600,
+                                const Color(0xFF505050)),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -1002,6 +1593,89 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
       default:
         return const Color(0xFF374151);
     }
+  }
+}
+
+// ── Bill helper widgets ──────────────────────────────────────────────────────
+
+/// Key → value info row (Table, Customer) inside the bill dialog.
+class _BillInfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _BillInfoRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 3),
+      child: Row(
+        children: [
+          Text(
+            '$label: ',
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w400,
+              color: const Color(0xFF6B7280),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF1C1C1C),
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Amount row (Subtotal, GST, Grand Total) inside the bill dialog.
+class _BillAmountRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool dimmed;
+
+  const _BillAmountRow({
+    required this.label,
+    required this.value,
+    this.dimmed = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: dimmed ? 12 : 13,
+              fontWeight: dimmed ? FontWeight.w400 : FontWeight.w500,
+              color: dimmed
+                  ? const Color(0xFF6B7280)
+                  : const Color(0xFF555555),
+            ),
+          ),
+        ),
+        Text(
+          value,
+          style: GoogleFonts.poppins(
+            fontSize: dimmed ? 12 : 13,
+            fontWeight: dimmed ? FontWeight.w400 : FontWeight.w600,
+            color: dimmed
+                ? const Color(0xFF6B7280)
+                : const Color(0xFF2F2F2F),
+          ),
+        ),
+      ],
+    );
   }
 }
 

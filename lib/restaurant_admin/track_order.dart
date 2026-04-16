@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -25,6 +26,9 @@ Color hexToColor(String hex) {
 double _s(double val) => kIsWeb ? val : val.sp;
 double _h(double val) => kIsWeb ? val : val.h;
 double _w(double val) => kIsWeb ? val : val.w;
+
+// ── Helper: returns the currently signed-in user's uid, or null ──────────────
+String? get _currentUid => FirebaseAuth.instance.currentUser?.uid;
 
 class TrackOrderPage extends StatefulWidget {
   final String restaurantId;
@@ -53,7 +57,6 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
   @override
   void initState() {
     super.initState();
-    // Pre-fill token and auto-search when navigated from order success
     if (widget.initialToken != null && widget.initialToken!.isNotEmpty) {
       _tokenCtrl.text = widget.initialToken!;
       _searchedToken = widget.initialToken;
@@ -68,6 +71,7 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
 
   @override
   Widget build(BuildContext context) {
+    // ── FIX: restaurants/{id} is allow read: if true — no auth needed ─────────
     return StreamBuilder<DocumentSnapshot>(
       stream: FirebaseFirestore.instance
           .collection('restaurants')
@@ -92,7 +96,8 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
 
         final rawData = restaurantSnap.data!.data();
         if (rawData == null) {
-          return const Scaffold(body: Center(child: Text('Restaurant not found')));
+          return const Scaffold(
+              body: Center(child: Text('Restaurant not found')));
         }
 
         return Scaffold(
@@ -105,21 +110,17 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Page Title
-                // _PageHeader(),
-
                 SizedBox(height: _h(20)),
 
-                // Track Your Order Banner Card
                 _TrackBannerCard(
                   tokenCtrl: _tokenCtrl,
-                  onTrack: () => setState(
-                          () => _searchedToken = _tokenCtrl.text.trim()),
+                  onTrack: () =>
+                      setState(() => _searchedToken = _tokenCtrl.text.trim()),
                 ),
 
                 SizedBox(height: _h(28)),
 
-                // Order Result (shown after search)
+                // Order result (shown after token search)
                 if (_searchedToken != null && _searchedToken!.isNotEmpty)
                   _OrderResultSection(
                     restaurantId: widget.restaurantId,
@@ -128,7 +129,7 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
                     onContinueShopping: widget.onContinueShopping,
                   ),
 
-                // Past Orders Section
+                // Past orders (shown when no search active)
                 if (_searchedToken == null || _searchedToken!.isEmpty) ...[
                   _SectionLabel(label: 'Past Orders'),
                   SizedBox(height: _h(12)),
@@ -142,63 +143,7 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
     );
   }
 
-  AppBar _buildAppBar() {
-    return AppBar(
-      elevation: 0,
-      backgroundColor: _kPrimary,
-      foregroundColor: Colors.white,
-      centerTitle: false,
-      title: Row(
-        children: [
-          // Logo circle
-          Container(
-            width: _s(34),
-            height: _s(34),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text('🍦', style: TextStyle(fontSize: _s(18))),
-            ),
-          ),
-          SizedBox(width: _w(10)),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Havmore Icecream',
-                style: GoogleFonts.poppins(
-                  fontSize: _s(16),
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                  height: 1.2,
-                ),
-              ),
-              Text(
-                'Premium Ice Cream',
-                style: GoogleFonts.poppins(
-                  fontSize: _s(10),
-                  fontWeight: FontWeight.w400,
-                  color: Colors.white.withOpacity(0.8),
-                  height: 1.2,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      actions: [
-        Padding(
-          padding: EdgeInsets.only(right: _w(16)),
-          child: Icon(Icons.shopping_cart_outlined,
-              color: Colors.white, size: _s(24)),
-        ),
-      ],
-    );
-  }
-
-  // ── Status Chip ────────────────────────────────────────────────────────────
+  // ── Status Chip ─────────────────────────────────────────────────────────────
   Widget _buildStatusChip(String status) {
     Color bg;
     Color fg;
@@ -327,8 +272,7 @@ class _TrackBannerCardState extends State<_TrackBannerCard> {
 
   Widget _collapsedContent() {
     return Padding(
-      padding: EdgeInsets.symmetric(
-          horizontal: _s(20), vertical: _s(22)),
+      padding: EdgeInsets.symmetric(horizontal: _s(20), vertical: _s(22)),
       child: Row(
         children: [
           Expanded(
@@ -387,8 +331,6 @@ class _TrackBannerCardState extends State<_TrackBannerCard> {
             ],
           ),
           SizedBox(height: _h(14)),
-
-          // Token Input Field
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -404,25 +346,17 @@ class _TrackBannerCardState extends State<_TrackBannerCard> {
               ),
               decoration: InputDecoration(
                 hintText: 'Enter token number...',
-                hintStyle: GoogleFonts.poppins(
-                  fontSize: _s(14),
-                  color: _kSubText,
-                ),
-                prefixIcon: Icon(
-                  Icons.confirmation_number_outlined,
-                  color: _kPrimary,
-                  size: _s(20),
-                ),
+                hintStyle:
+                GoogleFonts.poppins(fontSize: _s(14), color: _kSubText),
+                prefixIcon: Icon(Icons.confirmation_number_outlined,
+                    color: _kPrimary, size: _s(20)),
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(
                     vertical: _s(14), horizontal: _s(4)),
               ),
             ),
           ),
-
           SizedBox(height: _h(12)),
-
-          // Track Button
           SizedBox(
             width: double.infinity,
             height: _s(48),
@@ -477,10 +411,26 @@ class _PastOrdersList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ── FIX: Customers have no restaurantId claim, so Firestore denies any
+    //    collection query that the rules evaluate with isAdminOrOwner().
+    //    The rules DO allow: request.auth.uid == resource.data.userId
+    //    But that only works if we include userId in the query — Firestore
+    //    needs it as a filter to safely evaluate per-document rules on a
+    //    collection scan.
+    final uid = _currentUid;
+    if (uid == null) {
+      return _EmptyState(
+        icon: Icons.lock_outline,
+        title: 'Not signed in',
+        subtitle: 'Please sign in to view your past orders.',
+      );
+    }
+
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('orders')
           .where('restaurantId', isEqualTo: restaurantId)
+          .where('userId', isEqualTo: uid) // ← FIX: scope to this user
           .orderBy('createdAt', descending: true)
           .limit(10)
           .snapshots(),
@@ -488,6 +438,13 @@ class _PastOrdersList extends StatelessWidget {
         if (snap.connectionState == ConnectionState.waiting) {
           return const Center(
               child: CircularProgressIndicator(color: _kPrimary));
+        }
+        if (snap.hasError) {
+          return _EmptyState(
+            icon: Icons.error_outline,
+            title: 'Could not load orders',
+            subtitle: snap.error.toString(),
+          );
         }
         if (!snap.hasData || snap.data!.docs.isEmpty) {
           return _EmptyState(
@@ -508,16 +465,20 @@ class _PastOrdersList extends StatelessWidget {
             String dateStr = '';
             if (ts is Timestamp) {
               final dt = ts.toDate();
-              dateStr =
-              '${_monthName(dt.month)} ${dt.day}, ${dt.year}';
+              dateStr = '${_monthName(dt.month)} ${dt.day}, ${dt.year}';
             }
 
             return _PastOrderCard(
+              orderId: doc.id,
+              restaurantId: restaurantId,
               token: token.toString(),
               amount: amount.toString(),
               status: status,
               date: dateStr,
               itemCount: itemCount,
+              items: (d['items'] as List? ?? [])
+                  .map((i) => Map<String, dynamic>.from(i as Map))
+                  .toList(),
             );
           }).toList(),
         );
@@ -527,8 +488,19 @@ class _PastOrdersList extends StatelessWidget {
 
   String _monthName(int m) {
     const months = [
-      '', 'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      '',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
     ];
     return months[m];
   }
@@ -536,139 +508,367 @@ class _PastOrdersList extends StatelessWidget {
 
 // ─── Past Order Card ──────────────────────────────────────────────────────────
 class _PastOrderCard extends StatelessWidget {
+  final String orderId;
+  final String restaurantId;
   final String token;
   final String amount;
   final String status;
   final String date;
   final int itemCount;
+  final List<Map<String, dynamic>> items;
 
   const _PastOrderCard({
+    required this.orderId,
+    required this.restaurantId,
     required this.token,
     required this.amount,
     required this.status,
     required this.date,
     required this.itemCount,
+    required this.items,
   });
+
+  Color get _statusBg {
+    switch (status.toLowerCase()) {
+      case 'completed': return _kGreenBg;
+      case 'preparing': return const Color(0xFFDBEAFE);
+      case 'ready':     return const Color(0xFFDCFCE7);
+      case 'pending':   return const Color(0xFFFEF9C3);
+      default:          return const Color(0xFFF3F4F6);
+    }
+  }
+
+  Color get _statusFg {
+    switch (status.toLowerCase()) {
+      case 'completed': return _kGreenText;
+      case 'preparing': return const Color(0xFF1E40AF);
+      case 'ready':     return const Color(0xFF15803D);
+      case 'pending':   return const Color(0xFF854D0E);
+      default:          return _kSubText;
+    }
+  }
+
+  bool get _isCompleted => status.toLowerCase() == 'completed';
+
+  void _showItemDetails(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.75,
+        ),
+        decoration: BoxDecoration(
+          color: _kCard,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(_s(20))),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle
+            Center(
+              child: Container(
+                margin: EdgeInsets.only(top: _s(12), bottom: _s(4)),
+                width: _s(40), height: _s(4),
+                decoration: BoxDecoration(
+                  color: _kBorder,
+                  borderRadius: BorderRadius.circular(_s(2)),
+                ),
+              ),
+            ),
+            // Header
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: _s(16), vertical: _s(12)),
+              child: Row(
+                children: [
+                  Text(
+                    'Token #$token',
+                    style: GoogleFonts.poppins(
+                      fontSize: _s(16), fontWeight: FontWeight.w700, color: _kText,
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: _s(10), vertical: _s(4)),
+                    decoration: BoxDecoration(
+                      color: _statusBg, borderRadius: BorderRadius.circular(_s(20)),
+                    ),
+                    child: Text(
+                      status[0].toUpperCase() + status.substring(1),
+                      style: GoogleFonts.poppins(
+                        fontSize: _s(12), fontWeight: FontWeight.w600, color: _statusFg,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Divider(height: 1, color: _kBorder),
+            // Items list
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                padding: EdgeInsets.fromLTRB(_s(16), _s(8), _s(16), _s(16)),
+                itemCount: items.length,
+                separatorBuilder: (_, __) => Divider(height: 1, color: const Color(0xFFF5F5F5)),
+                itemBuilder: (_, i) {
+                  final item = items[i];
+                  final name    = (item['name']    ?? '').toString();
+                  final variant = (item['variant'] ?? '').toString();
+                  final qty     = item['qty']   ?? 1;
+                  final price   = (item['price'] ?? 0) as num;
+                  final isCancelled = (item['status'] ?? 'active') == 'cancelled';
+                  return Padding(
+                    padding: EdgeInsets.symmetric(vertical: _s(10)),
+                    child: Opacity(
+                      opacity: isCancelled ? 0.5 : 1.0,
+                      child: Row(
+                        children: [
+                          Container(
+                            width: _s(26), height: _s(26),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF5F5F5),
+                              borderRadius: BorderRadius.circular(_s(6)),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              '${i + 1}',
+                              style: GoogleFonts.poppins(
+                                fontSize: _s(11), fontWeight: FontWeight.w600,
+                                color: _kSubText,
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: _w(10)),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${qty}x $name',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: _s(13), fontWeight: FontWeight.w600,
+                                    color: _kText,
+                                    decoration: isCancelled ? TextDecoration.lineThrough : null,
+                                  ),
+                                ),
+                                if (variant.isNotEmpty)
+                                  Text(
+                                    variant,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: _s(11), color: _kSubText,
+                                    ),
+                                  ),
+                                if (isCancelled)
+                                  Text(
+                                    'Cancelled',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: _s(10), color: Colors.red.shade400,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            '₹${(price * qty).toStringAsFixed(2)}',
+                            style: GoogleFonts.poppins(
+                              fontSize: _s(13), fontWeight: FontWeight.w600,
+                              color: isCancelled ? _kSubText : _kPrimary,
+                              decoration: isCancelled ? TextDecoration.lineThrough : null,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            // Total row
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: _s(16), vertical: _s(12)),
+              decoration: BoxDecoration(
+                color: _kPrimaryBg,
+                border: Border(top: BorderSide(color: _kBorder)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Total',
+                    style: GoogleFonts.poppins(
+                      fontSize: _s(14), fontWeight: FontWeight.w600, color: _kText,
+                    ),
+                  ),
+                  Text(
+                    '₹$amount',
+                    style: GoogleFonts.poppins(
+                      fontSize: _s(18), fontWeight: FontWeight.w700, color: _kPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openEditSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _EditOrderSheet(
+        orderId: orderId,
+        restaurantId: restaurantId,
+        items: items,
+        status: status,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    Color statusBg;
-    Color statusFg;
-    switch (status.toLowerCase()) {
-      case 'completed':
-        statusBg = _kGreenBg;
-        statusFg = _kGreenText;
-        break;
-      case 'preparing':
-        statusBg = const Color(0xFFDBEAFE);
-        statusFg = const Color(0xFF1E40AF);
-        break;
-      case 'pending':
-        statusBg = const Color(0xFFFEF9C3);
-        statusFg = const Color(0xFF854D0E);
-        break;
-      default:
-        statusBg = const Color(0xFFF3F4F6);
-        statusFg = _kSubText;
-    }
-
-    return Container(
-      margin: EdgeInsets.only(bottom: _h(12)),
-      decoration: BoxDecoration(
-        color: _kCard,
-        borderRadius: BorderRadius.circular(_s(14)),
-        border: Border.all(color: _kBorder, width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: _s(10),
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Top row
-          Padding(
-            padding: EdgeInsets.fromLTRB(_s(16), _s(14), _s(16), _s(10)),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Token #$token',
-                      style: GoogleFonts.poppins(
-                        fontSize: _s(12),
-                        fontWeight: FontWeight.w500,
-                        color: _kSubText,
+    return GestureDetector(
+      onTap: () => _showItemDetails(context),
+      child: Container(
+        margin: EdgeInsets.only(bottom: _h(12)),
+        decoration: BoxDecoration(
+          color: _kCard,
+          borderRadius: BorderRadius.circular(_s(14)),
+          border: Border.all(color: _kBorder, width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: _s(10),
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            // ── Top row: token + amount + status ────────────────────────────
+            Padding(
+              padding: EdgeInsets.fromLTRB(_s(16), _s(14), _s(16), _s(10)),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Token #$token',
+                        style: GoogleFonts.poppins(
+                          fontSize: _s(12), fontWeight: FontWeight.w500, color: _kSubText,
+                        ),
                       ),
-                    ),
-                    SizedBox(height: _h(2)),
-                    Text(
-                      '₹$amount',
-                      style: GoogleFonts.poppins(
-                        fontSize: _s(22),
-                        fontWeight: FontWeight.w700,
-                        color: _kText,
-                        height: 1.2,
+                      SizedBox(height: _h(2)),
+                      Text(
+                        '₹$amount',
+                        style: GoogleFonts.poppins(
+                          fontSize: _s(22), fontWeight: FontWeight.w700,
+                          color: _kText, height: 1.2,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                Container(
-                  padding: EdgeInsets.symmetric(
-                      horizontal: _s(12), vertical: _s(5)),
-                  decoration: BoxDecoration(
-                    color: statusBg,
-                    borderRadius: BorderRadius.circular(_s(20)),
+                    ],
                   ),
-                  child: Text(
-                    status[0].toUpperCase() + status.substring(1),
+                  const Spacer(),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                        horizontal: _s(12), vertical: _s(5)),
+                    decoration: BoxDecoration(
+                      color: _statusBg,
+                      borderRadius: BorderRadius.circular(_s(20)),
+                    ),
+                    child: Text(
+                      status[0].toUpperCase() + status.substring(1),
+                      style: GoogleFonts.poppins(
+                        fontSize: _s(12), fontWeight: FontWeight.w600, color: _statusFg,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Divider(height: 1, color: _kBorder),
+
+            // ── Bottom row: date + items count + action buttons ──────────────
+            Padding(
+              padding: EdgeInsets.symmetric(
+                  horizontal: _s(16), vertical: _s(10)),
+              child: Row(
+                children: [
+                  Icon(Icons.calendar_today_outlined,
+                      size: _s(13), color: _kSubText),
+                  SizedBox(width: _w(5)),
+                  Text(
+                    date,
                     style: GoogleFonts.poppins(
-                      fontSize: _s(12),
-                      fontWeight: FontWeight.w600,
-                      color: statusFg,
+                        fontSize: _s(12), color: _kSubText),
+                  ),
+                  SizedBox(width: _w(10)),
+                  Text(
+                    '·',
+                    style: GoogleFonts.poppins(
+                        fontSize: _s(12), color: _kSubText),
+                  ),
+                  SizedBox(width: _w(10)),
+                  Text(
+                    '$itemCount ${itemCount == 1 ? 'item' : 'items'}',
+                    style: GoogleFonts.poppins(
+                        fontSize: _s(12), color: _kSubText),
+                  ),
+                  const Spacer(),
+                  // View details hint
+                  Icon(Icons.receipt_long_outlined,
+                      size: _s(14), color: _kPrimary),
+                  SizedBox(width: _w(4)),
+                  Text(
+                    'Details',
+                    style: GoogleFonts.poppins(
+                      fontSize: _s(12), fontWeight: FontWeight.w600,
+                      color: _kPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Update Order button (only when not completed) ────────────────
+            if (!_isCompleted) ...[
+              Divider(height: 1, color: _kBorder),
+              Padding(
+                padding: EdgeInsets.fromLTRB(_s(12), _s(10), _s(12), _s(12)),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: _s(40),
+                  child: ElevatedButton.icon(
+                    onPressed: () => _openEditSheet(context),
+                    icon: Icon(Icons.edit_note_rounded, size: _s(16)),
+                    label: Text(
+                      'Update Order',
+                      style: GoogleFonts.poppins(
+                        fontSize: _s(13), fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _kPrimary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(_s(10)),
+                      ),
                     ),
                   ),
                 ),
-              ],
-            ),
-          ),
-
-          // Divider
-          Divider(height: 1, color: _kBorder),
-
-          // Bottom row
-          Padding(
-            padding: EdgeInsets.symmetric(
-                horizontal: _s(16), vertical: _s(10)),
-            child: Row(
-              children: [
-                Icon(Icons.calendar_today_outlined,
-                    size: _s(13), color: _kSubText),
-                SizedBox(width: _w(5)),
-                Text(
-                  date,
-                  style: GoogleFonts.poppins(
-                    fontSize: _s(12),
-                    color: _kSubText,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  '$itemCount ${itemCount == 1 ? 'item' : 'items'}',
-                  style: GoogleFonts.poppins(
-                    fontSize: _s(12),
-                    color: _kSubText,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -690,10 +890,25 @@ class _OrderResultSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ── FIX: Same as _PastOrdersList — must include userId filter so that
+    //    Firestore can evaluate request.auth.uid == resource.data.userId.
+    //    Without it, the query is denied because the customer has no
+    //    restaurantId claim for isAdminOrOwner() to pass.
+    final uid = _currentUid;
+    if (uid == null) {
+      return _StatusMessage(
+        icon: Icons.lock_outline_rounded,
+        iconColor: _kSubText,
+        title: 'Not signed in',
+        subtitle: 'Please sign in to track your order.',
+      );
+    }
+
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('orders')
           .where('restaurantId', isEqualTo: restaurantId)
+          .where('userId', isEqualTo: uid) // ← FIX: scope to this user
           .where('tokenNumber', isEqualTo: int.tryParse(token))
           .limit(1)
           .snapshots(),
@@ -721,16 +936,20 @@ class _OrderResultSection extends StatelessWidget {
             icon: Icons.search_off_rounded,
             iconColor: _kSubText,
             title: 'Order not found',
-            subtitle: 'No order found for token #$token. Please check and try again.',
+            subtitle:
+            'No order found for token #$token. Please check and try again.',
           );
         }
 
-        final orderData = snap.data!.docs.first.data() as Map<String, dynamic>;
+        final orderData =
+        snap.data!.docs.first.data() as Map<String, dynamic>;
         final status = orderData['status'] as String? ?? 'pending';
         final tokenNumber = orderData['tokenNumber'] ?? 0;
         final totalAmount = orderData['totalAmount'] ?? 0;
-        final customerName = orderData['customerName'] as String? ?? 'Guest';
-        final orderType = orderData['orderType'] as String? ?? 'Dine In';
+        final customerName =
+            orderData['customerName'] as String? ?? 'Guest';
+        final orderType =
+            orderData['orderType'] as String? ?? 'Dine In';
         final items = orderData['items'] as List<dynamic>? ?? [];
 
         return Column(
@@ -783,7 +1002,6 @@ class _OrderDetailCard extends StatelessWidget {
     this.onContinueShopping,
   });
 
-  /// Map status string → step index (0-based)
   int get _currentStep {
     switch (status.toLowerCase()) {
       case 'pending':
@@ -826,7 +1044,7 @@ class _OrderDetailCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Gradient Header ────────────────────────────────────────────
+          // ── Gradient Header ──────────────────────────────────────────────
           Container(
             decoration: BoxDecoration(
               gradient: const LinearGradient(
@@ -843,7 +1061,6 @@ class _OrderDetailCard extends StatelessWidget {
                 horizontal: _s(16), vertical: _s(14)),
             child: Row(
               children: [
-                // Token badge
                 Container(
                   padding: EdgeInsets.symmetric(
                       horizontal: _s(12), vertical: _s(6)),
@@ -866,9 +1083,10 @@ class _OrderDetailCard extends StatelessWidget {
             ),
           ),
 
-          // ── Progress Stepper ───────────────────────────────────────────
+          // ── Progress Stepper ─────────────────────────────────────────────
           Padding(
-            padding: EdgeInsets.fromLTRB(_s(16), _s(20), _s(16), _s(4)),
+            padding:
+            EdgeInsets.fromLTRB(_s(16), _s(20), _s(16), _s(4)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -884,7 +1102,6 @@ class _OrderDetailCard extends StatelessWidget {
                 Row(
                   children: List.generate(steps.length * 2 - 1, (i) {
                     if (i.isOdd) {
-                      // Connector line
                       final stepIdx = (i - 1) ~/ 2;
                       final isDone = stepIdx < activeStep;
                       return Expanded(
@@ -939,10 +1156,56 @@ class _OrderDetailCard extends StatelessWidget {
 
           Divider(height: _s(24), color: _kBorder),
 
-          // ── Edit Order Button (only for editable statuses) ─────────────
-          if (OrderUpdateService.isEditable(status)) ...[
+          // ── Update My Order / Locked banner ──────────────────────────────
+          if (status.toLowerCase() == 'completed') ...[
             Padding(
-              padding: EdgeInsets.fromLTRB(_s(16), 0, _s(16), _s(12)),
+              padding:
+              EdgeInsets.fromLTRB(_s(16), 0, _s(16), _s(12)),
+              child: Container(
+                width: double.infinity,
+                padding: EdgeInsets.symmetric(
+                    horizontal: _s(14), vertical: _s(12)),
+                decoration: BoxDecoration(
+                  color: _kGreenBg,
+                  borderRadius: BorderRadius.circular(_s(12)),
+                  border:
+                  Border.all(color: _kGreenText.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.lock_outline_rounded,
+                        color: _kGreenText, size: _s(18)),
+                    SizedBox(width: _w(8)),
+                    Expanded(
+                      child: Text(
+                        'Order completed — no further changes allowed.',
+                        style: GoogleFonts.poppins(
+                          fontSize: _s(12),
+                          color: _kGreenText,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Divider(height: 1, color: _kBorder),
+          ] else if (OrderUpdateService.isEditable(status)) ...[
+            Padding(
+              padding:
+              EdgeInsets.fromLTRB(_s(16), 0, _s(16), _s(4)),
+              child: Text(
+                'You can add items or adjust quantities until your order is completed.',
+                style: GoogleFonts.poppins(
+                  fontSize: _s(11),
+                  color: _kSubText,
+                ),
+              ),
+            ),
+            Padding(
+              padding:
+              EdgeInsets.fromLTRB(_s(16), _s(6), _s(16), _s(12)),
               child: SizedBox(
                 width: double.infinity,
                 height: _s(46),
@@ -956,14 +1219,14 @@ class _OrderDetailCard extends StatelessWidget {
                       restaurantId: restaurantId,
                       items: items
                           .map((i) =>
-                              Map<String, dynamic>.from(i as Map))
+                      Map<String, dynamic>.from(i as Map))
                           .toList(),
                       status: status,
                     ),
                   ),
                   icon: Icon(Icons.edit_note_rounded, size: _s(18)),
                   label: Text(
-                    'Edit Order',
+                    'Update My Order',
                     style: GoogleFonts.poppins(
                       fontSize: _s(14),
                       fontWeight: FontWeight.w600,
@@ -983,13 +1246,13 @@ class _OrderDetailCard extends StatelessWidget {
             Divider(height: 1, color: _kBorder),
           ],
 
-          // ── Body ───────────────────────────────────────────────────────
+          // ── Body ─────────────────────────────────────────────────────────
           Padding(
-            padding: EdgeInsets.fromLTRB(_s(16), 0, _s(16), _s(16)),
+            padding:
+            EdgeInsets.fromLTRB(_s(16), 0, _s(16), _s(16)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Customer row
                 Row(
                   children: [
                     Container(
@@ -1048,7 +1311,6 @@ class _OrderDetailCard extends StatelessWidget {
 
                 SizedBox(height: _h(16)),
 
-                // Total amount row
                 Container(
                   padding: EdgeInsets.symmetric(
                       horizontal: _s(14), vertical: _s(12)),
@@ -1079,10 +1341,8 @@ class _OrderDetailCard extends StatelessWidget {
                   ),
                 ),
 
-                // ── KOT History ──────────────────────────────────────────
                 _KotHistorySection(orderId: orderId),
 
-                // ── Continue Shopping Button ────────────────────────────
                 if (onContinueShopping != null) ...[
                   SizedBox(height: _h(16)),
                   SizedBox(
@@ -1152,9 +1412,8 @@ class _ItemRow extends StatelessWidget {
                     style: GoogleFonts.poppins(
                       fontSize: _s(13),
                       color: _kSubText,
-                      decoration: isCancelled
-                          ? TextDecoration.lineThrough
-                          : null,
+                      decoration:
+                      isCancelled ? TextDecoration.lineThrough : null,
                     ),
                   ),
                   if (isCancelled)
@@ -1175,9 +1434,8 @@ class _ItemRow extends StatelessWidget {
                 fontSize: _s(13),
                 fontWeight: FontWeight.w600,
                 color: isCancelled ? _kSubText : _kPrimary,
-                decoration: isCancelled
-                    ? TextDecoration.lineThrough
-                    : null,
+                decoration:
+                isCancelled ? TextDecoration.lineThrough : null,
               ),
             ),
           ],
@@ -1187,7 +1445,7 @@ class _ItemRow extends StatelessWidget {
   }
 }
 
-// ─── Status Message (empty / error) ──────────────────────────────────────────
+// ─── Status Message ───────────────────────────────────────────────────────────
 class _StatusMessage extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
@@ -1226,10 +1484,7 @@ class _StatusMessage extends StatelessWidget {
           SizedBox(height: _h(6)),
           Text(
             subtitle,
-            style: GoogleFonts.poppins(
-              fontSize: _s(13),
-              color: _kSubText,
-            ),
+            style: GoogleFonts.poppins(fontSize: _s(13), color: _kSubText),
             textAlign: TextAlign.center,
           ),
         ],
@@ -1278,10 +1533,7 @@ class _EmptyState extends StatelessWidget {
             SizedBox(height: _h(6)),
             Text(
               subtitle,
-              style: GoogleFonts.poppins(
-                fontSize: _s(13),
-                color: _kSubText,
-              ),
+              style: GoogleFonts.poppins(fontSize: _s(13), color: _kSubText),
               textAlign: TextAlign.center,
             ),
           ],
@@ -1292,7 +1544,6 @@ class _EmptyState extends StatelessWidget {
 }
 
 // ─── KOT History Section ──────────────────────────────────────────────────────
-/// Streams the `kots` sub-collection of an order and displays each KOT ticket.
 class _KotHistorySection extends StatelessWidget {
   final String orderId;
   const _KotHistorySection({required this.orderId});
@@ -1326,10 +1577,10 @@ class _KotHistorySection extends StatelessWidget {
             SizedBox(height: _h(8)),
             ...docs.asMap().entries.map(
                   (e) => _KotCard(
-                    kotNumber: e.key + 1,
-                    data: e.value.data() as Map<String, dynamic>,
-                  ),
-                ),
+                kotNumber: e.key + 1,
+                data: e.value.data() as Map<String, dynamic>,
+              ),
+            ),
           ],
         );
       },
@@ -1351,7 +1602,7 @@ class _KotCard extends StatelessWidget {
     if (ts is Timestamp) {
       final dt = ts.toDate();
       timeStr =
-          '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+      '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
     }
 
     return Container(
@@ -1387,8 +1638,8 @@ class _KotCard extends StatelessWidget {
               if (timeStr.isNotEmpty)
                 Text(
                   timeStr,
-                  style: GoogleFonts.poppins(
-                      fontSize: _s(11), color: _kSubText),
+                  style:
+                  GoogleFonts.poppins(fontSize: _s(11), color: _kSubText),
                 ),
             ],
           ),
@@ -1399,8 +1650,7 @@ class _KotCard extends StatelessWidget {
               padding: EdgeInsets.only(bottom: _h(2)),
               child: Text(
                 '• ${m['name']} (${m['variant']}) × ${m['qty']}',
-                style: GoogleFonts.poppins(
-                    fontSize: _s(12), color: _kText),
+                style: GoogleFonts.poppins(fontSize: _s(12), color: _kText),
               ),
             );
           }),
@@ -1411,20 +1661,9 @@ class _KotCard extends StatelessWidget {
 }
 
 // ─── Edit Order Sheet ─────────────────────────────────────────────────────────
-/// Full-screen bottom sheet that lets staff add items, adjust quantities,
-/// and cancel items on a running order.
-///
-/// Flow:
-///   1. Shows existing (active) items with ± qty stepper and cancel button.
-///   2. Lets user search menu and stage new items (shown in green, with KOT badge).
-///   3. "Save & Send KOT" commits everything via [OrderUpdateService] in one
-///      Firestore transaction.  A KOT sub-document is only created when new
-///      items are staged.
 class _EditOrderSheet extends StatefulWidget {
   final String orderId;
   final String restaurantId;
-
-  /// Working copy of the order's items passed in from the live Firestore stream.
   final List<Map<String, dynamic>> items;
   final String status;
 
@@ -1440,34 +1679,25 @@ class _EditOrderSheet extends StatefulWidget {
 }
 
 class _EditOrderSheetState extends State<_EditOrderSheet> {
-  // Mutable copies of the order's existing items.
   late List<Map<String, dynamic>> _workingItems;
-
-  // New items staged by the user (will generate a KOT on save).
   final List<Map<String, dynamic>> _newItems = [];
 
-  // Menu search state.
   String _searchQuery = '';
   List<QueryDocumentSnapshot> _menuDocs = [];
   bool _loadingMenu = false;
 
-  // Inline add-item config.
   QueryDocumentSnapshot? _selectedMenuItem;
   int _selectedVariantIdx = 0;
   int _newItemQty = 1;
-
   bool _saving = false;
 
   @override
   void initState() {
     super.initState();
-    _workingItems = widget.items
-        .map((e) => Map<String, dynamic>.from(e))
-        .toList();
+    _workingItems =
+        widget.items.map((e) => Map<String, dynamic>.from(e)).toList();
     _loadMenu();
   }
-
-  // ── Menu loading ──────────────────────────────────────────────────────────
 
   Future<void> _loadMenu([String query = '']) async {
     if (mounted) setState(() => _loadingMenu = true);
@@ -1484,7 +1714,7 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
         final lower = query.toLowerCase();
         docs = docs
             .where((d) =>
-                (d['name'] ?? '').toString().toLowerCase().contains(lower))
+            (d['name'] ?? '').toString().toLowerCase().contains(lower))
             .toList();
       }
       if (mounted) setState(() => _menuDocs = docs);
@@ -1492,17 +1722,12 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
     if (mounted) setState(() => _loadingMenu = false);
   }
 
-  // ── Actions ───────────────────────────────────────────────────────────────
-
   void _stageNewItem() {
     if (_selectedMenuItem == null) return;
-    final data =
-        _selectedMenuItem!.data() as Map<String, dynamic>;
-    final variants =
-        data['variants'] as List<dynamic>? ?? [];
+    final data = _selectedMenuItem!.data() as Map<String, dynamic>;
+    final variants = data['variants'] as List<dynamic>? ?? [];
     final variant = variants.isNotEmpty
-        ? Map<String, dynamic>.from(
-            variants[_selectedVariantIdx] as Map)
+        ? Map<String, dynamic>.from(variants[_selectedVariantIdx] as Map)
         : <String, dynamic>{'name': 'Regular', 'price': 0};
 
     setState(() {
@@ -1522,6 +1747,29 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
   Future<void> _saveChanges() async {
     setState(() => _saving = true);
     try {
+      final fresh = await FirebaseFirestore.instance
+          .collection('orders')
+          .doc(widget.orderId)
+          .get();
+      final latestStatus =
+      (fresh.data()?['status'] as String? ?? '').toLowerCase();
+      if (latestStatus == 'completed') {
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Your order is already completed and can no longer be changed.',
+                style: GoogleFonts.poppins(),
+              ),
+              backgroundColor: Colors.orange.shade700,
+            ),
+          );
+        }
+        if (mounted) setState(() => _saving = false);
+        return;
+      }
+
       await OrderUpdateService.updateRunningOrder(
         orderId: widget.orderId,
         updatedExistingItems: _workingItems,
@@ -1545,8 +1793,7 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e',
-                style: GoogleFonts.poppins()),
+            content: Text('Error: $e', style: GoogleFonts.poppins()),
             backgroundColor: Colors.red.shade600,
           ),
         );
@@ -1568,20 +1815,18 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
         ),
         content: Text(
           'Remove "${_workingItems[index]['name']}" from this order?',
-          style: GoogleFonts.poppins(
-              fontSize: _s(14), color: _kSubText),
+          style: GoogleFonts.poppins(fontSize: _s(14), color: _kSubText),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Keep',
-                style: GoogleFonts.poppins(color: _kSubText)),
+            child:
+            Text('Keep', style: GoogleFonts.poppins(color: _kSubText)),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              setState(() =>
-                  _workingItems[index]['status'] = 'cancelled');
+              setState(() => _workingItems[index]['status'] = 'cancelled');
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red.shade500,
@@ -1592,15 +1837,12 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
             ),
             child: Text('Cancel Item',
                 style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w600,
-                    fontSize: _s(13))),
+                    fontWeight: FontWeight.w600, fontSize: _s(13))),
           ),
         ],
       ),
     );
   }
-
-  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -1609,8 +1851,7 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
       height: maxH,
       decoration: BoxDecoration(
         color: _kBg,
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(_s(20))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(_s(20))),
       ),
       child: Column(
         children: [
@@ -1620,22 +1861,19 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
             child: ListView(
               padding: EdgeInsets.all(_s(16)),
               children: [
-                // ── Active existing items ──────────────────────────────
-                if (_workingItems.any(
-                    (i) => (i['status'] ?? 'active') == 'active')) ...[
+                if (_workingItems
+                    .any((i) => (i['status'] ?? 'active') == 'active')) ...[
                   _sectionTitle('Current Items'),
                   SizedBox(height: _h(8)),
                   ..._workingItems
                       .asMap()
                       .entries
                       .where((e) =>
-                          (e.value['status'] ?? 'active') == 'active')
-                      .map((e) =>
-                          _existingItemRow(e.key, e.value)),
+                  (e.value['status'] ?? 'active') == 'active')
+                      .map((e) => _existingItemRow(e.key, e.value)),
                   SizedBox(height: _h(16)),
                 ],
 
-                // ── Staged new items (awaiting KOT) ───────────────────
                 if (_newItems.isNotEmpty) ...[
                   _sectionTitle(
                       'Items to Add  •  New KOT (${_newItems.length})'),
@@ -1647,7 +1885,6 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
                   SizedBox(height: _h(16)),
                 ],
 
-                // ── Menu search ────────────────────────────────────────
                 _sectionTitle('Add from Menu'),
                 SizedBox(height: _h(8)),
                 _menuSearchBar(),
@@ -1663,78 +1900,76 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
     );
   }
 
-  // ── Sub-widgets ───────────────────────────────────────────────────────────
-
   Widget _handle() => Center(
-        child: Container(
-          margin: EdgeInsets.only(top: _s(12), bottom: _s(4)),
-          width: _s(40),
-          height: _s(4),
-          decoration: BoxDecoration(
-            color: _kBorder,
-            borderRadius: BorderRadius.circular(_s(2)),
-          ),
-        ),
-      );
+    child: Container(
+      margin: EdgeInsets.only(top: _s(12), bottom: _s(4)),
+      width: _s(40),
+      height: _s(4),
+      decoration: BoxDecoration(
+        color: _kBorder,
+        borderRadius: BorderRadius.circular(_s(2)),
+      ),
+    ),
+  );
 
   Widget _sheetHeader() => Container(
-        padding: EdgeInsets.symmetric(
-            horizontal: _s(20), vertical: _s(12)),
-        decoration: BoxDecoration(
-          color: _kCard,
-          border: Border(bottom: BorderSide(color: _kBorder)),
+    padding:
+    EdgeInsets.symmetric(horizontal: _s(20), vertical: _s(12)),
+    decoration: BoxDecoration(
+      color: _kCard,
+      border: Border(bottom: BorderSide(color: _kBorder)),
+    ),
+    child: Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Edit Order',
+                style: GoogleFonts.poppins(
+                  fontSize: _s(17),
+                  fontWeight: FontWeight.w700,
+                  color: _kText,
+                ),
+              ),
+              Text(
+                'Status: ${widget.status[0].toUpperCase()}${widget.status.substring(1)}  •  Changes allowed until Completed',
+                style: GoogleFonts.poppins(
+                    fontSize: _s(11), color: _kSubText),
+              ),
+            ],
+          ),
         ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Edit Order',
-                    style: GoogleFonts.poppins(
-                      fontSize: _s(17),
-                      fontWeight: FontWeight.w700,
-                      color: _kText,
-                    ),
-                  ),
-                  Text(
-                    'Status: ${widget.status[0].toUpperCase()}${widget.status.substring(1)}',
-                    style: GoogleFonts.poppins(
-                        fontSize: _s(11), color: _kSubText),
-                  ),
-                ],
+        if (_newItems.isNotEmpty)
+          Container(
+            padding: EdgeInsets.symmetric(
+                horizontal: _s(10), vertical: _s(4)),
+            decoration: BoxDecoration(
+              color: _kPrimary,
+              borderRadius: BorderRadius.circular(_s(20)),
+            ),
+            child: Text(
+              '${_newItems.length} new',
+              style: GoogleFonts.poppins(
+                fontSize: _s(11),
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
               ),
             ),
-            if (_newItems.isNotEmpty)
-              Container(
-                padding: EdgeInsets.symmetric(
-                    horizontal: _s(10), vertical: _s(4)),
-                decoration: BoxDecoration(
-                  color: _kPrimary,
-                  borderRadius: BorderRadius.circular(_s(20)),
-                ),
-                child: Text(
-                  '${_newItems.length} new',
-                  style: GoogleFonts.poppins(
-                    fontSize: _s(11),
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      );
+          ),
+      ],
+    ),
+  );
 
   Widget _sectionTitle(String title) => Text(
-        title,
-        style: GoogleFonts.poppins(
-          fontSize: _s(13),
-          fontWeight: FontWeight.w600,
-          color: _kText,
-        ),
-      );
+    title,
+    style: GoogleFonts.poppins(
+      fontSize: _s(13),
+      fontWeight: FontWeight.w600,
+      color: _kText,
+    ),
+  );
 
   Widget _existingItemRow(int index, Map<String, dynamic> item) =>
       Container(
@@ -1769,7 +2004,6 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
                 ],
               ),
             ),
-            // Quantity stepper.
             _qtyRow(
               qty: (item['qty'] ?? 1) as int,
               onDecrement: () {
@@ -1778,9 +2012,8 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
                   setState(() => _workingItems[index]['qty'] = q - 1);
                 }
               },
-              onIncrement: () => setState(() =>
-                  _workingItems[index]['qty'] =
-                      (item['qty'] ?? 1) + 1),
+              onIncrement: () => setState(
+                      () => _workingItems[index]['qty'] = (item['qty'] ?? 1) + 1),
             ),
             SizedBox(width: _w(10)),
             GestureDetector(
@@ -1834,40 +2067,37 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
               ),
             ),
             GestureDetector(
-              onTap: () =>
-                  setState(() => _newItems.removeAt(index)),
-              child: Icon(Icons.close,
-                  color: _kSubText, size: _s(18)),
+              onTap: () => setState(() => _newItems.removeAt(index)),
+              child: Icon(Icons.close, color: _kSubText, size: _s(18)),
             ),
           ],
         ),
       );
 
   Widget _menuSearchBar() => Container(
-        decoration: BoxDecoration(
-          color: _kCard,
-          borderRadius: BorderRadius.circular(_s(12)),
-          border: Border.all(color: _kBorder),
-        ),
-        child: TextField(
-          onChanged: (v) {
-            _searchQuery = v;
-            _loadMenu(v);
-          },
-          style: GoogleFonts.poppins(
-              fontSize: _s(14), color: _kText),
-          decoration: InputDecoration(
-            hintText: 'Search menu items…',
-            hintStyle: GoogleFonts.poppins(
-                fontSize: _s(13), color: _kSubText),
-            prefixIcon:
-                Icon(Icons.search, color: _kPrimary, size: _s(20)),
-            border: InputBorder.none,
-            contentPadding: EdgeInsets.symmetric(
-                vertical: _s(12), horizontal: _s(4)),
-          ),
-        ),
-      );
+    decoration: BoxDecoration(
+      color: _kCard,
+      borderRadius: BorderRadius.circular(_s(12)),
+      border: Border.all(color: _kBorder),
+    ),
+    child: TextField(
+      onChanged: (v) {
+        _searchQuery = v;
+        _loadMenu(v);
+      },
+      style: GoogleFonts.poppins(fontSize: _s(14), color: _kText),
+      decoration: InputDecoration(
+        hintText: 'Search menu items…',
+        hintStyle:
+        GoogleFonts.poppins(fontSize: _s(13), color: _kSubText),
+        prefixIcon:
+        Icon(Icons.search, color: _kPrimary, size: _s(20)),
+        border: InputBorder.none,
+        contentPadding: EdgeInsets.symmetric(
+            vertical: _s(12), horizontal: _s(4)),
+      ),
+    ),
+  );
 
   Widget _menuList() {
     if (_loadingMenu) {
@@ -1880,23 +2110,18 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
           _searchQuery.isEmpty
               ? 'No menu items found'
               : 'No results for "$_searchQuery"',
-          style: GoogleFonts.poppins(
-              color: _kSubText, fontSize: _s(13)),
+          style: GoogleFonts.poppins(color: _kSubText, fontSize: _s(13)),
         ),
       );
     }
     return Column(
-      children: _menuDocs
-          .take(30)
-          .map((doc) => _menuItemTile(doc))
-          .toList(),
+      children: _menuDocs.take(30).map((doc) => _menuItemTile(doc)).toList(),
     );
   }
 
   Widget _menuItemTile(QueryDocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-    final variants =
-        data['variants'] as List<dynamic>? ?? [];
+    final variants = data['variants'] as List<dynamic>? ?? [];
     final isSelected = _selectedMenuItem?.id == doc.id;
 
     return GestureDetector(
@@ -1921,7 +2146,6 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
           children: [
             Row(
               children: [
-                // Veg/non-veg indicator
                 Container(
                   width: _s(14),
                   height: _s(14),
@@ -1977,7 +2201,6 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
                 ),
               ],
             ),
-            // ── Expanded config (variant + qty + add button) ──────────
             if (isSelected) ...[
               SizedBox(height: _h(10)),
               if (variants.length > 1) ...[
@@ -1989,19 +2212,19 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
                   spacing: _w(6),
                   runSpacing: _h(6),
                   children: variants.asMap().entries.map((e) {
-                    final v = Map<String, dynamic>.from(
-                        e.value as Map);
+                    final v =
+                    Map<String, dynamic>.from(e.value as Map);
                     final sel = e.key == _selectedVariantIdx;
                     return GestureDetector(
-                      onTap: () => setState(
-                          () => _selectedVariantIdx = e.key),
+                      onTap: () =>
+                          setState(() => _selectedVariantIdx = e.key),
                       child: Container(
                         padding: EdgeInsets.symmetric(
                             horizontal: _s(10), vertical: _s(4)),
                         decoration: BoxDecoration(
                           color: sel ? _kPrimary : _kCard,
                           borderRadius:
-                              BorderRadius.circular(_s(20)),
+                          BorderRadius.circular(_s(20)),
                           border: Border.all(
                               color: sel ? _kPrimary : _kBorder),
                         ),
@@ -2028,12 +2251,9 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
                   _qtyRow(
                     qty: _newItemQty,
                     onDecrement: () {
-                      if (_newItemQty > 1) {
-                        setState(() => _newItemQty--);
-                      }
+                      if (_newItemQty > 1) setState(() => _newItemQty--);
                     },
-                    onIncrement: () =>
-                        setState(() => _newItemQty++),
+                    onIncrement: () => setState(() => _newItemQty++),
                   ),
                   const Spacer(),
                   ElevatedButton(
@@ -2044,7 +2264,7 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                           borderRadius:
-                              BorderRadius.circular(_s(10))),
+                          BorderRadius.circular(_s(10))),
                       padding: EdgeInsets.symmetric(
                           horizontal: _s(18), vertical: _s(8)),
                     ),
@@ -2087,68 +2307,64 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
         ],
       );
 
-  Widget _iconBtn(IconData icon, VoidCallback onTap) =>
-      GestureDetector(
-        onTap: onTap,
-        child: Container(
-          width: _s(28),
-          height: _s(28),
-          decoration: BoxDecoration(
-            color: _kPrimaryBg,
-            borderRadius: BorderRadius.circular(_s(8)),
-          ),
-          child: Icon(icon, size: _s(16), color: _kPrimary),
-        ),
-      );
+  Widget _iconBtn(IconData icon, VoidCallback onTap) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      width: _s(28),
+      height: _s(28),
+      decoration: BoxDecoration(
+        color: _kPrimaryBg,
+        borderRadius: BorderRadius.circular(_s(8)),
+      ),
+      child: Icon(icon, size: _s(16), color: _kPrimary),
+    ),
+  );
 
   Widget _saveButton() => SafeArea(
-        child: Container(
-          padding: EdgeInsets.all(_s(16)),
-          decoration: BoxDecoration(
-            color: _kCard,
-            border: Border(top: BorderSide(color: _kBorder)),
+    child: Container(
+      padding: EdgeInsets.all(_s(16)),
+      decoration: BoxDecoration(
+        color: _kCard,
+        border: Border(top: BorderSide(color: _kBorder)),
+      ),
+      child: SizedBox(
+        width: double.infinity,
+        height: _s(52),
+        child: ElevatedButton(
+          onPressed: _saving ? null : _saveChanges,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _kPrimary,
+            foregroundColor: Colors.white,
+            disabledBackgroundColor: _kPrimary.withOpacity(0.6),
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(_s(14))),
           ),
-          child: SizedBox(
-            width: double.infinity,
-            height: _s(52),
-            child: ElevatedButton(
-              onPressed: _saving ? null : _saveChanges,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _kPrimary,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor:
-                    _kPrimary.withOpacity(0.6),
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(_s(14))),
+          child: _saving
+              ? const SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(
+                color: Colors.white, strokeWidth: 2),
+          )
+              : Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.check_circle_outline, size: _s(20)),
+              SizedBox(width: _w(8)),
+              Text(
+                _newItems.isEmpty
+                    ? 'Save Changes'
+                    : 'Save & Send KOT',
+                style: GoogleFonts.poppins(
+                  fontSize: _s(15),
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-              child: _saving
-                  ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2),
-                    )
-                  : Row(
-                      mainAxisAlignment:
-                          MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.check_circle_outline,
-                            size: _s(20)),
-                        SizedBox(width: _w(8)),
-                        Text(
-                          _newItems.isEmpty
-                              ? 'Save Changes'
-                              : 'Save & Send KOT',
-                          style: GoogleFonts.poppins(
-                            fontSize: _s(15),
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-            ),
+            ],
           ),
         ),
-      );
+      ),
+    ),
+  );
 }

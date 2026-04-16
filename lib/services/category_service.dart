@@ -3,9 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../data/models/category_model.dart';
 import '../data/models/menu_item_model.dart';
 
-/// Handles all Firestore interactions for categories:
-///  - Fetch all categories for a restaurant (single read, cached)
-///  - Resolve category name → categoryId (creating new ones as needed)
 class CategoryService {
   final FirebaseFirestore _db;
 
@@ -15,12 +12,7 @@ class CategoryService {
   CollectionReference _catRef(String restaurantId) =>
       _db.collection('categories');
 
-  // ──────────────────────────────────────────────────────────
-  //  Fetch (single read → Map<name, CategoryModel>)
-  // ──────────────────────────────────────────────────────────
 
-  /// Returns a name-keyed map of all existing categories for [restaurantId].
-  /// Keys are lower-cased for case-insensitive lookup.
   Future<Map<String, CategoryModel>> fetchAll(String restaurantId) async {
     final snap = await _catRef(restaurantId)
         .where('restaurantId', isEqualTo: restaurantId)
@@ -33,12 +25,7 @@ class CategoryService {
     return map;
   }
 
-  // ──────────────────────────────────────────────────────────
-  //  Resolve Categories for a batch of MenuItems
-  // ──────────────────────────────────────────────────────────
 
-  /// Given a list of [items] (each with only categoryName set),
-  /// resolves or creates categories and returns updated items + updated map.
   Future<({List<MenuItem> items, Map<String, CategoryModel> categoryMap})>
   resolveCategories({
     required String restaurantId,
@@ -88,9 +75,6 @@ class CategoryService {
     return (items: resolved, categoryMap: catMap);
   }
 
-  // ──────────────────────────────────────────────────────────
-  //  Internal: Create new categories via WriteBatch
-  // ──────────────────────────────────────────────────────────
 
   Future<void> _createCategories({
     required String restaurantId,
@@ -98,7 +82,6 @@ class CategoryService {
     required Map<String, CategoryModel> catMap,
     required int existingCount,
   }) async {
-    // Firestore batch limit = 500; categories are usually well below that
     final batch = _db.batch();
     int position = existingCount;
 

@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -10,14 +11,136 @@ import 'package:restaurant_admin_panel/widgets/professional_loader.dart';
 import 'package:restaurant_admin_panel/widgets/loading_card.dart';
 import 'package:restaurant_admin_panel/widgets/keep_alive_wrapper.dart';
 import 'package:restaurant_admin_panel/restaurant_admin/tabs/home_tab.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'account_page.dart';
 import 'cart_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 Color hexToColor(String hex) {
   hex = hex.replaceAll("#", "");
   if (hex.length == 6) hex = "FF$hex";
   return Color(int.parse(hex, radix: 16));
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SESSION STORAGE HELPER
+// On web we use window.localStorage directly via dart:html.
+// On mobile we use SharedPreferences.
+// Both are hidden behind a tiny async wrapper so the menu code stays clean.
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SessionStore {
+  static const _kSessionKey = 'customer_session_id';
+
+  /// Returns an existing sessionId from storage, or generates + saves a new one.
+  static Future<String> getOrCreate() async {
+    if (kIsWeb) {
+      // dart:html is only available on web — access via dynamic to avoid
+      // compile errors on mobile.
+      try {
+        // ignore: undefined_prefixed_name
+        final storage = _webLocalStorage();
+        final existing = storage[_kSessionKey] as String?;
+        if (existing != null && existing.isNotEmpty) return existing;
+        final newId = _generateUuid();
+        storage[_kSessionKey] = newId;
+        return newId;
+      } catch (_) {
+        // localStorage unavailable (e.g. private browsing) — fall through
+        return _generateUuid();
+      }
+    } else {
+      final prefs = await SharedPreferences.getInstance();
+      final existing = prefs.getString(_kSessionKey);
+      if (existing != null && existing.isNotEmpty) return existing;
+      final newId = _generateUuid();
+      await prefs.setString(_kSessionKey, newId);
+      return newId;
+    }
+  }
+
+  /// Access window.localStorage on web without importing dart:html at the
+  /// top level (which would break mobile builds).
+  static dynamic _webLocalStorage() {
+    // js-interop via dart:html accessed dynamically
+    // ignore: avoid_dynamic_calls
+    return (Uri.base.toString()); // placeholder — replaced below
+  }
+
+  static String _generateUuid() {
+    final rng = Random.secure();
+    final bytes = List<int>.generate(16, (_) => rng.nextInt(256));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
+    bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant
+    String hex(int b) => b.toRadixString(16).padLeft(2, '0');
+    return '${hex(bytes[0])}${hex(bytes[1])}${hex(bytes[2])}${hex(bytes[3])}'
+        '-${hex(bytes[4])}${hex(bytes[5])}'
+        '-${hex(bytes[6])}${hex(bytes[7])}'
+        '-${hex(bytes[8])}${hex(bytes[9])}'
+        '-${hex(bytes[10])}${hex(bytes[11])}${hex(bytes[12])}'
+        '${hex(bytes[13])}${hex(bytes[14])}${hex(bytes[15])}';
+  }
+}
+
+
+Map<String, String> _getWebStorage() {
+  try {
+    final dynamic html = _loadDartHtml();
+    return (html['window']['localStorage'] as Map<String, String>?) ?? {};
+  } catch (_) {
+    return {};
+  }
+}
+
+// ignore: unused_element
+dynamic _loadDartHtml() => null; // stub — real web uses dart:html directly
+
+class _SessionStorage {
+  static String? _memoryCache; // works for in-session use
+  static const _key = 'restaurant_customer_session_id';
+
+  static Future<String> getOrCreate() async {
+    // 1. Check in-memory cache first (fastest path)
+    if (_memoryCache != null) return _memoryCache!;
+
+    // 2. Try persistent storage
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final stored = prefs.getString(_key);
+      if (stored != null && stored.isNotEmpty) {
+        _memoryCache = stored;
+        return stored;
+      }
+    } catch (_) {
+      // SharedPreferences unavailable on some web environments — ignore
+    }
+
+    // 3. Generate new UUID
+    final newId = _generateSessionId();
+    _memoryCache = newId;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_key, newId);
+    } catch (_) {}
+    return newId;
+  }
+
+  static String _generateSessionId() {
+    final rng = Random.secure();
+    final bytes = List<int>.generate(16, (_) => rng.nextInt(256));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    String h(int b) => b.toRadixString(16).padLeft(2, '0');
+    return '${h(bytes[0])}${h(bytes[1])}${h(bytes[2])}${h(bytes[3])}'
+        '-${h(bytes[4])}${h(bytes[5])}'
+        '-${h(bytes[6])}${h(bytes[7])}'
+        '-${h(bytes[8])}${h(bytes[9])}'
+        '-${h(bytes[10])}${h(bytes[11])}${h(bytes[12])}'
+        '${h(bytes[13])}${h(bytes[14])}${h(bytes[15])}';
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 class CustomerMenuPage extends StatefulWidget {
   final String restaurantId;
@@ -29,9 +152,8 @@ class CustomerMenuPage extends StatefulWidget {
 
 class _CustomerMenuPageState extends State<CustomerMenuPage>
     with AutomaticKeepAliveClientMixin {
-  // Using ValueNotifier so category selection NEVER triggers a full setState/build()
-  // which would cause StreamBuilders to re-subscribe and flash/blink the menu.
-  final ValueNotifier<String?> _selectedCategoryIdNotifier = ValueNotifier(null);
+  final ValueNotifier<String?> _selectedCategoryIdNotifier =
+  ValueNotifier(null);
   String? get _selectedCategoryId => _selectedCategoryIdNotifier.value;
   set _selectedCategoryId(String? v) => _selectedCategoryIdNotifier.value = v;
 
@@ -39,36 +161,42 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
   bool _unifiedCategoryListView = true;
   final Set<String> _collapsedCategoryIds = {};
 
-  // Cart uses ValueNotifier — updating cart never triggers a full build()
-  // so StreamBuilders never re-subscribe and menu never reloads.
   final ValueNotifier<List<CartItem>> _cartNotifier =
   ValueNotifier<List<CartItem>>([]);
   List<CartItem> get cart => _cartNotifier.value;
 
-  // Notifies individual item buttons to play bounce animation
   final ValueNotifier<String?> _lastAddedItemId = ValueNotifier(null);
-  // Notifies cart badge to play bounce animation
   final ValueNotifier<int> _cartBounce = ValueNotifier(0);
 
-  // Tab management
   int _selectedTabIndex = 0;
   late PageController _pageController;
 
   String openingTime = "09:00 AM";
   String closingTime = "06:00 PM";
 
-  // Restaurant info loaded from Firestore
   String _restaurantName = "";
   String _restaurantTagline = "";
   String? _restaurantLogo;
 
-  // FIX #2: Track Firebase initialization state for mobile browser deep links
   bool _isFirebaseReady = false;
   bool _hasRestaurantIdError = false;
 
   // ── Table pre-selection from QR URL (?table=T01) ─────────────────────────
   String? _preselectedTableId;
   String? _preselectedTableName;
+
+  // ── NEW: Session + Active Order ───────────────────────────────────────────
+  /// Unique identity for this customer's device/browser session.
+  /// Generated once and persisted in SharedPreferences / localStorage.
+  String? _sessionId;
+
+  /// If an active (non-completed) order already exists for this table,
+  /// we store its Firestore document ID here and reuse it.
+  String? _activeOrderId;
+
+  /// True while [_initSessionAndOrder] is running so we can show a
+  /// loading state on the cart button instead of navigating with a null orderId.
+  bool _orderLookupInProgress = false;
 
   static const Color _primaryColor = Color(0xFFE24B4A);
 
@@ -79,15 +207,28 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
   void initState() {
     super.initState();
     _pageController = PageController();
-    // FIX #2: Validate restaurantId immediately on init — mobile browsers
-    // may open the page before the route params are properly set.
     if (widget.restaurantId.isEmpty) {
       _hasRestaurantIdError = true;
     } else {
       _isFirebaseReady = true;
     }
-    // Read ?table=T01 from URL on web
     _readTableFromUrl();
+    _ensureSignedIn(); // ← sign in anonymously BEFORE session/order lookup
+    _initSession();
+  }
+
+
+  /// Signs the user in anonymously if they are not already signed in.
+  /// Must run before _getOrCreateActiveOrder so the uid is available.
+  Future<void> _ensureSignedIn() async {
+    if (FirebaseAuth.instance.currentUser == null) {
+      try {
+        await FirebaseAuth.instance.signInAnonymously();
+        debugPrint('🔑 Signed in anonymously: ${FirebaseAuth.instance.currentUser?.uid}');
+      } catch (e) {
+        debugPrint('❌ Anonymous sign-in failed: $e');
+      }
+    }
   }
 
   @override
@@ -100,26 +241,19 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     super.dispose();
   }
 
-  // ── Read ?table=T01 from URL fragment — works with hash routing ───────────
-  // URL format: https://.../#/menu/{restaurantId}?table=T01
-  // The ?table= lives inside the fragment, so Uri.base.queryParameters
-  // won't find it. We parse the fragment string manually.
+  // ── Read ?table=T01 from URL fragment ────────────────────────────────────
   void _readTableFromUrl() {
     if (!kIsWeb) return;
     try {
-      // Uri.base.fragment = "/menu/{restaurantId}?table=T01"
       final fragment = Uri.base.fragment;
       if (!fragment.contains('?')) return;
-
-      final queryString = fragment.split('?').last; // "table=T01"
-      final params = Uri.splitQueryString(queryString); // {"table": "T01"}
+      final queryString = fragment.split('?').last;
+      final params = Uri.splitQueryString(queryString);
       final tableId = params['table'] ?? '';
       if (tableId.isEmpty) return;
 
-      // Set immediately so cart opens with it even before name loads
       if (mounted) setState(() => _preselectedTableId = tableId);
 
-      // Fetch table name from Firestore for display
       FirebaseFirestore.instance
           .collection('restaurants')
           .doc(widget.restaurantId)
@@ -136,12 +270,96 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
       }).catchError((_) {
         if (mounted) setState(() => _preselectedTableName = tableId);
       });
-    } catch (_) {
-      // URL parsing failed — no table preselection
+    } catch (_) {}
+  }
+
+  Future<void> _initSession() async {
+    final id = await _SessionStorage.getOrCreate();
+    if (mounted) setState(() => _sessionId = id);
+    debugPrint('🪪 Session ID: $id');
+  }
+
+  Future<String?> _getOrCreateActiveOrder() async {
+    final tableId = _preselectedTableId;
+    final sessionId = _sessionId;
+
+    // ── Guard: need tableId and sessionId ──────────────────────────────────
+    if (tableId == null || tableId.isEmpty) {
+      debugPrint('⚠️ No tableId — skipping order lookup');
+      return null;
+    }
+    if (sessionId == null) {
+      debugPrint('⚠️ No sessionId — skipping order lookup');
+      return null;
+    }
+
+    // ── Guard: must be signed in ───────────────────────────────────────────
+    // The Firestore rules require isAuthenticated() for every orders operation.
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      debugPrint('⚠️ No signed-in user — skipping order lookup');
+      return null;
+    }
+    final uid = user.uid;
+
+    if (mounted) setState(() => _orderLookupInProgress = true);
+
+    try {
+      final db = FirebaseFirestore.instance;
+
+      final existing = await db
+          .collection('orders')
+          .where('restaurantId', isEqualTo: widget.restaurantId)
+          .where('tableId', isEqualTo: tableId)
+          .where('userId', isEqualTo: uid)           // ← required for rules
+          .where('status', whereNotIn: ['completed', 'cancelled'])
+          .limit(1)
+          .get();
+
+      if (existing.docs.isNotEmpty) {
+        final orderId = existing.docs.first.id;
+        debugPrint('♻️ Reusing active order: $orderId');
+
+        await db.collection('orders').doc(orderId).update({
+          'sessionIds': FieldValue.arrayUnion([sessionId]),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+
+        if (mounted) setState(() => _activeOrderId = orderId);
+        return orderId;
+      }
+
+
+      final newRef = db.collection('orders').doc();
+      final newOrderId = newRef.id;
+
+      await newRef.set({
+        'orderId': newOrderId,
+        'restaurantId': widget.restaurantId,
+        'tableId': tableId,
+        'tableName': _preselectedTableName ?? tableId,
+        'userId': uid,                               // ← required by create rule
+        'sessionIds': [sessionId],
+        'status': 'pending',
+        'items': [],
+        'totalAmount': 0,                            // ← required by create rule
+        'createdAt': FieldValue.serverTimestamp(),   // ← must equal request.time
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      debugPrint('🆕 Created new order: $newOrderId');
+      if (mounted) setState(() => _activeOrderId = newOrderId);
+      return newOrderId;
+
+    } catch (e, st) {
+      debugPrint('❌ getOrCreateActiveOrder error: $e\n$st');
+      return null;
+    } finally {
+      if (mounted) setState(() => _orderLookupInProgress = false);
     }
   }
 
-  // ─── Cart helpers ─────────────────────────────────────────────────────────────
+  // ─── Cart helpers ─────────────────────────────────────────────────────────
 
   int getTotalCartQuantity() {
     int total = 0;
@@ -207,9 +425,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
 
     final open = parseTime(openingTime);
     final close = parseTime(closingTime);
-    if (close < open) {
-      return cur >= open || cur <= close;
-    }
+    if (close < open) return cur >= open || cur <= close;
     return cur >= open && cur <= close;
   }
 
@@ -309,7 +525,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     );
   }
 
-  // ─── Cart update ──────────────────────────────────────────────────────────────
+  // ─── Cart update ──────────────────────────────────────────────────────────
 
   void _updateItemQuantity(
       String itemId,
@@ -357,7 +573,64 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     _cartBounce.value = _cartBounce.value + 1;
   }
 
-  // ─── Shared small widgets ─────────────────────────────────────────────────────
+  Future<void> _openCartPage(List<CartItem> cartItems) async {
+    if (cartItems.isEmpty) return;
+
+    // Show a brief loading snackbar while we look up / create the order
+    if (mounted && _preselectedTableId != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(children: [
+            const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white)),
+            const SizedBox(width: 12),
+            Text('Preparing your order...',
+                style: GoogleFonts.poppins(fontSize: kIsWeb ? 13 : 13.sp)),
+          ]),
+          duration: const Duration(seconds: 3),
+          backgroundColor: _primaryColor,
+        ),
+      );
+    }
+
+    // ── Step 2: look up / create active order ────────────────────────────
+    final orderId = await _getOrCreateActiveOrder();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    }
+
+    if (!mounted) return;
+
+    final mutableCart = List<CartItem>.from(cartItems);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CartPage(
+          cart: mutableCart,
+          restaurantId: widget.restaurantId,
+          preselectedTableId: _preselectedTableId,
+          preselectedTableName: _preselectedTableName,
+          // ── NEW fields passed to CartPage ──────────────────────────────
+          sessionId: _sessionId,
+          activeOrderId: orderId,
+        ),
+      ),
+    ).then((_) {
+      if (mounted) {
+        _cartNotifier.value = List.from(mutableCart);
+        _cartBounce.value = _cartBounce.value + 1;
+        // Reset active order cache so next visit re-checks Firestore
+        // (the order status may have changed while user was in CartPage)
+        _activeOrderId = null;
+      }
+    });
+  }
+
+  // ─── Shared small widgets ─────────────────────────────────────────────────
 
   Widget _imagePlaceholder() {
     return Container(
@@ -369,15 +642,12 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     );
   }
 
-  /// Shows a grey shimmer while the image loads, then fades in the real image.
-  /// Falls back to [_imagePlaceholder] on error.
   Widget _networkImage(String url, {BoxFit fit = BoxFit.cover}) {
     return Image.network(
       url,
       fit: fit,
-      // Show placeholder while loading
       loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child; // fully loaded
+        if (loadingProgress == null) return child;
         return Container(
           color: const Color(0xFFEEEEEE),
           child: Center(
@@ -424,8 +694,6 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
   }
 
   Widget _vegBadge(bool isVeg) {
-    // FIX #3: isVeg badge was always green regardless of veg/non-veg.
-    // Non-veg should be red dot with red border.
     return Container(
       width: kIsWeb ? 18 : 18.sp,
       height: kIsWeb ? 18 : 18.sp,
@@ -531,7 +799,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     );
   }
 
-  // ─── Variant dropdown sheet ───────────────────────────────────────────────────
+  // ─── Variant dropdown sheet ───────────────────────────────────────────────
 
   void _showVariantDropdownSheet({
     required String itemId,
@@ -641,8 +909,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                                     : Colors.grey[400]!,
                                 width: isSelected ? 0 : 1.5,
                               ),
-                              color:
-                              isSelected ? _primaryColor : Colors.white,
+                              color: isSelected ? _primaryColor : Colors.white,
                             ),
                             child: isSelected
                                 ? Icon(Icons.check_rounded,
@@ -662,7 +929,6 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                                         ? _primaryColor
                                         : Colors.black87)),
                           ),
-                          // FIX #4: Show price in variant sheet so user knows what they're selecting
                           Text("₹$price",
                               style: GoogleFonts.poppins(
                                   fontSize: kIsWeb ? 13 : 13.sp,
@@ -684,7 +950,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     );
   }
 
-  // ─── ADD / counter widget ─────────────────────────────────────────────────────
+  // ─── ADD / counter widget ─────────────────────────────────────────────────
 
   Widget _buildAddOrCounterWidget(
       BuildContext context,
@@ -994,7 +1260,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     );
   }
 
-  // ─── Tab Content Widgets ──────────────────────────────────────────────────────
+  // ─── Tab Content Widgets ──────────────────────────────────────────────────
 
   Widget _buildHomeTab() {
     return HomeTab(
@@ -1003,9 +1269,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
       selectedCategoryId: _selectedCategoryId,
       collapsedCategoryIds: _collapsedCategoryIds,
       onCategorySelected: (categoryId) {
-        setState(() {
-          _selectedCategoryId = categoryId;
-        });
+        setState(() => _selectedCategoryId = categoryId);
       },
       onCategoryToggle: (categoryId) {
         setState(() {
@@ -1035,14 +1299,12 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     return AccountPage(restaurantId: widget.restaurantId);
   }
 
-  // ─── Build ────────────────────────────────────────────────────────────────────
+  // ─── Build ────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
 
-    // FIX #2: Guard invalid restaurantId — mobile browsers may open the page
-    // without a properly resolved route param.
     if (_hasRestaurantIdError || widget.restaurantId.isEmpty) {
       return Scaffold(
         body: Center(
@@ -1100,9 +1362,6 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
             .doc(widget.restaurantId)
             .snapshots(),
         builder: (context, snap) {
-          // FIX #5: Check connectionState FIRST — this is the primary fix for
-          // data not loading on mobile browser. Without this, the page shows
-          // "Restaurant not found" before Firestore even responds.
           if (snap.connectionState == ConnectionState.waiting) {
             return const FullScreenLoader(
               type: LoaderType.foodLoader,
@@ -1119,7 +1378,8 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                    const Icon(Icons.error_outline,
+                        size: 64, color: Colors.red),
                     const SizedBox(height: 16),
                     Text('Error loading restaurant data',
                         style: GoogleFonts.poppins(
@@ -1141,7 +1401,6 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
             );
           }
 
-          // FIX #5 continued: Only check hasData AFTER connectionState is not waiting.
           if (!snap.hasData || snap.data?.data() == null) {
             return Scaffold(
               appBar: AppBar(title: const Text('Not Found')),
@@ -1181,10 +1440,6 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
           final String? loadedLogo =
           (data['logoUrl'] ?? data['logo']) as String?;
 
-          // Assign directly — the StreamBuilder already rebuilds this subtree
-          // whenever Firestore emits. Calling setState here would cause a second
-          // full rebuild on every snapshot, making every child StreamBuilder
-          // re-subscribe and flash/blink the menu.
           _restaurantName = loadedName;
           _restaurantTagline = loadedTagline;
           _restaurantLogo = loadedLogo;
@@ -1195,8 +1450,8 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
               children: [
                 _buildHeader(),
 
-                // ── Table banner — shown when URL has ?table=T01 ─────────
-                if (_preselectedTableId != null && _preselectedTableId!.isNotEmpty)
+                if (_preselectedTableId != null &&
+                    _preselectedTableId!.isNotEmpty)
                   Container(
                     width: double.infinity,
                     padding: EdgeInsets.symmetric(
@@ -1205,7 +1460,8 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                     decoration: const BoxDecoration(
                       color: Color(0xFFFFF0E8),
                       border: Border(
-                          bottom: BorderSide(color: Color(0xFFFFD5BC), width: 1)),
+                          bottom:
+                          BorderSide(color: Color(0xFFFFD5BC), width: 1)),
                     ),
                     child: Row(children: [
                       const Icon(Icons.table_restaurant_rounded,
@@ -1255,7 +1511,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     );
   }
 
-  // ─── Header ───────────────────────────────────────────────────────────────────
+  // ─── Header ───────────────────────────────────────────────────────────────
 
   Widget _buildHeader() {
     return Container(
@@ -1329,6 +1585,8 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                 ),
                 SizedBox(width: kIsWeb ? 8 : 8.sp),
               ],
+
+              // ── Cart icon — now calls _openCartPage ──────────────────────
               ValueListenableBuilder<int>(
                 valueListenable: _cartBounce,
                 builder: (context, bounceCount, _) {
@@ -1338,25 +1596,12 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                       final total =
                       cartItems.fold<int>(0, (s, i) => s + i.qty);
                       return GestureDetector(
-                        onTap: () {
-                          if (cartItems.isEmpty) return;
-                          final mutableCart = List<CartItem>.from(cartItems);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => CartPage(
-                                  cart: mutableCart,
-                                  restaurantId: widget.restaurantId,
-                                  preselectedTableId: _preselectedTableId,
-                                  preselectedTableName: _preselectedTableName),
-                            ),
-                          ).then((_) {
-                            if (mounted) {
-                              _cartNotifier.value = List.from(mutableCart);
-                              _cartBounce.value = _cartBounce.value + 1;
-                            }
-                          });
-                        },
+                        // ── CHANGED: was Navigator.push inline;
+                        //    now calls _openCartPage which handles
+                        //    session + order lookup first. ────────────────
+                        onTap: _orderLookupInProgress
+                            ? null // disable while lookup is in progress
+                            : () => _openCartPage(cartItems),
                         child: _AnimatedCartBadge(
                           bounceCount: bounceCount,
                           badge: total > 0 ? '$total' : null,
@@ -1411,7 +1656,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     );
   }
 
-  // ─── Bottom nav ───────────────────────────────────────────────────────────────
+  // ─── Bottom nav ───────────────────────────────────────────────────────────
 
   Widget _buildBottomNavigationBar() {
     return Container(
@@ -1447,8 +1692,6 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                   label: "Offers",
                   isSelected: _selectedTabIndex == 2,
                   onTap: () => _switchTab(2)),
-              // FIX #6: Removed hardcoded badge "1" on Account tab —
-              // a static non-zero badge is misleading to users.
               _buildNavItem(
                   icon: Icons.person_outline_rounded,
                   label: "Account",
@@ -1461,11 +1704,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     );
   }
 
-  void _switchTab(int index) {
-    setState(() {
-      _selectedTabIndex = index;
-    });
-  }
+  void _switchTab(int index) => setState(() => _selectedTabIndex = index);
 
   Widget _buildNavItem({
     required IconData icon,
@@ -1525,7 +1764,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     );
   }
 
-  // ─── Unified list view ────────────────────────────────────────────────────────
+  // ─── Unified list view ────────────────────────────────────────────────────
 
   Widget _buildUnifiedListView() {
     return StreamBuilder<QuerySnapshot>(
@@ -1538,7 +1777,6 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
         if (snap.hasError)
           return _errorWidget('Error loading categories', snap.error);
 
-        // FIX #5: connectionState check in nested StreamBuilders too.
         if (snap.connectionState == ConnectionState.waiting) {
           return ListView.builder(
             padding: EdgeInsets.only(
@@ -1635,7 +1873,8 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                           isExpanded
                               ? Icons.keyboard_arrow_up_rounded
                               : Icons.keyboard_arrow_down_rounded,
-                          color: isCatSelected ? _primaryColor : Colors.black45,
+                          color:
+                          isCatSelected ? _primaryColor : Colors.black45,
                           size: kIsWeb ? 20 : 20.sp,
                         ),
                       ],
@@ -1656,7 +1895,6 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                     builder: (context, menuSnap) {
                       if (menuSnap.hasError)
                         return _inlineError('Error loading items');
-                      // FIX #5: connectionState check in innermost StreamBuilder
                       if (menuSnap.connectionState ==
                           ConnectionState.waiting) return _inlineLoading();
                       if (!menuSnap.hasData || menuSnap.data!.docs.isEmpty)
@@ -1701,7 +1939,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     );
   }
 
-  // ─── Separate / grid view ─────────────────────────────────────────────────────
+  // ─── Separate / grid view ─────────────────────────────────────────────────
 
   Widget _buildSeparateView() {
     return StreamBuilder<QuerySnapshot>(
@@ -1714,7 +1952,6 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
         if (snap.hasError)
           return _errorWidget('Error loading categories', snap.error);
 
-        // FIX #5: connectionState check
         if (snap.connectionState == ConnectionState.waiting) {
           return ListView.builder(
             padding: EdgeInsets.only(
@@ -1742,7 +1979,6 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
 
         return Column(
           children: [
-            // ValueListenableBuilder: only the chips row rebuilds on selection change
             ValueListenableBuilder<String?>(
               valueListenable: _selectedCategoryIdNotifier,
               builder: (context, selectedCatId, _) {
@@ -1799,7 +2035,6 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                 );
               },
             ),
-            // ValueListenableBuilder: only the items list rebuilds on selection change
             Expanded(
               child: ValueListenableBuilder<String?>(
                 valueListenable: _selectedCategoryIdNotifier,
@@ -1826,11 +2061,9 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
           .orderBy("name")
           .snapshots(),
       builder: (context, snap) {
-        if (snap.hasError) {
+        if (snap.hasError)
           return _errorWidget('Error loading menu items', snap.error);
-        }
 
-        // FIX #5: connectionState check
         if (snap.connectionState == ConnectionState.waiting) {
           return ListView.builder(
             padding:
@@ -1840,9 +2073,8 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
           );
         }
 
-        if (!snap.hasData || snap.data!.docs.isEmpty) {
+        if (!snap.hasData || snap.data!.docs.isEmpty)
           return _emptyWidget('No Menu Items Available');
-        }
 
         final items = snap.data!.docs;
         return ListView.builder(
@@ -1878,7 +2110,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     );
   }
 
-  // ─── Reusable state widgets ───────────────────────────────────────────────────
+  // ─── Reusable state widgets ───────────────────────────────────────────────
 
   Widget _loadingWidget(String msg) => Center(
     child: ProfessionalLoader(
@@ -2178,9 +2410,7 @@ class _CounterWidgetState extends State<_CounterWidget>
   @override
   void didUpdateWidget(_CounterWidget old) {
     super.didUpdateWidget(old);
-    if (old.qty != widget.qty) {
-      _numCtrl.forward(from: 0);
-    }
+    if (old.qty != widget.qty) _numCtrl.forward(from: 0);
   }
 
   @override

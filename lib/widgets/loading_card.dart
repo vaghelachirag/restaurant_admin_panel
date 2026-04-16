@@ -254,7 +254,6 @@ class MenuCardSkeleton extends StatelessWidget {
                     borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                   ),
                   const Spacer(),
-                  // Price and button skeleton
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [

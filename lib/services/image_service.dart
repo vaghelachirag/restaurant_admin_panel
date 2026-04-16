@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
 
@@ -252,35 +253,35 @@ class ImageService {
   }) async {
     final cacheKey = _normalizeKey(itemName);
 
-    // 1. Memory cache
+    // 1. Memory cache — fastest path, no network
     if (_memCache.containsKey(cacheKey)) return _memCache[cacheKey]!;
 
-    // 2. Firestore cache
+    // 2. Firestore cache — avoids duplicate API calls across sessions
     final firestoreUrl = await _checkFirestoreCache(cacheKey);
     if (firestoreUrl != null) {
       _memCache[cacheKey] = firestoreUrl;
+      debugPrint('[ImageService] Cache hit: $itemName');
       return firestoreUrl;
     }
 
-    // 3. Keyword match
+    // 3. Keyword match — curated food images, most reliable
     final keywordUrl = _matchKeyword(itemName);
     if (keywordUrl != null) {
+      debugPrint('[ImageService] Keyword match: $itemName');
       await _saveToCache(cacheKey, keywordUrl);
       return keywordUrl;
     }
 
-    // 4. Cloud Function → Unsplash
-    if (cloudFunctionUrl != null && cloudFunctionUrl.isNotEmpty) {
-      final apiUrl = await _fetchFromCloudFunction(itemName, cloudFunctionUrl);
-      if (apiUrl != null) {
-        await _saveToCache(cacheKey, apiUrl);
-        return apiUrl;
-      }
-    }
-
-    // 5. Category fallback
+    // 4. Category fallback — when item name has no keyword match,
+    //    use the category (e.g. "Starters", "Rice", "Beverages") to pick
+    //    a relevant food image. This guarantees a non-empty image URL.
     final fallback = _categoryFallback(categoryName);
-    _memCache[cacheKey] = fallback; // cache fallback in memory only
+    debugPrint(
+      '[ImageService] No keyword match for "$itemName" '
+          '(category: "$categoryName") → using fallback image',
+    );
+    // Cache the fallback in memory only (don't persist generic images to Firestore)
+    _memCache[cacheKey] = fallback;
     return fallback;
   }
 
@@ -339,12 +340,29 @@ class ImageService {
   }
 
   String _categoryFallback(String categoryName) {
+    if (categoryName.trim().isEmpty) return _defaultFallback;
     final lower = categoryName.toLowerCase().trim();
+
+    // Exact match first (fastest)
+    if (_categoryFallbacks.containsKey(lower)) return _categoryFallbacks[lower]!;
+
+    // Substring match — handles "South Indian Starters" matching "starters"
     for (final entry in _categoryFallbacks.entries) {
       if (lower.contains(entry.key) || entry.key.contains(lower)) {
         return entry.value;
       }
     }
+
+    // Also try word-level match — "Roti & Bread" should match "breads"
+    final words = lower.split(RegExp(r'[\s&,/]+'));
+    for (final word in words) {
+      if (_categoryFallbacks.containsKey(word)) return _categoryFallbacks[word]!;
+      for (final entry in _categoryFallbacks.entries) {
+        if (word.isNotEmpty && entry.key.contains(word)) return entry.value;
+      }
+    }
+
+    // Always guaranteed to return a real food image, never an empty string
     return _defaultFallback;
   }
 
@@ -359,13 +377,18 @@ class ImageService {
   }
 
   Future<void> _saveToCache(String key, String url) async {
+    // Always persist to memory first — this is the fast path within a session
     _memCache[key] = url;
     try {
       await _cacheRef.doc(key).set({
         'url': url,
         'cachedAt': FieldValue.serverTimestamp(),
       });
-    } catch (_) {} // non-critical — silently ignore
+    } catch (e) {
+      // Non-fatal: Firestore cache write failed (rules/auth).
+      // The image URL is still returned correctly from memory cache.
+      debugPrint('[ImageService] Cache write skipped (non-fatal): $e');
+    }
   }
 
   /// Calls your Firebase Cloud Function which wraps the Unsplash API.

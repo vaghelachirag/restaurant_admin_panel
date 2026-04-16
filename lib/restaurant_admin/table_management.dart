@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/localization_service.dart';
 
@@ -10,15 +9,11 @@ class _C {
   static const card        = Color(0xFFFFFFFF);
   static const orange      = Color(0xFFE8622A);
   static const orangeLight = Color(0xFFFFF0E8);
-  static const orangeMid   = Color(0xFFFFD5C0);
   static const textDark    = Color(0xFF1A1A1A);
   static const textMid     = Color(0xFF666666);
   static const textLight   = Color(0xFF999999);
   static const cardBorder  = Color(0xFFEEEEEE);
   static const divider     = Color(0xFFF0F0F0);
-  static const green       = Color(0xFF27AE60);
-  static const greenBg     = Color(0xFFE8F8EF);
-  static const greenLight  = Color(0xFFB7E4CA);
   static const red         = Color(0xFFE74C3C);
   static const redBg       = Color(0xFFFEEEEE);
 }
@@ -29,34 +24,29 @@ TextStyle _p(double size, FontWeight weight, Color color) =>
 // ─── Model ────────────────────────────────────────────────────────────────────
 class TableModel {
   final String tableId;
+  final String restaurantId;
   final String name;
   final int capacity;
-  final String status;
-  final String? currentOrderId;
   final bool isActive;
 
   const TableModel({
     required this.tableId,
+    required this.restaurantId,
     required this.name,
     required this.capacity,
-    required this.status,
-    this.currentOrderId,
     required this.isActive,
   });
 
-  factory TableModel.fromDoc(DocumentSnapshot doc) {
+  factory TableModel.fromDoc(DocumentSnapshot doc, {String restaurantId = ''}) {
     final d = doc.data() as Map<String, dynamic>;
     return TableModel(
       tableId: doc.id,
+      restaurantId: d['restaurant_id'] as String? ?? restaurantId,
       name: d['name'] as String? ?? '',
       capacity: (d['capacity'] as num?)?.toInt() ?? 0,
-      status: d['status'] as String? ?? 'available',
-      currentOrderId: d['current_order_id'] as String?,
       isActive: d['is_active'] as bool? ?? true,
     );
   }
-
-  bool get isAvailable => status == 'available';
 }
 
 // ─── Service ──────────────────────────────────────────────────────────────────
@@ -66,12 +56,18 @@ class TableService {
       .doc(restaurantId)
       .collection('tables');
 
-  Stream<List<TableModel>> watchTables(String restaurantId) =>
-      _ref(restaurantId)
-          .where('is_active', isEqualTo: true)
-          .orderBy('table_id')
-          .snapshots()
-          .map((s) => s.docs.map(TableModel.fromDoc).toList());
+  Stream<List<TableModel>> watchTables(String restaurantId) {
+    return _ref(restaurantId)
+        .where('is_active', isEqualTo: true)
+        .snapshots()
+        .map((s) {
+      final tables = s.docs
+          .map((doc) => TableModel.fromDoc(doc, restaurantId: restaurantId))
+          .toList();
+      tables.sort((a, b) => a.tableId.compareTo(b.tableId));
+      return tables;
+    });
+  }
 
   Future<void> addTable({
     required String restaurantId,
@@ -85,10 +81,9 @@ class TableService {
     }
     await ref.set({
       'table_id': tableId,
+      'restaurant_id': restaurantId,
       'name': name,
       'capacity': capacity,
-      'status': 'available',
-      'current_order_id': null,
       'is_active': true,
       'created_at': FieldValue.serverTimestamp(),
       'updated_at': FieldValue.serverTimestamp(),
@@ -114,30 +109,6 @@ class TableService {
       'updated_at': FieldValue.serverTimestamp(),
     });
   }
-
-  Future<void> updateTableStatus({
-    required String restaurantId,
-    required String tableId,
-    required String status,
-    String? currentOrderId,
-  }) async {
-    await _ref(restaurantId).doc(tableId).update({
-      'status': status,
-      'current_order_id': currentOrderId ?? '',
-      'updated_at': FieldValue.serverTimestamp(),
-    });
-  }
-
-  Future<void> freeTable({
-    required String restaurantId,
-    required String tableId,
-  }) async {
-    await _ref(restaurantId).doc(tableId).update({
-      'status': 'available',
-      'current_order_id': '',
-      'updated_at': FieldValue.serverTimestamp(),
-    });
-  }
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
@@ -151,7 +122,6 @@ class TableManagementPage extends StatefulWidget {
 
 class _TableManagementPageState extends State<TableManagementPage> {
   final _service = TableService();
-  String _filter = 'All';
 
   // ── Snack ─────────────────────────────────────────────────────────────────
   void _snack(String msg, Color bg, IconData icon) {
@@ -219,8 +189,11 @@ class _TableManagementPageState extends State<TableManagementPage> {
                     child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          SizedBox(height: 20,),
-                          Text(isEdit ? AppLocalizations.of(ctx).editTable : AppLocalizations.of(ctx).addNewTable,
+                          const SizedBox(height: 20),
+                          Text(
+                              isEdit
+                                  ? AppLocalizations.of(ctx).editTable
+                                  : AppLocalizations.of(ctx).addNewTable,
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w600,
@@ -232,7 +205,10 @@ class _TableManagementPageState extends State<TableManagementPage> {
                                   : AppLocalizations.of(ctx).fillTableInfo,
                               style: TextStyle(
                                 fontSize: 14,
-                                color: Theme.of(ctx).colorScheme.onSurface.withOpacity(0.6),
+                                color: Theme.of(ctx)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.6),
                               )),
                         ]),
                   ),
@@ -255,7 +231,9 @@ class _TableManagementPageState extends State<TableManagementPage> {
                   icon: Icons.tag_rounded,
                   readOnly: isEdit,
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty) return AppLocalizations.of(ctx).tableIdRequired;
+                    if (v == null || v.trim().isEmpty) {
+                      return AppLocalizations.of(ctx).tableIdRequired;
+                    }
                     if (!RegExp(r'^[A-Za-z0-9]+$').hasMatch(v.trim())) {
                       return AppLocalizations.of(ctx).alphanumericOnly;
                     }
@@ -280,9 +258,13 @@ class _TableManagementPageState extends State<TableManagementPage> {
                   icon: Icons.people_outline_rounded,
                   keyboardType: TextInputType.number,
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty) return AppLocalizations.of(ctx).capacityRequired;
+                    if (v == null || v.trim().isEmpty) {
+                      return AppLocalizations.of(ctx).capacityRequired;
+                    }
                     final n = int.tryParse(v.trim());
-                    if (n == null || n < 1) return AppLocalizations.of(ctx).validCapacity;
+                    if (n == null || n < 1) {
+                      return AppLocalizations.of(ctx).validCapacity;
+                    }
                     return null;
                   },
                 ),
@@ -333,8 +315,7 @@ class _TableManagementPageState extends State<TableManagementPage> {
                           } else {
                             await _service.addTable(
                               restaurantId: widget.restaurantId,
-                              tableId:
-                              idCtrl.text.trim().toUpperCase(),
+                              tableId: idCtrl.text.trim().toUpperCase(),
                               name: nmCtrl.text.trim(),
                               capacity: int.parse(capCtrl.text.trim()),
                             );
@@ -344,7 +325,7 @@ class _TableManagementPageState extends State<TableManagementPage> {
                             isEdit
                                 ? AppLocalizations.of(ctx).tableUpdatedSuccess
                                 : AppLocalizations.of(ctx).tableAddedSuccess,
-                            _C.green,
+                            _C.orange,
                             Icons.check_circle_rounded,
                           );
                         } catch (e) {
@@ -373,7 +354,9 @@ class _TableManagementPageState extends State<TableManagementPage> {
                           child: CircularProgressIndicator(
                               strokeWidth: 2, color: Colors.white))
                           : Text(
-                        isEdit ? AppLocalizations.of(ctx).commonSave : AppLocalizations.of(ctx).addTable,
+                        isEdit
+                            ? AppLocalizations.of(ctx).commonSave
+                            : AppLocalizations.of(ctx).addTable,
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 14,
@@ -434,7 +417,9 @@ class _TableManagementPageState extends State<TableManagementPage> {
               ),
               const SizedBox(height: 8),
               Text(
-                AppLocalizations.of(ctx).disableTableDescription.replaceAll('{tableName}', table.name),
+                AppLocalizations.of(ctx)
+                    .disableTableDescription
+                    .replaceAll('{tableName}', table.name),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
@@ -480,16 +465,14 @@ class _TableManagementPageState extends State<TableManagementPage> {
                             table.tableId,
                           );
                           _snack(
-                            AppLocalizations.of(ctx).tableDisabled.replaceAll('{tableName}', table.name),
+                            AppLocalizations.of(ctx)
+                                .tableDisabled
+                                .replaceAll('{tableName}', table.name),
                             _C.textMid,
                             Icons.info_outline_rounded,
                           );
                         } catch (e) {
-                          _snack(
-                            e.toString(),
-                            _C.red,
-                            Icons.error_rounded,
-                          );
+                          _snack(e.toString(), _C.red, Icons.error_rounded);
                         }
                       },
                       style: ElevatedButton.styleFrom(
@@ -503,7 +486,7 @@ class _TableManagementPageState extends State<TableManagementPage> {
                       ),
                       child: Text(
                         AppLocalizations.of(ctx).disableTable,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 14,
                         ),
@@ -519,75 +502,8 @@ class _TableManagementPageState extends State<TableManagementPage> {
     );
   }
 
-  // ── Filter chip ───────────────────────────────────────────────────────────
-  Widget _filterChip(String label) {
-    final active = _filter == label;
-    return GestureDetector(
-      onTap: () => setState(() => _filter = label),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        padding:
-        const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-        decoration: BoxDecoration(
-          color: active ? _C.orange : Colors.white,
-          borderRadius: BorderRadius.circular(22),
-          border:
-          Border.all(color: active ? _C.orange : _C.cardBorder, width: 1.2),
-          boxShadow: active
-              ? [
-            BoxShadow(
-                color: _C.orange.withOpacity(0.22),
-                blurRadius: 8,
-                offset: const Offset(0, 2))
-          ]
-              : [],
-        ),
-        child: Text(
-          label,
-          style: _p(12, active ? FontWeight.w600 : FontWeight.w500,
-              active ? Colors.white : _C.textMid),
-        ),
-      ),
-    );
-  }
-
-  // ── Stat card ─────────────────────────────────────────────────────────────
-  Widget _statCard(
-      String label, int count, Color color, Color bg, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withOpacity(0.15), width: 1),
-      ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Container(
-          padding: const EdgeInsets.all(7),
-          decoration: BoxDecoration(
-              color: color.withOpacity(0.12), shape: BoxShape.circle),
-          child: Icon(icon, size: 14, color: color),
-        ),
-        const SizedBox(width: 10),
-        Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('$count', style: _p(16, FontWeight.w700, color)),
-              Text(label,
-                  style: _p(10, FontWeight.w500, color.withOpacity(0.75))),
-            ]),
-      ]),
-    );
-  }
-
   Widget _tableCard(TableModel t, bool isMobile) {
-    final isAvailable = t.isAvailable;
-    final statusColor = isAvailable ? _C.green : _C.red;
-    final statusBg    = isAvailable ? _C.greenBg : _C.redBg;
-    final statusLabel = isAvailable ? AppLocalizations.of(context).tablesAvailable : AppLocalizations.of(context).tablesOccupied;
-
-    // Capacity drives accent bar thickness and icon size
+    // Capacity tier drives accent bar thickness and icon size
     final tier     = t.capacity <= 2 ? 0 : t.capacity <= 4 ? 1 : t.capacity <= 7 ? 2 : 3;
     final iconSize = 18.0 + tier * 3.0;
     final accentH  =  3.0 + tier * 0.5;
@@ -609,97 +525,71 @@ class _TableManagementPageState extends State<TableManagementPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Data-driven accent bar (capacity → thickness + colour)
+            // ── Capacity-driven accent bar
             Container(
               height: accentH,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: isAvailable
-                      ? [_C.green, _C.greenLight]
-                      : [_C.red, _C.red.withOpacity(0.55)],
+                  colors: [_C.orange, _C.orange.withOpacity(0.55)],
                 ),
               ),
             ),
 
-            // ── Card body — intrinsic height, no Expanded/Spacer needed
+            // ── Card body
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 12, 10, 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Top row: status pill + 3-dot menu
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      // Status pill
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 9, vertical: 4),
-                        decoration: BoxDecoration(
-                            color: statusBg,
-                            borderRadius: BorderRadius.circular(20)),
-                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                                color: statusColor, shape: BoxShape.circle),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(statusLabel,
-                              style: _p(11, FontWeight.w600, statusColor)),
-                        ]),
-                      ),
-
-                      // 3-dot menu
-                      PopupMenuButton<String>(
-                        onSelected: (v) {
-                          if (v == 'edit') _showTableDialog(existing: t);
-                          if (v == 'delete') _confirmDelete(t);
-                        },
-                        itemBuilder: (_) => [
-                          PopupMenuItem(
-                            value: 'edit',
-                            child: Row(children: [
-                              const Icon(Icons.edit_outlined,
-                                  size: 15, color: _C.textMid),
-                              const SizedBox(width: 8),
-                              Text(AppLocalizations.of(context).edit,
-                                  style: _p(13, FontWeight.w400, _C.textDark)),
-                            ]),
-                          ),
-                          PopupMenuItem(
-                            value: 'delete',
-                            child: Row(children: [
-                              const Icon(Icons.delete_outline_rounded,
-                                  size: 15, color: _C.red),
-                              const SizedBox(width: 8),
-                              Text(AppLocalizations.of(context).disableTable,
-                                  style: _p(13, FontWeight.w400, _C.red)),
-                            ]),
-                          ),
-                        ],
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        elevation: 4,
-                        padding: EdgeInsets.zero,
-                        child: Container(
-                          padding: const EdgeInsets.all(5),
-                          decoration: BoxDecoration(
-                              color: const Color(0xFFF5F5F5),
-                              borderRadius: BorderRadius.circular(7)),
-                          child: const Icon(Icons.more_horiz_rounded,
-                              size: 15, color: _C.textMid),
+                  // Top row: 3-dot menu aligned right
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: PopupMenuButton<String>(
+                      onSelected: (v) {
+                        if (v == 'edit') _showTableDialog(existing: t);
+                        if (v == 'delete') _confirmDelete(t);
+                      },
+                      itemBuilder: (_) => [
+                        PopupMenuItem(
+                          value: 'edit',
+                          child: Row(children: [
+                            const Icon(Icons.edit_outlined,
+                                size: 15, color: _C.textMid),
+                            const SizedBox(width: 8),
+                            Text(AppLocalizations.of(context).edit,
+                                style: _p(13, FontWeight.w400, _C.textDark)),
+                          ]),
                         ),
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Row(children: [
+                            const Icon(Icons.delete_outline_rounded,
+                                size: 15, color: _C.red),
+                            const SizedBox(width: 8),
+                            Text(AppLocalizations.of(context).disableTable,
+                                style: _p(13, FontWeight.w400, _C.red)),
+                          ]),
+                        ),
+                      ],
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      elevation: 4,
+                      padding: EdgeInsets.zero,
+                      child: Container(
+                        padding: const EdgeInsets.all(5),
+                        decoration: BoxDecoration(
+                            color: const Color(0xFFF5F5F5),
+                            borderRadius: BorderRadius.circular(7)),
+                        child: const Icon(Icons.more_horiz_rounded,
+                            size: 15, color: _C.textMid),
                       ),
-                    ],
+                    ),
                   ),
 
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 8),
 
-                  // Table icon (size = capacity tier)
+                  // Table icon
                   Container(
                     padding: const EdgeInsets.all(9),
                     decoration: BoxDecoration(
@@ -730,25 +620,6 @@ class _TableManagementPageState extends State<TableManagementPage> {
                     Text('${t.capacity} ${AppLocalizations.of(context).seats}',
                         style: _p(13, FontWeight.w400, _C.textMid)),
                   ]),
-
-                  // Order ID badge (occupied only)
-                  if (t.currentOrderId != null &&
-                      t.currentOrderId!.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                          color: _C.orangeLight,
-                          borderRadius: BorderRadius.circular(6)),
-                      child: Text(
-                        '# ${t.currentOrderId}',
-                        style: _p(11, FontWeight.w600, _C.orange),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -765,34 +636,36 @@ class _TableManagementPageState extends State<TableManagementPage> {
     return StreamBuilder<List<TableModel>>(
       stream: _service.watchTables(widget.restaurantId),
       builder: (context, snapshot) {
-        final all       = snapshot.data ?? [];
-        final available = all.where((t) => t.isAvailable).length;
-        final occupied  = all.where((t) => !t.isAvailable).length;
-
-        List<TableModel> filtered = all;
-        if (_filter == AppLocalizations.of(context).tablesAvailable) filtered = all.where((t) => t.isAvailable).toList();
-        if (_filter == AppLocalizations.of(context).tablesOccupied)  filtered = all.where((t) => !t.isAvailable).toList();
+        final tables = snapshot.data ?? [];
 
         return SingleChildScrollView(
-          padding: EdgeInsets.only(left: isMobile ? 16 : 8, right: isMobile ? 16 : 8, bottom: 8),
+          padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 16 : 8, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ── Header row
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    SizedBox(height: 10,),
-                    Text(AppLocalizations.of(context).tablesTitle,
-                        style: GoogleFonts.poppins(
-                          fontSize: kIsWeb ? 24 : 16,
-                          fontWeight: FontWeight.w200,
-                          color: const Color(0xFF0E1A2F),
-                        )),
-                    const SizedBox(height: 3),
-                  ]),
-                  SizedBox(height: 10,),
+                  Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          AppLocalizations.of(context).tablesTitle,
+                          style: GoogleFonts.poppins(
+                            fontSize: kIsWeb ? 24 : 16,
+                            fontWeight: FontWeight.w200,
+                            color: const Color(0xFF0E1A2F),
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          '${tables.length} ${AppLocalizations.of(context).totalTables}',
+                          style: _p(13, FontWeight.w400, _C.textMid),
+                        ),
+                      ]),
                   ElevatedButton(
                     onPressed: () => _showTableDialog(),
                     style: ElevatedButton.styleFrom(
@@ -800,9 +673,7 @@ class _TableManagementPageState extends State<TableManagementPage> {
                       foregroundColor: Colors.white,
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 12,
-                      ),
+                          horizontal: 18, vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -825,32 +696,9 @@ class _TableManagementPageState extends State<TableManagementPage> {
                 ],
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 20),
 
-              // ── Stat cards ────────────────────────────────────────────────
-              if (snapshot.hasData)
-                Wrap(spacing: 10, runSpacing: 10, children: [
-                  _statCard(AppLocalizations.of(context).totalTables, all.length, _C.textMid,
-                      const Color(0xFFF5F5F5), Icons.table_restaurant_rounded),
-                  _statCard(AppLocalizations.of(context).tablesAvailable, available, _C.green, _C.greenBg,
-                      Icons.check_circle_outline_rounded),
-                  _statCard(AppLocalizations.of(context).tablesOccupied, occupied, _C.red, _C.redBg,
-                      Icons.people_rounded),
-                ]),
-
-              const SizedBox(height: 12),
-
-              // ── Filter chips ──────────────────────────────────────────────
-              Wrap(
-                spacing: 8,
-                children: [AppLocalizations.of(context).tablesAll, AppLocalizations.of(context).tablesAvailable, AppLocalizations.of(context).tablesOccupied]
-                    .map(_filterChip)
-                    .toList(),
-              ),
-
-              const SizedBox(height: 12),
-
-              // ── Content ───────────────────────────────────────────────────
+              // ── Content
               if (snapshot.connectionState == ConnectionState.waiting)
                 const Center(
                   child: Padding(
@@ -866,7 +714,7 @@ class _TableManagementPageState extends State<TableManagementPage> {
                         style: _p(13, FontWeight.w400, _C.red)),
                   ),
                 )
-              else if (filtered.isEmpty)
+              else if (tables.isEmpty)
                   Center(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 60),
@@ -880,32 +728,28 @@ class _TableManagementPageState extends State<TableManagementPage> {
                         ),
                         const SizedBox(height: 18),
                         Text(
-                          _filter == AppLocalizations.of(context).tablesAll
-                              ? AppLocalizations.of(context).noTablesYet
-                              : _filter == AppLocalizations.of(context).tablesAvailable ? AppLocalizations.of(context).noAvailableTables : AppLocalizations.of(context).noOccupiedTables,
+                          AppLocalizations.of(context).noTablesYet,
                           style: _p(16, FontWeight.w600, _C.textDark),
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          _filter == AppLocalizations.of(context).tablesAll
-                              ? AppLocalizations.of(context).tapAddTable
-                              : _filter == AppLocalizations.of(context).tablesAvailable ? AppLocalizations.of(context).allOccupied : AppLocalizations.of(context).allAvailable,
+                          AppLocalizations.of(context).tapAddTable,
                           style: _p(12, FontWeight.w400, _C.textLight),
                         ),
                       ]),
                     ),
                   )
                 else
-                // ── Wrap grid — cards size to their own content ──
                   LayoutBuilder(
                     builder: (context, constraints) {
                       final cols    = isMobile ? 2 : 4;
-                      final spacing = 12.0;
-                      final cardW   = (constraints.maxWidth - spacing * (cols - 1)) / cols;
+                      const spacing = 12.0;
+                      final cardW   =
+                          (constraints.maxWidth - spacing * (cols - 1)) / cols;
                       return Wrap(
                         spacing: spacing,
                         runSpacing: spacing,
-                        children: filtered
+                        children: tables
                             .map((t) => SizedBox(
                           width: cardW,
                           child: _tableCard(t, isMobile),
@@ -914,6 +758,7 @@ class _TableManagementPageState extends State<TableManagementPage> {
                       );
                     },
                   ),
+
               const SizedBox(height: 10),
             ],
           ),
@@ -959,11 +804,14 @@ class _FormField extends StatelessWidget {
         readOnly: readOnly,
         keyboardType: keyboardType,
         validator: validator,
-        style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500,
+        style: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
             color: colorScheme.onSurface),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: GoogleFonts.poppins(fontSize: 14,
+          hintStyle: GoogleFonts.poppins(
+              fontSize: 14,
               color: colorScheme.onSurface.withOpacity(0.4)),
           prefixIcon: Icon(icon,
               size: 20,
@@ -972,7 +820,8 @@ class _FormField extends StatelessWidget {
                   : colorScheme.onSurface.withOpacity(0.5)),
           filled: true,
           fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide:

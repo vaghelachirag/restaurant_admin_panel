@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -70,7 +71,7 @@ class _MenuPageState extends State<MenuPage> {
     String? selectedCategoryId = _selectedCategoryId;
     bool isVeg = true;
     List<Map<String, TextEditingController>> variants = [
-      {"name": TextEditingController(), "price": TextEditingController()}
+      {"name": TextEditingController(text: "Regular"), "price": TextEditingController()}
     ];
 
     showDialog(
@@ -90,6 +91,7 @@ class _MenuPageState extends State<MenuPage> {
           dialogWidth = screenWidth * 0.9;
         }
 
+        bool isDialogLoading = false;
         return StatefulBuilder(
           builder: (context, setStateDialog) {
             return Dialog(
@@ -103,462 +105,525 @@ class _MenuPageState extends State<MenuPage> {
               backgroundColor: colorScheme.surface,
               child: SizedBox(
                 width: dialogWidth,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                child: Stack(
                   children: [
-                    // Header with title and close button
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: kIsWeb ? 24 : 20.sp,
-                        vertical: kIsWeb ? 20 : 16.sp,
-                      ),
-                      decoration: BoxDecoration(
-                        color: colorScheme.surface,
-                        border: Border(
-                          bottom: BorderSide(
-                            color: colorScheme.outline.withOpacity(0.15),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Header with title and close button
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: kIsWeb ? 24 : 20.sp,
+                            vertical: kIsWeb ? 20 : 16.sp,
+                          ),
+                          decoration: BoxDecoration(
+                            color: colorScheme.surface,
+                            border: Border(
+                              bottom: BorderSide(
+                                color: colorScheme.outline.withOpacity(0.15),
+                              ),
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              // Brand icon — terracotta square with plus
+                              Container(
+                                width: kIsWeb ? 44 : 38.sp,
+                                height: kIsWeb ? 44 : 38.sp,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFC4622D),
+                                  borderRadius: BorderRadius.circular(kIsWeb ? 12 : 10.sp),
+                                ),
+                                child: Icon(
+                                  Icons.restaurant_menu,
+                                  color: Colors.white,
+                                  size: kIsWeb ? 22 : 19.sp,
+                                ),
+                              ),
+                              SizedBox(width: kIsWeb ? 14 : 12.sp),
+                              // Title + subtitle
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      AppLocalizations.of(context).addMenuItem,
+                                      style: TextStyle(
+                                        fontSize: kIsWeb ? 18 : 16.sp,
+                                        fontWeight: FontWeight.w600,
+                                        color: colorScheme.onSurface,
+                                        letterSpacing: 0.1,
+                                        fontFamily: 'Poppins',
+                                      ),
+                                    ),
+                                    SizedBox(height: kIsWeb ? 3 : 2.sp),
+                                    Text(
+                                      AppLocalizations.of(context).createNewDish,
+                                      style: TextStyle(
+                                        fontSize: kIsWeb ? 13 : 12.sp,
+                                        color: colorScheme.onSurface.withOpacity(0.55),
+                                        height: 1.3,
+                                        fontFamily: 'Poppins',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // Close button — top-right, same row
+                              SizedBox(width: kIsWeb ? 8 : 6.sp),
+                              InkWell(
+                                onTap: () => Navigator.pop(context),
+                                borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
+                                child: Container(
+                                  width: kIsWeb ? 32 : 28.sp,
+                                  height: kIsWeb ? 32 : 28.sp,
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.onSurface.withOpacity(0.07),
+                                    borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
+                                  ),
+                                  child: Icon(
+                                    Icons.close_rounded,
+                                    color: colorScheme.onSurface.withOpacity(0.6),
+                                    size: kIsWeb ? 18 : 16.sp,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          // Brand icon — terracotta square with plus
-                          Container(
-                            width: kIsWeb ? 44 : 38.sp,
-                            height: kIsWeb ? 44 : 38.sp,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFC4622D),
-                              borderRadius: BorderRadius.circular(kIsWeb ? 12 : 10.sp),
-                            ),
-                            child: Icon(
-                              Icons.restaurant_menu,
-                              color: Colors.white,
-                              size: kIsWeb ? 22 : 19.sp,
-                            ),
-                          ),
-                          SizedBox(width: kIsWeb ? 14 : 12.sp),
-                          // Title + subtitle
-                          Expanded(
+                        // Content with scrollable area
+                        Expanded(
+                          child: SingleChildScrollView(
+                            physics: const ClampingScrollPhysics(),
+                            padding: EdgeInsets.all(kIsWeb ? 16 : 16.sp),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(
-                                  AppLocalizations.of(context).addMenuItem,
-                                  style: TextStyle(
-                                    fontSize: kIsWeb ? 18 : 16.sp,
-                                    fontWeight: FontWeight.w600,
-                                    color: colorScheme.onSurface,
-                                    letterSpacing: 0.1,
-                                  ),
-                                ),
-                                SizedBox(height: kIsWeb ? 3 : 2.sp),
-                                Text(
-                                  AppLocalizations.of(context).createNewDish,
-                                  style: TextStyle(
-                                    fontSize: kIsWeb ? 13 : 12.sp,
-                                    color: colorScheme.onSurface.withOpacity(0.55),
-                                    height: 1.3,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          // Close button — top-right, same row
-                          SizedBox(width: kIsWeb ? 8 : 6.sp),
-                          InkWell(
-                            onTap: () => Navigator.pop(context),
-                            borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
-                            child: Container(
-                              width: kIsWeb ? 32 : 28.sp,
-                              height: kIsWeb ? 32 : 28.sp,
-                              decoration: BoxDecoration(
-                                color: colorScheme.onSurface.withOpacity(0.07),
-                                borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
-                              ),
-                              child: Icon(
-                                Icons.close_rounded,
-                                color: colorScheme.onSurface.withOpacity(0.6),
-                                size: kIsWeb ? 18 : 16.sp,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Content with scrollable area
-                    Expanded(
-                      child: SingleChildScrollView(
-                        physics: const ClampingScrollPhysics(),
-                        padding: EdgeInsets.all(kIsWeb ? 16 : 16.sp),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(AppLocalizations.of(context).itemImage, style: TextStyle(fontSize: kIsWeb ? 14 : 14.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
-                            SizedBox(height: kIsWeb ? 10 : 10.sp),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  width: kIsWeb ? 120 : 120.sp,
-                                  height: kIsWeb ? 120 : 120.sp,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
-                                    color: colorScheme.surfaceVariant.withOpacity(0.5),
-                                    border: Border.all(color: colorScheme.outline.withOpacity(0.3)),
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
-                                    child: imageBytes != null
-                                        ? Image.memory(imageBytes!, fit: BoxFit.cover, width: double.infinity, height: double.infinity)
-                                        : Container(
-                                      decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFFF3F4F6), Color(0xFFE5E7EB)], begin: Alignment.topLeft, end: Alignment.bottomRight)),
-                                      child: Icon(Icons.restaurant, color: colorScheme.onSurface.withOpacity(0.4), size: kIsWeb ? 30 : 30.sp),
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(width: kIsWeb ? 12 : 16.sp),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(AppLocalizations.of(context).dishImageDescription, style: TextStyle(fontSize: kIsWeb ? 12 : 12.sp, color: colorScheme.onSurface.withOpacity(0.6))),
-                                      SizedBox(height: kIsWeb ? 10 : 10.sp),
-                                      OutlinedButton.icon(
-                                        onPressed: () async {
-                                          final picker = ImagePicker();
-                                          final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-                                          if (image != null) {
-                                            final bytes = await image.readAsBytes();
-                                            setStateDialog(() { imageBytes = bytes; });
-                                          }
-                                        },
-                                        icon: Icon(Icons.image_outlined, color: colorScheme.primary, size: kIsWeb ? 18 : 18.sp),
-                                        label: Text(
-                                          AppLocalizations.of(context).uploadImage,
-                                          style: TextStyle(color: colorScheme.primary, fontWeight: FontWeight.w500, fontSize: kIsWeb ? 12 : 12.sp),
-                                        ),
-                                        style: OutlinedButton.styleFrom(
-                                          padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 16 : 20.sp, vertical: kIsWeb ? 10 : 12.sp),
-                                          side: BorderSide(color: colorScheme.primary.withOpacity(0.5)),
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp)),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: kIsWeb ? 10 : 20.sp),
-                            Text(AppLocalizations.of(context).categoryName, style: TextStyle(fontSize: kIsWeb ? 14 : 14.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
-                            SizedBox(height: kIsWeb ? 8 : 8.sp),
-                            StreamBuilder<QuerySnapshot>(
-                              stream: FirebaseFirestore.instance.collection("categories").where("restaurantId", isEqualTo: widget.restaurantId).snapshots(),
-                              builder: (context, snapshot) {
-                                if (!snapshot.hasData) {
-                                  return Container(
-                                    height: kIsWeb ? 50 : 50.sp,
-                                    decoration: BoxDecoration(color: colorScheme.surfaceVariant.withOpacity(0.5), borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
-                                    child: Center(child: CircularProgressIndicator(strokeWidth: kIsWeb ? 2 : 2.sp)),
-                                  );
-                                }
-                                final categories = snapshot.data!.docs;
-                                return Container(
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.surfaceVariant.withOpacity(0.3),
-                                    borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
-                                    border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
-                                  ),
-                                  child: DropdownButtonHideUnderline(
-                                    child: DropdownButton<String>(
-                                      value: selectedCategoryId,
-                                      hint: Padding(
-                                        padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 12 : 12.sp, vertical: kIsWeb ? 8 : 8.sp),
-                                        child: Text(AppLocalizations.of(context).selectCategory, style: TextStyle(color: colorScheme.onSurface.withOpacity(0.5))),
-                                      ),
-                                      isExpanded: true,
-                                      padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 12 : 12.sp, vertical: kIsWeb ? 8 : 8.sp),
-                                      items: categories.map((cat) => DropdownMenuItem<String>(
-                                        value: cat.id,
-                                        child: Text(cat['name'], style: TextStyle(fontSize: kIsWeb ? 12 : 15.sp)),
-                                      )).toList(),
-                                      onChanged: (value) {
-                                        setStateDialog(() { selectedCategoryId = value; });
-                                      },
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                            SizedBox(height: kIsWeb ? 20 : 20.sp),
-                            Text(AppLocalizations.of(context).itemName, style: TextStyle(fontSize: kIsWeb ? 14 : 16.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
-                            SizedBox(height: kIsWeb ? 8 : 8.sp),
-                            TextField(
-                              controller: nameController,
-                              decoration: InputDecoration(
-                                hintText: AppLocalizations.of(context).enterItemName,
-                                filled: true,
-                                fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp), borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.2))),
-                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12), borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.2))),
-                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp), borderSide: BorderSide(color: colorScheme.primary)),
-                                prefixIcon: Icon(Icons.restaurant, color: colorScheme.onSurface.withOpacity(0.5)),
-                              ),
-                            ),
-                            SizedBox(height: kIsWeb ? 20 : 20.sp),
-                            Text(AppLocalizations.of(context).itemDescription, style: TextStyle(fontSize: kIsWeb ? 14 : 16.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
-                            SizedBox(height: kIsWeb ? 8 : 8.sp),
-                            TextField(
-                              controller: descriptionController,
-                              maxLines: 3,
-                              decoration: InputDecoration(
-                                hintText: AppLocalizations.of(context).enterItemDescription,
-                                filled: true,
-                                fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp), borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.2))),
-                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12), borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.2))),
-                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp), borderSide: BorderSide(color: colorScheme.primary)),
-                                prefixIcon: Padding(
-                                  padding: const EdgeInsets.only(bottom: 40),
-                                  child: Icon(Icons.description_outlined, color: colorScheme.onSurface.withOpacity(0.5)),
-                                ),
-                              ),
-                            ),
-                            SizedBox(height: kIsWeb ? 20 : 20.sp),
-                            Text(AppLocalizations.of(context).foodType, style: TextStyle(fontSize: kIsWeb ? 14 : 16.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
-                            SizedBox(height: kIsWeb ? 10 : 10.sp),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: GestureDetector(
-                                    onTap: () => setStateDialog(() { isVeg = true; }),
-                                    child: AnimatedContainer(
-                                      duration: const Duration(milliseconds: 200),
-                                      padding: EdgeInsets.symmetric(vertical: kIsWeb ? 12 : 12.sp),
+                                Text(AppLocalizations.of(context).itemImage, style: TextStyle(fontSize: kIsWeb ? 14 : 14.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface, fontFamily: 'Poppins')),
+                                SizedBox(height: kIsWeb ? 10 : 10.sp),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      width: kIsWeb ? 120 : 120.sp,
+                                      height: kIsWeb ? 120 : 120.sp,
                                       decoration: BoxDecoration(
-                                        color: isVeg ? const Color(0xFFE8F5E9) : colorScheme.surfaceVariant.withOpacity(0.3),
-                                        borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
-                                        border: Border.all(color: isVeg ? const Color(0xFF388E3C) : colorScheme.outline.withOpacity(0.3), width: isVeg ? 2 : 1),
+                                        borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
+                                        color: colorScheme.surfaceVariant.withOpacity(0.5),
+                                        border: Border.all(color: colorScheme.outline.withOpacity(0.3)),
                                       ),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
+                                        child: imageBytes != null
+                                            ? Image.memory(imageBytes!, fit: BoxFit.cover, width: double.infinity, height: double.infinity)
+                                            : Container(
+                                          decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFFF3F4F6), Color(0xFFE5E7EB)], begin: Alignment.topLeft, end: Alignment.bottomRight)),
+                                          child: Icon(Icons.restaurant, color: colorScheme.onSurface.withOpacity(0.4), size: kIsWeb ? 30 : 30.sp),
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(width: kIsWeb ? 12 : 16.sp),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Container(
-                                            width: 16, height: 16,
-                                            decoration: BoxDecoration(
-                                              border: Border.all(color: const Color(0xFF388E3C), width: 2),
-                                              borderRadius: BorderRadius.circular(3),
+                                          Text(AppLocalizations.of(context).dishImageDescription, style: TextStyle(fontSize: kIsWeb ? 12 : 12.sp, color: colorScheme.onSurface.withOpacity(0.6))),
+                                          SizedBox(height: kIsWeb ? 10 : 10.sp),
+                                          OutlinedButton.icon(
+                                            onPressed: () async {
+                                              final picker = ImagePicker();
+                                              final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+                                              if (image != null) {
+                                                final bytes = await image.readAsBytes();
+                                                setStateDialog(() { imageBytes = bytes; });
+                                              }
+                                            },
+                                            icon: Icon(Icons.image_outlined, color: colorScheme.primary, size: kIsWeb ? 18 : 18.sp),
+                                            label: Text(
+                                              AppLocalizations.of(context).uploadImage,
+                                              style: TextStyle(color: colorScheme.primary, fontWeight: FontWeight.w500, fontSize: kIsWeb ? 12 : 12.sp, fontFamily: 'Poppins'),
                                             ),
-                                            child: Center(
-                                              child: Container(
-                                                width: 8, height: 8,
-                                                decoration: const BoxDecoration(color: Color(0xFF388E3C), shape: BoxShape.circle),
-                                              ),
+                                            style: OutlinedButton.styleFrom(
+                                              padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 16 : 20.sp, vertical: kIsWeb ? 10 : 12.sp),
+                                              side: BorderSide(color: colorScheme.primary.withOpacity(0.5)),
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp)),
                                             ),
                                           ),
-                                          SizedBox(width: kIsWeb ? 8 : 8.sp),
-                                          Text(AppLocalizations.of(context).veg, style: TextStyle(fontSize: kIsWeb ? 13 : 14.sp, fontWeight: FontWeight.w600, color: const Color(0xFF388E3C))),
                                         ],
                                       ),
                                     ),
+                                  ],
+                                ),
+                                SizedBox(height: kIsWeb ? 10 : 20.sp),
+                                Text(AppLocalizations.of(context).categoryName, style: TextStyle(fontSize: kIsWeb ? 14 : 14.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface, fontFamily: 'Poppins')),
+                                SizedBox(height: kIsWeb ? 8 : 8.sp),
+                                StreamBuilder<QuerySnapshot>(
+                                  stream: FirebaseFirestore.instance.collection('restaurants').doc(widget.restaurantId).collection('categories').orderBy('position').snapshots(),
+                                  builder: (context, snapshot) {
+                                    if (!snapshot.hasData) {
+                                      return Container(
+                                        height: kIsWeb ? 50 : 50.sp,
+                                        decoration: BoxDecoration(color: colorScheme.surfaceVariant.withOpacity(0.5), borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
+                                        child: Center(child: CircularProgressIndicator(strokeWidth: kIsWeb ? 2 : 2.sp)),
+                                      );
+                                    }
+                                    final categories = snapshot.data!.docs;
+                                    return Container(
+                                      decoration: BoxDecoration(
+                                        color: colorScheme.surfaceVariant.withOpacity(0.3),
+                                        borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
+                                        border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
+                                      ),
+                                      child: DropdownButtonHideUnderline(
+                                        child: DropdownButton<String>(
+                                          value: selectedCategoryId,
+                                          hint: Padding(
+                                            padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 12 : 12.sp, vertical: kIsWeb ? 8 : 8.sp),
+                                            child: Text(AppLocalizations.of(context).selectCategory, style: TextStyle(color: colorScheme.onSurface.withOpacity(0.5))),
+                                          ),
+                                          isExpanded: true,
+                                          padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 12 : 12.sp, vertical: kIsWeb ? 8 : 8.sp),
+                                          items: categories.map((cat) => DropdownMenuItem<String>(
+                                            value: cat.id,
+                                            child: Text(cat['name'], style: TextStyle(fontSize: kIsWeb ? 12 : 15.sp, fontFamily: 'Poppins')),
+                                          )).toList(),
+                                          onChanged: (value) {
+                                            setStateDialog(() { selectedCategoryId = value; });
+                                          },
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                SizedBox(height: kIsWeb ? 20 : 20.sp),
+                                Text(AppLocalizations.of(context).itemName, style: TextStyle(fontSize: kIsWeb ? 14 : 16.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface, fontFamily: 'Poppins')),
+                                SizedBox(height: kIsWeb ? 8 : 8.sp),
+                                TextField(
+                                  controller: nameController,
+                                  style: const TextStyle(fontFamily: 'Poppins'),
+                                  decoration: InputDecoration(
+                                    hintText: AppLocalizations.of(context).enterItemName,
+                                    hintStyle: const TextStyle(fontFamily: 'Poppins'),
+                                    filled: true,
+                                    fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp), borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.2))),
+                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12), borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.2))),
+                                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp), borderSide: BorderSide(color: colorScheme.primary)),
+                                    prefixIcon: Icon(Icons.restaurant, color: colorScheme.onSurface.withOpacity(0.5)),
                                   ),
                                 ),
-                                SizedBox(width: kIsWeb ? 12 : 12.sp),
-                                Expanded(
-                                  child: GestureDetector(
-                                    onTap: () => setStateDialog(() { isVeg = false; }),
-                                    child: AnimatedContainer(
-                                      duration: const Duration(milliseconds: 200),
-                                      padding: EdgeInsets.symmetric(vertical: kIsWeb ? 12 : 12.sp),
-                                      decoration: BoxDecoration(
-                                        color: !isVeg ? const Color(0xFFFFEBEE) : colorScheme.surfaceVariant.withOpacity(0.3),
-                                        borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
-                                        border: Border.all(color: !isVeg ? const Color(0xFFC62828) : colorScheme.outline.withOpacity(0.3), width: !isVeg ? 2 : 1),
-                                      ),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Container(
-                                            width: 16, height: 16,
-                                            decoration: BoxDecoration(
-                                              border: Border.all(color: const Color(0xFFC62828), width: 2),
-                                              borderRadius: BorderRadius.circular(3),
-                                            ),
-                                            child: Center(
-                                              child: Container(
-                                                width: 8, height: 8,
-                                                decoration: const BoxDecoration(color: Color(0xFFC62828), shape: BoxShape.circle),
-                                              ),
-                                            ),
-                                          ),
-                                          SizedBox(width: kIsWeb ? 8 : 8.sp),
-                                          Text(AppLocalizations.of(context).nonVeg, style: TextStyle(fontSize: kIsWeb ? 13 : 14.sp, fontWeight: FontWeight.w600, color: const Color(0xFFC62828))),
-                                        ],
-                                      ),
+                                SizedBox(height: kIsWeb ? 20 : 20.sp),
+                                Text(AppLocalizations.of(context).itemDescription, style: TextStyle(fontSize: kIsWeb ? 14 : 16.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface, fontFamily: 'Poppins')),
+                                SizedBox(height: kIsWeb ? 8 : 8.sp),
+                                TextField(
+                                  controller: descriptionController,
+                                  maxLines: 3,
+                                  style: const TextStyle(fontFamily: 'Poppins'),
+                                  decoration: InputDecoration(
+                                    hintText: AppLocalizations.of(context).enterItemDescription,
+                                    hintStyle: const TextStyle(fontFamily: 'Poppins'),
+                                    filled: true,
+                                    fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp), borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.2))),
+                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12), borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.2))),
+                                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp), borderSide: BorderSide(color: colorScheme.primary)),
+                                    prefixIcon: Padding(
+                                      padding: const EdgeInsets.only(bottom: 40),
+                                      child: Icon(Icons.description_outlined, color: colorScheme.onSurface.withOpacity(0.5)),
                                     ),
                                   ),
                                 ),
-                              ],
-                            ),
-                            SizedBox(height: kIsWeb ? 24 : 24.sp),
-                            Row(
-                              children: [
-                                Icon(Icons.list_alt, color: colorScheme.onSurface.withOpacity(0.7), size: kIsWeb ? 20 : 20.sp),
-                                SizedBox(width: kIsWeb ? 8 : 8.sp),
-                                Text(AppLocalizations.of(context).variants, style: TextStyle(fontSize: kIsWeb ? 12 : 12.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
-                              ],
-                            ),
-                            SizedBox(height: kIsWeb ? 12 : 12.sp),
-                            ...variants.asMap().entries.map((entry) {
-                              final index = entry.key;
-                              return Container(
-                                margin: EdgeInsets.only(bottom: kIsWeb ? 12 : 12.sp),
-                                padding: EdgeInsets.all(kIsWeb ? 16 : 16.sp),
-                                decoration: BoxDecoration(
-                                  color: colorScheme.surfaceVariant.withOpacity(0.3),
-                                  borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
-                                  border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
-                                ),
-                                child: Row(
+                                SizedBox(height: kIsWeb ? 20 : 20.sp),
+                                Text(AppLocalizations.of(context).foodType, style: TextStyle(fontSize: kIsWeb ? 14 : 16.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface, fontFamily: 'Poppins')),
+                                SizedBox(height: kIsWeb ? 10 : 10.sp),
+                                Row(
                                   children: [
                                     Expanded(
-                                      child: TextField(
-                                        controller: variants[index]["name"],
-                                        decoration: InputDecoration(
-                                          labelText: AppLocalizations.of(context).variantName,
-                                          filled: true,
-                                          fillColor: Colors.white,
-                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp), borderSide: BorderSide.none),
-                                          contentPadding: EdgeInsets.symmetric(horizontal: kIsWeb ? 12 : 12.sp, vertical: kIsWeb ? 8 : 8.sp),
+                                      child: GestureDetector(
+                                        onTap: () => setStateDialog(() { isVeg = true; }),
+                                        child: AnimatedContainer(
+                                          duration: const Duration(milliseconds: 200),
+                                          padding: EdgeInsets.symmetric(vertical: kIsWeb ? 12 : 12.sp),
+                                          decoration: BoxDecoration(
+                                            color: isVeg ? const Color(0xFFE8F5E9) : colorScheme.surfaceVariant.withOpacity(0.3),
+                                            borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
+                                            border: Border.all(color: isVeg ? const Color(0xFF388E3C) : colorScheme.outline.withOpacity(0.3), width: isVeg ? 2 : 1),
+                                          ),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Container(
+                                                width: 16, height: 16,
+                                                decoration: BoxDecoration(
+                                                  border: Border.all(color: const Color(0xFF388E3C), width: 2),
+                                                  borderRadius: BorderRadius.circular(3),
+                                                ),
+                                                child: Center(
+                                                  child: Container(
+                                                    width: 8, height: 8,
+                                                    decoration: const BoxDecoration(color: Color(0xFF388E3C), shape: BoxShape.circle),
+                                                  ),
+                                                ),
+                                              ),
+                                              SizedBox(width: kIsWeb ? 8 : 8.sp),
+                                              Text(AppLocalizations.of(context).veg, style: TextStyle(fontSize: kIsWeb ? 13 : 14.sp, fontWeight: FontWeight.w600, color: const Color(0xFF388E3C))),
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     ),
                                     SizedBox(width: kIsWeb ? 12 : 12.sp),
-                                    SizedBox(
-                                      width: kIsWeb ? 100 : 100.sp,
-                                      child: TextField(
-                                        controller: variants[index]["price"],
-                                        keyboardType: TextInputType.number,
-                                        decoration: InputDecoration(
-                                          labelText: AppLocalizations.of(context).price,
-                                          prefixText: "₹",
-                                          filled: true,
-                                          fillColor: Colors.white,
-                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp), borderSide: BorderSide.none),
-                                          contentPadding: EdgeInsets.symmetric(horizontal: kIsWeb ? 10 : 10.sp, vertical: 8),
+                                    Expanded(
+                                      child: GestureDetector(
+                                        onTap: () => setStateDialog(() { isVeg = false; }),
+                                        child: AnimatedContainer(
+                                          duration: const Duration(milliseconds: 200),
+                                          padding: EdgeInsets.symmetric(vertical: kIsWeb ? 12 : 12.sp),
+                                          decoration: BoxDecoration(
+                                            color: !isVeg ? const Color(0xFFFFEBEE) : colorScheme.surfaceVariant.withOpacity(0.3),
+                                            borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
+                                            border: Border.all(color: !isVeg ? const Color(0xFFC62828) : colorScheme.outline.withOpacity(0.3), width: !isVeg ? 2 : 1),
+                                          ),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Container(
+                                                width: 16, height: 16,
+                                                decoration: BoxDecoration(
+                                                  border: Border.all(color: const Color(0xFFC62828), width: 2),
+                                                  borderRadius: BorderRadius.circular(3),
+                                                ),
+                                                child: Center(
+                                                  child: Container(
+                                                    width: 8, height: 8,
+                                                    decoration: const BoxDecoration(color: Color(0xFFC62828), shape: BoxShape.circle),
+                                                  ),
+                                                ),
+                                              ),
+                                              SizedBox(width: kIsWeb ? 8 : 8.sp),
+                                              Text(AppLocalizations.of(context).nonVeg, style: TextStyle(fontSize: kIsWeb ? 13 : 14.sp, fontWeight: FontWeight.w600, color: const Color(0xFFC62828))),
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     ),
-                                    SizedBox(width: kIsWeb ? 10 : 10.sp),
-                                    if (variants.length > 1)
-                                      IconButton(
-                                        icon: Icon(Icons.remove_circle_outline, color: colorScheme.error),
-                                        onPressed: () { variants.removeAt(index); setStateDialog(() {}); },
-                                      ),
                                   ],
                                 ),
-                              );
-                            }),
-                            SizedBox(height: kIsWeb ? 12 : 12.sp),
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton.icon(
-                                onPressed: () {
-                                  variants.add({"name": TextEditingController(), "price": TextEditingController()});
-                                  setStateDialog(() {});
-                                },
-                                icon: Icon(Icons.add_circle_outline, color: colorScheme.primary),
-                                label: Text(AppLocalizations.of(context).addAnotherVariant, style: TextStyle(color: colorScheme.primary)),
-                                style: OutlinedButton.styleFrom(
-                                  padding: EdgeInsets.symmetric(vertical: kIsWeb ? 12 : 12.sp),
-                                  side: BorderSide(color: colorScheme.primary.withOpacity(0.5)),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
+                                SizedBox(height: kIsWeb ? 24 : 24.sp),
+                                Row(
+                                  children: [
+                                    Icon(Icons.list_alt, color: colorScheme.onSurface.withOpacity(0.7), size: kIsWeb ? 20 : 20.sp),
+                                    SizedBox(width: kIsWeb ? 8 : 8.sp),
+                                    Text(AppLocalizations.of(context).variants, style: TextStyle(fontSize: kIsWeb ? 12 : 12.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface, fontFamily: 'Poppins')),
+                                  ],
+                                ),
+                                SizedBox(height: kIsWeb ? 12 : 12.sp),
+                                ...variants.asMap().entries.map((entry) {
+                                  final index = entry.key;
+                                  return Container(
+                                    margin: EdgeInsets.only(bottom: kIsWeb ? 12 : 12.sp),
+                                    padding: EdgeInsets.all(kIsWeb ? 16 : 16.sp),
+                                    decoration: BoxDecoration(
+                                      color: colorScheme.surfaceVariant.withOpacity(0.3),
+                                      borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
+                                      border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: TextField(
+                                            controller: variants[index]["name"],
+                                            style: const TextStyle(fontFamily: 'Poppins'),
+                                            decoration: InputDecoration(
+                                              labelText: AppLocalizations.of(context).variantName,
+                                              labelStyle: const TextStyle(fontFamily: 'Poppins'),
+                                              filled: true,
+                                              fillColor: Colors.white,
+                                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp), borderSide: BorderSide.none),
+                                              contentPadding: EdgeInsets.symmetric(horizontal: kIsWeb ? 12 : 12.sp, vertical: kIsWeb ? 8 : 8.sp),
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(width: kIsWeb ? 12 : 12.sp),
+                                        SizedBox(
+                                          width: kIsWeb ? 100 : 100.sp,
+                                          child: TextField(
+                                            controller: variants[index]["price"],
+                                            keyboardType: TextInputType.number,
+                                            style: const TextStyle(fontFamily: 'Poppins'),
+                                            decoration: InputDecoration(
+                                              labelText: AppLocalizations.of(context).price,
+                                              labelStyle: const TextStyle(fontFamily: 'Poppins'),
+                                              prefixText: "₹",
+                                              filled: true,
+                                              fillColor: Colors.white,
+                                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp), borderSide: BorderSide.none),
+                                              contentPadding: EdgeInsets.symmetric(horizontal: kIsWeb ? 10 : 10.sp, vertical: 8),
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(width: kIsWeb ? 10 : 10.sp),
+                                        if (variants.length > 1)
+                                          IconButton(
+                                            icon: Icon(Icons.remove_circle_outline, color: colorScheme.error),
+                                            onPressed: () { variants.removeAt(index); setStateDialog(() {}); },
+                                          ),
+                                      ],
+                                    ),
+                                  );
+                                }),
+                                SizedBox(height: kIsWeb ? 12 : 12.sp),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    onPressed: () {
+                                      variants.add({"name": TextEditingController(), "price": TextEditingController()});
+                                      setStateDialog(() {});
+                                    },
+                                    icon: Icon(Icons.add_circle_outline, color: colorScheme.primary),
+                                    label: Text(AppLocalizations.of(context).addAnotherVariant, style: TextStyle(color: colorScheme.primary, fontFamily: 'Poppins')),
+                                    style: OutlinedButton.styleFrom(
+                                      padding: EdgeInsets.symmetric(vertical: kIsWeb ? 12 : 12.sp),
+                                      side: BorderSide(color: colorScheme.primary.withOpacity(0.5)),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        // Footer buttons
+                        Container(
+                          padding: EdgeInsets.all(kIsWeb ? 20 : 20.sp),
+                          decoration: BoxDecoration(
+                            color: colorScheme.surfaceVariant.withOpacity(0.3),
+                            borderRadius: BorderRadius.vertical(bottom: Radius.circular(kIsWeb ? 20 : 20.sp)),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: EdgeInsets.symmetric(vertical: kIsWeb ? 14 : 12.sp),
+                                    side: BorderSide(color: colorScheme.outline),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12)),
+                                  ),
+                                  child: Text(AppLocalizations.of(context).cancel, style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7), fontWeight: FontWeight.w500, fontFamily: 'Poppins')),
+                                ),
+                              ),
+                              SizedBox(width: kIsWeb ? 12 : 12.sp),
+                              Expanded(
+                                flex: 2,
+                                child: ElevatedButton(
+                                  onPressed: () async {
+                                    if (selectedCategoryId == null || nameController.text.isEmpty) {
+                                      SnackBarHelper.showError(context, AppLocalizations.of(context).pleaseFillAllRequiredFields);
+                                      return;
+                                    }
+                                    setStateDialog(() { isDialogLoading = true; });
+                                    setState(() { _isAddingMenuItem = true; });
+                                    try {
+                                      // Force-refresh ID token so Firestore receives
+                                      // request.auth even if token was stale/unattached.
+                                      final user = FirebaseAuth.instance.currentUser;
+                                      if (user == null) {
+                                        throw Exception('Not authenticated. Please log in as admin.');
+                                      }
+                                      await user.getIdToken(true);
+
+                                      String? imageUrl = await uploadImageToImgBB();
+                                      List<Map<String, dynamic>> variantList = [];
+                                      for (var v in variants) {
+                                        variantList.add({"name": v["name"]!.text, "price": int.parse(v["price"]!.text)});
+                                      }
+                                      await FirebaseFirestore.instance.collection("menu_items").add({
+                                        "name": nameController.text,
+                                        "image": imageUrl ?? '',
+                                        "categoryId": selectedCategoryId,
+                                        "restaurantId": widget.restaurantId,
+                                        "variants": variantList,
+                                        "description": descriptionController.text.trim(),
+                                        "isVeg": isVeg,
+                                        "isAvailable": true,
+                                        "createdAt": FieldValue.serverTimestamp(),
+                                      });
+                                      Navigator.pop(context);
+                                      setState(() { _selectedCategoryId = selectedCategoryId; });
+                                      SnackBarHelper.showSuccess(context, AppLocalizations.of(context).menuItemAddedSuccess);
+                                    } catch (e) {
+                                      setStateDialog(() { isDialogLoading = false; });
+                                      SnackBarHelper.showError(context, "${AppLocalizations.of(context).errorAddingMenuItem}: $e");
+                                    } finally {
+                                      setState(() { _isAddingMenuItem = false; });
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF070B2D),
+                                    foregroundColor: Colors.white,
+                                    padding: EdgeInsets.symmetric(vertical: kIsWeb ? 14 : 12.sp),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12)),
+                                  ),
+                                  child: _isAddingMenuItem
+                                      ? Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children:  [
+                                      SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                                      SizedBox(width: 8),
+                                      Text(AppLocalizations.of(context).addingMenuItem, style: TextStyle(fontWeight: FontWeight.w600, fontFamily: 'Poppins')),
+                                    ],
+                                  )
+                                      : const Text("Add Menu Item", style: TextStyle(fontWeight: FontWeight.w600, fontFamily: 'Poppins')),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Loading overlay
+                    if (isDialogLoading)
+                      Positioned.fill(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(kIsWeb ? 16 : 14.sp),
+                          child: Container(
+                            color: Colors.black.withOpacity(0.35),
+                            child: Center(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 22),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.surface,
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 20)],
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const CircularProgressIndicator(
+                                      color: Color(0xFFC4622D),
+                                      strokeWidth: 3,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      "Adding menu item...",
+                                      style: TextStyle(
+                                        fontSize: kIsWeb ? 14 : 13.sp,
+                                        fontWeight: FontWeight.w600,
+                                        color: colorScheme.onSurface,
+                                        fontFamily: 'Poppins',
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
-                          ],
+                          ),
                         ),
                       ),
-                    ),
-                    // Footer buttons
-                    Container(
-                      padding: EdgeInsets.all(kIsWeb ? 20 : 20.sp),
-                      decoration: BoxDecoration(
-                        color: colorScheme.surfaceVariant.withOpacity(0.3),
-                        borderRadius: BorderRadius.vertical(bottom: Radius.circular(kIsWeb ? 20 : 20.sp)),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () => Navigator.pop(context),
-                              style: OutlinedButton.styleFrom(
-                                padding: EdgeInsets.symmetric(vertical: kIsWeb ? 14 : 12.sp),
-                                side: BorderSide(color: colorScheme.outline),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12)),
-                              ),
-                              child: Text(AppLocalizations.of(context).cancel, style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7), fontWeight: FontWeight.w500)),
-                            ),
-                          ),
-                          SizedBox(width: kIsWeb ? 12 : 12.sp),
-                          Expanded(
-                            flex: 2,
-                            child: ElevatedButton(
-                              onPressed: () async {
-                                if (selectedCategoryId == null || nameController.text.isEmpty) {
-                                  SnackBarHelper.showError(context, AppLocalizations.of(context).pleaseFillAllRequiredFields);
-                                  return;
-                                }
-                                setState(() { _isAddingMenuItem = true; });
-                                try {
-                                  String? imageUrl = await uploadImageToImgBB();
-                                  List<Map<String, dynamic>> variantList = [];
-                                  for (var v in variants) {
-                                    variantList.add({"name": v["name"]!.text, "price": int.parse(v["price"]!.text)});
-                                  }
-                                  await FirebaseFirestore.instance.collection("menu_items").add({
-                                    "name": nameController.text,
-                                    "image": imageUrl ?? '',
-                                    "categoryId": selectedCategoryId,
-                                    "restaurantId": widget.restaurantId,
-                                    "variants": variantList,
-                                    "description": descriptionController.text.trim(),
-                                    "isVeg": isVeg,
-                                    "isAvailable": true,
-                                    "createdAt": FieldValue.serverTimestamp(),
-                                  });
-                                  Navigator.pop(context);
-                                  setState(() { _selectedCategoryId = selectedCategoryId; });
-                                  SnackBarHelper.showSuccess(context, AppLocalizations.of(context).menuItemAddedSuccess);
-                                } catch (e) {
-                                  SnackBarHelper.showError(context, "${AppLocalizations.of(context).errorAddingMenuItem}: $e");
-                                } finally {
-                                  setState(() { _isAddingMenuItem = false; });
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF070B2D),
-                                foregroundColor: Colors.white,
-                                padding: EdgeInsets.symmetric(vertical: kIsWeb ? 14 : 12.sp),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12)),
-                              ),
-                              child: _isAddingMenuItem
-                                  ? Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children:  [
-                                  SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
-                                  SizedBox(width: 8),
-                                  Text(AppLocalizations.of(context).addingMenuItem, style: TextStyle(fontWeight: FontWeight.w600)),
-                                ],
-                              )
-                                  : const Text("Add Menu Item", style: TextStyle(fontWeight: FontWeight.w600)),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -799,7 +864,7 @@ class _MenuPageState extends State<MenuPage> {
         Text(AppLocalizations.of(context).categoryName, style: TextStyle(fontSize: kIsWeb ? 12 : 14.sp, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
         SizedBox(height: kIsWeb ? 6 : 8.sp),
         StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance.collection("categories").where("restaurantId", isEqualTo: restaurantId).snapshots(),
+          stream: FirebaseFirestore.instance.collection('restaurants').doc(restaurantId).collection('categories').orderBy('position').snapshots(),
           builder: (context, snapshot) {
             if (!snapshot.hasData) {
               return Container(
@@ -936,6 +1001,12 @@ class _MenuPageState extends State<MenuPage> {
             onPressed: () async {
               Navigator.pop(context);
               try {
+                // Force-refresh token before delete — same as add/edit
+                final user = FirebaseAuth.instance.currentUser;
+                if (user == null) {
+                  throw Exception('Not authenticated. Please log in as admin.');
+                }
+                await user.getIdToken(true);
                 await FirebaseFirestore.instance.collection("menu_items").doc(id).delete();
                 if (mounted) {
                   SnackBarHelper.showSuccess(context, AppLocalizations.of(context).menuItemDeletedSuccess);
@@ -1161,7 +1232,7 @@ class _MenuPageState extends State<MenuPage> {
                             ),
                             SizedBox(height: kIsWeb ? 10 : 20.sp),
                             StreamBuilder<QuerySnapshot>(
-                              stream: FirebaseFirestore.instance.collection("categories").snapshots(),
+                              stream: FirebaseFirestore.instance.collection('restaurants').doc(widget.restaurantId).collection('categories').orderBy('position').snapshots(),
                               builder: (context, snapshot) {
                                 if (!snapshot.hasData) {
                                   return Container(
@@ -1604,8 +1675,10 @@ class _MenuPageState extends State<MenuPage> {
           SliverToBoxAdapter(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
-                  .collection("categories")
-                  .where("restaurantId", isEqualTo: widget.restaurantId)
+                  .collection('restaurants')
+                  .doc(widget.restaurantId)
+                  .collection('categories')
+                  .orderBy('position')
                   .snapshots(),
               builder: (context, catSnapshot) {
                 if (!catSnapshot.hasData) {

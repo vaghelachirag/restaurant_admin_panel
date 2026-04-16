@@ -25,8 +25,6 @@ class _CategoryPageState extends State<CategoryPage> {
   XFile? pickedImage;
   Uint8List? imageBytes;
   final String apiKey = "a923bc17d28cd6fe1be417700456eb69";
-  bool _isAddingCategory = false;
-  bool _isEditingCategory = false;
 
 
   void addCategory() {
@@ -39,7 +37,7 @@ class _CategoryPageState extends State<CategoryPage> {
         final theme = Theme.of(context);
         final colorScheme = theme.colorScheme;
         final screenWidth = Responsive.width(context);
-        
+
         double dialogWidth;
         if (Responsive.isDesktop(context)) {
           dialogWidth = screenWidth > 1400 ? 450 : 400;
@@ -58,7 +56,7 @@ class _CategoryPageState extends State<CategoryPage> {
             borderRadius: BorderRadius.circular(kIsWeb ? 16 : 14.sp),
           ),
           backgroundColor: colorScheme.surface,
-          child: Container(
+          child: SizedBox(
             width: dialogWidth,
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -226,6 +224,8 @@ class _CategoryPageState extends State<CategoryPage> {
 
                             try {
                               await FirebaseFirestore.instance
+                                  .collection('restaurants')
+                                  .doc(widget.restaurantId)
                                   .collection("categories")
                                   .add({
                                 "name": nameController.text.trim(),
@@ -234,7 +234,6 @@ class _CategoryPageState extends State<CategoryPage> {
                                 "position": 0,
                                 "createdAt": FieldValue.serverTimestamp(),
                               });
-
                               Navigator.pop(context);
                               SnackBarHelper.showSuccess(context, AppLocalizations.of(context).categoryAddedSuccess);
                             } catch (e) {
@@ -506,9 +505,11 @@ class _CategoryPageState extends State<CategoryPage> {
                           int.tryParse(positionController.text) ?? 0;
 
                       if (categoryId != null) {
-                        /// ✏️ Update
+
                         await FirebaseFirestore.instance
-                            .collection("categories")
+                            .collection('restaurants')
+                            .doc(restaurantId)
+                            .collection('categories')
                             .doc(categoryId)
                             .update({
                           "name": nameController.text.trim(),
@@ -523,14 +524,15 @@ class _CategoryPageState extends State<CategoryPage> {
                       } else {
                         /// ➕ Add
                         await FirebaseFirestore.instance
-                            .collection("categories")
+                            .collection('restaurants')
+                            .doc(restaurantId)
+                            .collection('categories')
                             .add({
                           "name": nameController.text.trim(),
                           "image": imageUrl ?? '',
                           "restaurantId": restaurantId,
                           "position": position,
-                          "createdAt":
-                          FieldValue.serverTimestamp(),
+                          "createdAt": FieldValue.serverTimestamp(),
                         });
 
                         if (context.mounted) {
@@ -874,7 +876,7 @@ class _CategoryPageState extends State<CategoryPage> {
         final theme = Theme.of(context);
         final colorScheme = theme.colorScheme;
         final screenWidth = Responsive.width(context);
-        
+
         double dialogWidth;
         if (Responsive.isDesktop(context)) {
           dialogWidth = screenWidth > 1400 ? 450 : 400;
@@ -1062,7 +1064,9 @@ class _CategoryPageState extends State<CategoryPage> {
 
                             try {
                               await FirebaseFirestore.instance
-                                  .collection("categories")
+                                  .collection('restaurants')
+                                  .doc(widget.restaurantId)
+                                  .collection('categories')
                                   .doc(id)
                                   .update({
                                 "name": nameController.text.trim(),
@@ -1111,7 +1115,7 @@ class _CategoryPageState extends State<CategoryPage> {
         final theme = Theme.of(context);
         final colorScheme = theme.colorScheme;
         final screenWidth = Responsive.width(context);
-        
+
         double dialogWidth;
         if (Responsive.isDesktop(context)) {
           dialogWidth = screenWidth > 1400 ? 450 : 400;
@@ -1279,12 +1283,20 @@ class _CategoryPageState extends State<CategoryPage> {
 
     if (shouldDelete != true) return;
 
-    await FirebaseFirestore.instance.collection("categories").doc(id).delete();
+    await FirebaseFirestore.instance
+        .collection('restaurants')
+        .doc(widget.restaurantId)
+        .collection('categories')
+        .doc(id)
+        .delete();
   }
 
   Future<void> updateOrder(List<QueryDocumentSnapshot> docs) async {
     final batch = FirebaseFirestore.instance.batch();
-    final col = FirebaseFirestore.instance.collection("categories");
+    final col = FirebaseFirestore.instance
+        .collection('restaurants')
+        .doc(widget.restaurantId)
+        .collection('categories');
     for (int i = 0; i < docs.length; i++) {
       batch.update(col.doc(docs[i].id), {"position": i});
     }
@@ -1510,8 +1522,9 @@ class _CategoryPageState extends State<CategoryPage> {
               Expanded(
                 child: StreamBuilder<QuerySnapshot>(
                   stream: FirebaseFirestore.instance
-                      .collection("categories")
-                      .where("restaurantId", isEqualTo: widget.restaurantId)
+                      .collection('restaurants')
+                      .doc(widget.restaurantId)
+                      .collection('categories')
                       .orderBy("position")
                       .snapshots(),
                   builder: (context, catSnapshot) {

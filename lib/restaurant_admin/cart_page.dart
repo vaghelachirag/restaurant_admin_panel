@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:restaurant_admin_panel/data/models/cart_item.dart';
+import 'package:restaurant_admin_panel/restaurant_admin/table_management.dart';
 
 import 'order_status_page.dart';
-import 'table_management.dart';
 
 Color _hexToColor(String hex) {
   hex = hex.replaceAll("#", "");
@@ -22,6 +22,8 @@ class CartPage extends StatefulWidget {
   final String restaurantId;
   final String? preselectedTableId;    // ← from QR URL
   final String? preselectedTableName;  // ← fetched from Firestore
+  final String? sessionId;
+  final String? activeOrderId;
 
   const CartPage({
     super.key,
@@ -29,6 +31,8 @@ class CartPage extends StatefulWidget {
     required this.restaurantId,
     this.preselectedTableId,
     this.preselectedTableName,
+    this.sessionId,
+    this.activeOrderId,
   });
 
   @override
@@ -105,16 +109,13 @@ class _CartPageState extends State<CartPage> {
         (nameController.text.isEmpty || mobileController.text.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text(
-                "Please enter customer name and mobile for parcel order")),
+            content: Text("Please enter customer name and mobile for parcel order")),
       );
       return;
     }
-
     if (orderType == "Dine In" && selectedTableId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text("Please select a table for dine in order")),
+        const SnackBar(content: Text("Please select a table for dine in order")),
       );
       return;
     }
@@ -129,10 +130,11 @@ class _CartPageState extends State<CartPage> {
     );
 
     try {
-      // ── Anonymous sign-in (gives auth token for Firestore rules) ─────────
+      // ── Ensure signed in ─────────────────────────────────────────────────
       if (FirebaseAuth.instance.currentUser == null) {
         await FirebaseAuth.instance.signInAnonymously();
       }
+      final uid = FirebaseAuth.instance.currentUser!.uid;
 
       final double grandTotal = getFinalTotal(
         enableGst: enableGst,
@@ -142,10 +144,29 @@ class _CartPageState extends State<CartPage> {
         packagingCharge: packagingCharge,
       );
 
-      int tokenNumber = DateTime.now().millisecondsSinceEpoch % 10000;
-      final orderRef = FirebaseFirestore.instance.collection("orders").doc();
+      final int tokenNumber = DateTime.now().millisecondsSinceEpoch % 10000;
+      final db = FirebaseFirestore.instance;
+      String orderId;
 
+      final itemsList = widget.cart.map((e) => {
+        "itemId"  : e.itemId,
+        "name"    : e.name,
+        "variant" : e.variant,
+        "price"   : e.price,
+        "qty"     : e.qty,
+      }).toList();
+
+
+      // ── Always create a fresh order ──────────────────────────────────────
+      // The draft-update path (activeOrderId) caused permission-denied on QR
+      // orders: the anonymous UID at checkout rarely matches the UID stored in
+      // the draft document, so the update rule rejects it.
+      // Creating a new document always satisfies the allow create rule as long
+      // as the user is signed in (anonymous or otherwise).
+      final orderRef = db.collection("orders").doc();
+      orderId = orderRef.id;
       await orderRef.set({
+        "userId"                : uid,
         "restaurantId"          : widget.restaurantId,
         "tokenNumber"           : tokenNumber,
         "customerName"          : nameController.text.trim(),
@@ -159,42 +180,15 @@ class _CartPageState extends State<CartPage> {
         "enableGst"             : enableGst,
         "gstPercentage"         : gstPct,
         "sgstPercentage"        : sgstPct,
-        "gstAmount"             : enableGst
-            ? getGSTAmount(gstPct).toStringAsFixed(2)
-            : "0.00",
-        "sgstAmount"            : enableGst
-            ? getSGSTAmount(sgstPct).toStringAsFixed(2)
-            : "0.00",
+        "gstAmount"             : enableGst ? getGSTAmount(gstPct).toStringAsFixed(2) : "0.00",
+        "sgstAmount"            : enableGst ? getSGSTAmount(sgstPct).toStringAsFixed(2) : "0.00",
         "enablePackagingCharge" : enablePackaging,
         "packagingCharge"       : enablePackaging ? packagingCharge : 0,
         "totalAmount"           : grandTotal.round(),
         "createdAt"             : FieldValue.serverTimestamp(),
-        "items"                 : widget.cart.map((e) => {
-          "itemId"  : e.itemId,
-          "name"    : e.name,
-          "variant" : e.variant,
-          "price"   : e.price,
-          "qty"     : e.qty,
-        }).toList(),
+        "updatedAt"             : FieldValue.serverTimestamp(),
+        "items"                 : itemsList,
       });
-
-      // ── Success ───────────────────────────────────────────────────────────
-      final orderId = orderRef.id;
-
-      // Update table status if it's a Dine In order
-      if (orderType == "Dine In" && selectedTableId != null) {
-        try {
-          await _tableService.updateTableStatus(
-            restaurantId: widget.restaurantId,
-            tableId: selectedTableId!,
-            status: 'occupied',
-            currentOrderId: orderId,
-          );
-        } catch (e) {
-          // Log error but don't fail the order
-          print('Error updating table status: $e');
-        }
-      }
 
       widget.cart.clear();
 
@@ -208,7 +202,7 @@ class _CartPageState extends State<CartPage> {
         );
       }
     } on FirebaseException catch (e) {
-      if (mounted) Navigator.pop(context); // close loader
+      if (mounted) Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Order failed: ${e.message}'),
@@ -216,7 +210,7 @@ class _CartPageState extends State<CartPage> {
         ),
       );
     } catch (e) {
-      if (mounted) Navigator.pop(context); // close loader
+      if (mounted) Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Something went wrong: $e'),
@@ -779,11 +773,8 @@ class _CartPageState extends State<CartPage> {
                               }
 
                               final tables = snapshot.data ?? [];
-                              final availableTables = tables
-                                  .where((t) => t.isAvailable)
-                                  .toList();
 
-                              if (availableTables.isEmpty) {
+                              if (tables.isEmpty) {
                                 return Container(
                                   padding: EdgeInsets.all(
                                       kIsWeb ? 16 : 16.w),
@@ -815,7 +806,7 @@ class _CartPageState extends State<CartPage> {
                               return Wrap(
                                 spacing: kIsWeb ? 8 : 8.w,
                                 runSpacing: kIsWeb ? 8 : 8.h,
-                                children: availableTables.map((table) {
+                                children: tables.map((table) {
                                   final isSelected =
                                       selectedTableId == table.tableId;
                                   return GestureDetector(

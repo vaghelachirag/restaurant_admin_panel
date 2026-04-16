@@ -1,3 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/category_model.dart';
 import '../data/models/menu_item_model.dart';
@@ -18,7 +21,10 @@ final categoryServiceProvider = Provider<CategoryService>(
 );
 
 final menuBatchServiceProvider = Provider<MenuBatchService>(
-      (_) => MenuBatchService(),
+      (_) => MenuBatchService(
+    db: FirebaseFirestore.instance,
+    auth: FirebaseAuth.instance,
+  ),
 );
 
 final imageServiceProvider = Provider<ImageService>(
@@ -168,15 +174,24 @@ class CsvUploadNotifier extends StateNotifier<CsvUploadState> {
         imagesDone: 0,
       );
 
-      final imageMap = await _imageService.resolveAll(
-        items: validItems
-            .map((i) => (name: i.name, category: i.categoryName))
-            .toList(),
-        cloudFunctionUrl: AppConfig.cloudFunctionImageUrl,
-        onProgress: (done, total) {
-          state = state.copyWith(imagesDone: done, imagesTotal: total);
-        },
-      );
+      // Image resolution is best-effort — a cache/network failure must never
+      // block the upload flow. Items without images will show empty image URLs
+      // and can be updated later from the preview screen.
+      Map<String, String> imageMap = {};
+      try {
+        imageMap = await _imageService.resolveAll(
+          items: validItems
+              .map((i) => (name: i.name, category: i.categoryName))
+              .toList(),
+          cloudFunctionUrl: AppConfig.cloudFunctionImageUrl,
+          onProgress: (done, total) {
+            state = state.copyWith(imagesDone: done, imagesTotal: total);
+          },
+        );
+      } catch (e) {
+        // Non-fatal: log and continue without images.
+        debugPrint('[CsvUpload] Image resolution failed (non-fatal): \$e');
+      }
 
       // Inject resolved image URLs into items
       final itemsWithImages = result.items.map((item) {
@@ -224,6 +239,17 @@ class CsvUploadNotifier extends StateNotifier<CsvUploadState> {
   // ── Step 3: Save All ──────────────────────────────────────
 
   Future<void> saveAll(String restaurantId) async {
+
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      state = state.copyWith(
+        step: UploadStep.error,
+        errorMessage: 'Not authenticated. Please log in as admin before saving.',
+      );
+      return;
+    }
+
     state = state.copyWith(
       step: UploadStep.resolvingCategories,
       savedCount: 0,
@@ -255,6 +281,12 @@ class CsvUploadNotifier extends StateNotifier<CsvUploadState> {
       state = state.copyWith(
         step: UploadStep.done,
         savedCount: validCount,
+      );
+    } on Exception catch (e) {
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      state = state.copyWith(
+        step: UploadStep.error,
+        errorMessage: msg,
       );
     } catch (e) {
       state = state.copyWith(
