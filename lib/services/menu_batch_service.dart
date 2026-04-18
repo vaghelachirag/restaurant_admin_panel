@@ -15,27 +15,13 @@ class MenuBatchService {
         _auth = auth ?? FirebaseAuth.instance;
 
   CollectionReference _menuRef(String restaurantId) =>
-      _db.collection('menu_items');
+      _db.collection('restaurants').doc(restaurantId).collection('menu_items');
 
-  // ──────────────────────────────────────────────────────────
-  //  Write Items
-  // ──────────────────────────────────────────────────────────
-
-  /// Writes all [items] (filtering out error rows) to Firestore.
-  /// Returns the number of items successfully written.
-  ///
-  /// [onProgress] is called after each batch with cumulative count.
-  /// Throws [Exception] if the user is not authenticated.
   Future<int> saveItems({
     required String restaurantId,
     required List<MenuItem> items,
     void Function(int saved, int total)? onProgress,
   }) async {
-    // ── Auth guard ─────────────────────────────────────────────────────────────
-    // currentUser can be non-null in Flutter but the ID token may not yet be
-    // attached to outgoing Firestore requests (race condition on startup, web
-    // persistence, or token expiry). Force-refreshing the token ensures
-    // Firestore's request.auth is populated when the batch is committed.
     final user = _auth.currentUser;
     if (user == null) {
       throw Exception(
@@ -57,13 +43,9 @@ class MenuBatchService {
       final batch = _db.batch();
       for (final item in chunk) {
         final ref = _menuRef(restaurantId).doc();
-        // Merge toFirestoreMap() with guaranteed fields required by Firestore rules.
-        // The rules check request.resource.data.restaurantId to verify ownership,
-        // so it MUST be present on every write. We enforce it here defensively
-        // in case toFirestoreMap() on the model ever omits or renames it.
         final data = {
           ...item.toFirestoreMap(),
-          'restaurantId': restaurantId,   // required by rules: isOwner(restaurantId)
+          'restaurantId': restaurantId,
           'isAvailable': item.toFirestoreMap()['isAvailable'] ?? true,
           'createdAt': FieldValue.serverTimestamp(),
         };
@@ -76,10 +58,6 @@ class MenuBatchService {
 
     return saved;
   }
-
-  // ──────────────────────────────────────────────────────────
-  //  Helper
-  // ──────────────────────────────────────────────────────────
 
   List<List<T>> _chunk<T>(List<T> list, int size) {
     final chunks = <List<T>>[];

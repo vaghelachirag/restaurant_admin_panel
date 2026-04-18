@@ -130,10 +130,13 @@ class _CartPageState extends State<CartPage> {
     );
 
     try {
-      // ── Ensure signed in ─────────────────────────────────────────────────
+      // ── Ensure signed in & token is fresh ───────────────────────────────
       if (FirebaseAuth.instance.currentUser == null) {
         await FirebaseAuth.instance.signInAnonymously();
       }
+      // Force-refresh the ID token so Firestore receives request.auth
+      // on the very next write — anonymous sign-in alone is not enough.
+      await FirebaseAuth.instance.currentUser!.getIdToken(true);
       final uid = FirebaseAuth.instance.currentUser!.uid;
 
       final double grandTotal = getFinalTotal(
@@ -156,14 +159,13 @@ class _CartPageState extends State<CartPage> {
         "qty"     : e.qty,
       }).toList();
 
-
-      // ── Always create a fresh order ──────────────────────────────────────
-      // The draft-update path (activeOrderId) caused permission-denied on QR
-      // orders: the anonymous UID at checkout rarely matches the UID stored in
-      // the draft document, so the update rule rejects it.
-      // Creating a new document always satisfies the allow create rule as long
-      // as the user is signed in (anonymous or otherwise).
-      final orderRef = db.collection("orders").doc();
+      // Orders are stored as a subcollection under the restaurant:
+      // restaurants/{restaurantId}/orders/{orderId}
+      final orderRef = db
+          .collection('restaurants')
+          .doc(widget.restaurantId)
+          .collection('orders')
+          .doc();
       orderId = orderRef.id;
       await orderRef.set({
         "userId"                : uid,
@@ -197,7 +199,10 @@ class _CartPageState extends State<CartPage> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (_) => OrderPlacedScreen(orderId: orderId),
+            builder: (_) => OrderPlacedScreen(
+              orderId: orderId,
+              restaurantId: widget.restaurantId,
+            ),
           ),
         );
       }

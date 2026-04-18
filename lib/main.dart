@@ -61,10 +61,9 @@ void main() async {
   OneSignal.initialize(AppConfig.oneSignalAppId);
 
   OneSignal.Notifications.requestPermission(true);
-  //
+
 
   if (kIsWeb) {
-    // Running on Web
   } else {
     await setupNotificationChannel();
   }
@@ -87,7 +86,7 @@ void main() async {
   }
 
   runApp(
-    ProviderScope(   // ← add this
+    ProviderScope(
       child:MyApp(
         loggedIn: loggedIn,
         role: role,
@@ -152,7 +151,9 @@ class _MyAppState extends State<MyApp> {
     }
 
     if (widget.restaurantId == null) return const LoginPage();
-    return DashboardPage(restaurantId: widget.restaurantId!);
+    return WaiterShell(
+      restaurantId: widget.restaurantId!, waiterId: '1SS',
+    );
   }
 
   Widget _buildApp({required Widget home}) {

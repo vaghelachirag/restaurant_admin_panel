@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:restaurant_admin_panel/restaurant_admin/manager/waiter_assistance.dart';
 import 'package:restaurant_admin_panel/restaurant_admin/manager_main_page.dart';
 import 'package:restaurant_admin_panel/restaurant_admin/table_management.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -80,6 +81,7 @@ List<_SItem> _getSidebarItems(BuildContext context) {
     _SItem(Icons.restaurant_outlined,        localizations.translate("menu_items.title")),
     _SItem(Icons.storefront_outlined,        localizations.translate("customer_menu.title")),
     _SItem(Icons.language_outlined,          localizations.translate("menu_link.title")),
+    _SItem(Icons.manage_accounts_outlined,   localizations.translate("managers.title")),
     _SItem(Icons.manage_accounts_outlined,   localizations.translate("managers.title")),
     _SItem(Icons.settings_outlined,          localizations.translate("settings.title")),
   ];
@@ -407,6 +409,8 @@ class _DashboardPageState extends State<DashboardPage> {
       case 7:
         return ManagerListPage(restaurantId: widget.restaurantId);
       case 8:
+        return WaiterAssistancePage(restaurantId: widget.restaurantId);
+      case 9:
         return SettingsPage(restaurantId: widget.restaurantId);
       case 0:
       default:

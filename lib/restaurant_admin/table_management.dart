@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -41,7 +42,7 @@ class TableModel {
     final d = doc.data() as Map<String, dynamic>;
     return TableModel(
       tableId: doc.id,
-      restaurantId: d['restaurant_id'] as String? ?? restaurantId,
+      restaurantId: d['restaurantId'] as String? ?? restaurantId,
       name: d['name'] as String? ?? '',
       capacity: (d['capacity'] as num?)?.toInt() ?? 0,
       isActive: d['is_active'] as bool? ?? true,
@@ -57,36 +58,42 @@ class TableService {
       .collection('tables');
 
   Stream<List<TableModel>> watchTables(String restaurantId) {
-    return _ref(restaurantId)
+    return FirebaseFirestore.instance
+        .collection('restaurants')
+        .doc(restaurantId)
+        .collection('tables')
         .where('is_active', isEqualTo: true)
         .snapshots()
         .map((s) {
       final tables = s.docs
           .map((doc) => TableModel.fromDoc(doc, restaurantId: restaurantId))
           .toList();
-      tables.sort((a, b) => a.tableId.compareTo(b.tableId));
+      tables.sort((a, b) => a.name.compareTo(b.name));
       return tables;
     });
   }
 
   Future<void> addTable({
     required String restaurantId,
-    required String tableId,
     required String name,
     required int capacity,
   }) async {
-    final ref = _ref(restaurantId).doc(tableId);
-    if ((await ref.get()).exists) {
-      throw Exception('Table "$tableId" already exists. Choose a different ID.');
-    }
-    await ref.set({
-      'table_id': tableId,
-      'restaurant_id': restaurantId,
+    // Force-refresh token so Firestore receives request.auth on the write.
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) await user.getIdToken(true);
+
+    // Same pattern as categories:
+    // .collection('restaurants').doc(restaurantId).collection('tables').add(...)
+    await FirebaseFirestore.instance
+        .collection('restaurants')
+        .doc(restaurantId)
+        .collection('tables')
+        .add({
       'name': name,
+      'restaurantId': restaurantId,
       'capacity': capacity,
       'is_active': true,
-      'created_at': FieldValue.serverTimestamp(),
-      'updated_at': FieldValue.serverTimestamp(),
+      'createdAt': FieldValue.serverTimestamp(),
     });
   }
 
@@ -96,17 +103,33 @@ class TableService {
     required String name,
     required int capacity,
   }) async {
-    await _ref(restaurantId).doc(tableId).update({
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) await user.getIdToken(true);
+
+    await FirebaseFirestore.instance
+        .collection('restaurants')
+        .doc(restaurantId)
+        .collection('tables')
+        .doc(tableId)
+        .update({
       'name': name,
       'capacity': capacity,
-      'updated_at': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
     });
   }
 
   Future<void> disableTable(String restaurantId, String tableId) async {
-    await _ref(restaurantId).doc(tableId).update({
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) await user.getIdToken(true);
+
+    await FirebaseFirestore.instance
+        .collection('restaurants')
+        .doc(restaurantId)
+        .collection('tables')
+        .doc(tableId)
+        .update({
       'is_active': false,
-      'updated_at': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
     });
   }
 }
@@ -224,23 +247,18 @@ class _TableManagementPageState extends State<TableManagementPage> {
                 Divider(color: _C.divider, height: 30),
 
                 // Fields
-                _FormField(
-                  controller: idCtrl,
-                  label: AppLocalizations.of(ctx).tableId,
-                  hint: AppLocalizations.of(ctx).tableIdHint,
-                  icon: Icons.tag_rounded,
-                  readOnly: isEdit,
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) {
-                      return AppLocalizations.of(ctx).tableIdRequired;
-                    }
-                    if (!RegExp(r'^[A-Za-z0-9]+$').hasMatch(v.trim())) {
-                      return AppLocalizations.of(ctx).alphanumericOnly;
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 14),
+                // Table ID field shown only when editing (doc.id is auto-generated on add)
+                if (isEdit) ...[
+                  _FormField(
+                    controller: idCtrl,
+                    label: AppLocalizations.of(ctx).tableId,
+                    hint: AppLocalizations.of(ctx).tableIdHint,
+                    icon: Icons.tag_rounded,
+                    readOnly: true,
+                    validator: null,
+                  ),
+                  const SizedBox(height: 14),
+                ],
                 _FormField(
                   controller: nmCtrl,
                   label: AppLocalizations.of(ctx).tableName,
@@ -315,7 +333,6 @@ class _TableManagementPageState extends State<TableManagementPage> {
                           } else {
                             await _service.addTable(
                               restaurantId: widget.restaurantId,
-                              tableId: idCtrl.text.trim().toUpperCase(),
                               name: nmCtrl.text.trim(),
                               capacity: int.parse(capCtrl.text.trim()),
                             );
@@ -503,128 +520,78 @@ class _TableManagementPageState extends State<TableManagementPage> {
   }
 
   Widget _tableCard(TableModel t, bool isMobile) {
-    // Capacity tier drives accent bar thickness and icon size
-    final tier     = t.capacity <= 2 ? 0 : t.capacity <= 4 ? 1 : t.capacity <= 7 ? 2 : 3;
-    final iconSize = 18.0 + tier * 3.0;
-    final accentH  =  3.0 + tier * 0.5;
-
     return Container(
       decoration: BoxDecoration(
         color: _C.card,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: _C.cardBorder, width: 1),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 12,
-              offset: const Offset(0, 4)),
-        ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Capacity-driven accent bar
-            Container(
-              height: accentH,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [_C.orange, _C.orange.withOpacity(0.55)],
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ── Top row: icon + edit/delete actions (mirrors Categories card)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Table icon in orange-tinted square (same as folder icon in Categories)
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: _C.orangeLight,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.table_restaurant_rounded,
+                  color: _C.orange,
+                  size: 34,
                 ),
               ),
-            ),
-
-            // ── Card body
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 10, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Top row: 3-dot menu aligned right
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: PopupMenuButton<String>(
-                      onSelected: (v) {
-                        if (v == 'edit') _showTableDialog(existing: t);
-                        if (v == 'delete') _confirmDelete(t);
-                      },
-                      itemBuilder: (_) => [
-                        PopupMenuItem(
-                          value: 'edit',
-                          child: Row(children: [
-                            const Icon(Icons.edit_outlined,
-                                size: 15, color: _C.textMid),
-                            const SizedBox(width: 8),
-                            Text(AppLocalizations.of(context).edit,
-                                style: _p(13, FontWeight.w400, _C.textDark)),
-                          ]),
-                        ),
-                        PopupMenuItem(
-                          value: 'delete',
-                          child: Row(children: [
-                            const Icon(Icons.delete_outline_rounded,
-                                size: 15, color: _C.red),
-                            const SizedBox(width: 8),
-                            Text(AppLocalizations.of(context).disableTable,
-                                style: _p(13, FontWeight.w400, _C.red)),
-                          ]),
-                        ),
-                      ],
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      elevation: 4,
-                      padding: EdgeInsets.zero,
-                      child: Container(
-                        padding: const EdgeInsets.all(5),
-                        decoration: BoxDecoration(
-                            color: const Color(0xFFF5F5F5),
-                            borderRadius: BorderRadius.circular(7)),
-                        child: const Icon(Icons.more_horiz_rounded,
-                            size: 15, color: _C.textMid),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  // Table icon
-                  Container(
-                    padding: const EdgeInsets.all(9),
-                    decoration: BoxDecoration(
-                        color: _C.orangeLight,
-                        borderRadius: BorderRadius.circular(10)),
-                    child: Icon(Icons.table_restaurant_rounded,
-                        color: _C.orange, size: iconSize),
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Table ID
-                  Text(t.tableId,
-                      style: _p(11, FontWeight.w500, _C.textLight)),
-                  const SizedBox(height: 2),
-
-                  // Table name
-                  Text(t.name,
-                      style: _p(15, FontWeight.w700, _C.textDark),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 6),
-
-                  // Capacity
-                  Row(children: [
-                    const Icon(Icons.people_outline_rounded,
-                        size: 13, color: _C.textLight),
-                    const SizedBox(width: 4),
-                    Text('${t.capacity} ${AppLocalizations.of(context).seats}',
-                        style: _p(13, FontWeight.w400, _C.textMid)),
-                  ]),
-                ],
+              const Spacer(),
+              // Edit icon button
+              IconButton(
+                onPressed: () => _showTableDialog(existing: t),
+                icon: const Icon(Icons.edit_outlined,
+                    size: 20, color: Color(0xFF888888)),
+                padding: const EdgeInsets.all(4),
+                constraints: const BoxConstraints(),
+                splashRadius: 20,
               ),
+              const SizedBox(width: 4),
+              // Delete icon button
+              IconButton(
+                onPressed: () => _confirmDelete(t),
+                icon: const Icon(Icons.delete_outline_rounded,
+                    size: 20, color: _C.red),
+                padding: const EdgeInsets.all(4),
+                constraints: const BoxConstraints(),
+                splashRadius: 20,
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          // Table name
+          Text(
+            t.name,
+            style: _p(16, FontWeight.w700, _C.textDark),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+
+          // Capacity row (mirrors "0 menu.items" in Categories)
+          Row(children: [
+            const Icon(Icons.people_outline_rounded,
+                size: 13, color: _C.textLight),
+            const SizedBox(width: 4),
+            Text(
+              '${t.capacity} ${AppLocalizations.of(context).seats}',
+              style: _p(13, FontWeight.w400, _C.textMid),
             ),
-          ],
-        ),
+          ]),
+        ],
       ),
     );
   }
@@ -639,8 +606,8 @@ class _TableManagementPageState extends State<TableManagementPage> {
         final tables = snapshot.data ?? [];
 
         return SingleChildScrollView(
-          padding: EdgeInsets.symmetric(
-              horizontal: isMobile ? 16 : 8, vertical: 16),
+          padding: EdgeInsets.fromLTRB(
+              isMobile ? 16 : 24, 24, isMobile ? 16 : 24, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -700,11 +667,20 @@ class _TableManagementPageState extends State<TableManagementPage> {
 
               // ── Content
               if (snapshot.connectionState == ConnectionState.waiting)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 60),
-                    child: CircularProgressIndicator(color: _C.orange),
-                  ),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final cols    = isMobile ? 2 : 3;
+                    const spacing = 12.0;
+                    final cardW   = (constraints.maxWidth - spacing * (cols - 1)) / cols;
+                    return Wrap(
+                      spacing: spacing,
+                      runSpacing: spacing,
+                      children: List.generate(
+                        6,
+                            (_) => SizedBox(width: cardW, child: const _TableCardSkeleton()),
+                      ),
+                    );
+                  },
                 )
               else if (snapshot.hasError)
                 Center(
@@ -742,7 +718,7 @@ class _TableManagementPageState extends State<TableManagementPage> {
                 else
                   LayoutBuilder(
                     builder: (context, constraints) {
-                      final cols    = isMobile ? 2 : 4;
+                      final cols    = isMobile ? 2 : 3;
                       const spacing = 12.0;
                       final cardW   =
                           (constraints.maxWidth - spacing * (cols - 1)) / cols;
@@ -764,6 +740,104 @@ class _TableManagementPageState extends State<TableManagementPage> {
           ),
         );
       },
+    );
+  }
+}
+
+// ─── Skeleton widgets ─────────────────────────────────────────────────────────
+
+class _SkeletonBox extends StatefulWidget {
+  final double? width;
+  final double height;
+  final double radius;
+
+  const _SkeletonBox({
+    this.width,
+    required this.height,
+    this.radius = 8,
+  });
+
+  @override
+  State<_SkeletonBox> createState() => _SkeletonBoxState();
+}
+
+class _SkeletonBoxState extends State<_SkeletonBox>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat(reverse: true);
+    _anim = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _anim,
+      builder: (_, __) => Opacity(
+        opacity: _anim.value,
+        child: Container(
+          width: widget.width,
+          height: widget.height,
+          decoration: BoxDecoration(
+            color: const Color(0xFFEEEEEE),
+            borderRadius: BorderRadius.circular(widget.radius),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TableCardSkeleton extends StatelessWidget {
+  const _TableCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: _C.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _C.cardBorder, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Top row: icon box + edit/delete buttons
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _SkeletonBox(width: 72, height: 72, radius: 14),
+              const Spacer(),
+              const _SkeletonBox(width: 20, height: 20, radius: 4),
+              const SizedBox(width: 12),
+              const _SkeletonBox(width: 20, height: 20, radius: 4),
+            ],
+          ),
+          const SizedBox(height: 14),
+          // Table name
+          const _SkeletonBox(width: 100, height: 15, radius: 4),
+          const SizedBox(height: 8),
+          // Capacity row
+          const _SkeletonBox(width: 70, height: 12, radius: 4),
+        ],
+      ),
     );
   }
 }

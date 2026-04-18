@@ -16,18 +16,15 @@ import 'account_page.dart';
 import 'cart_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import 'manager/call_waiter.dart';
+import 'manager/waiter_assistance.dart';
+
 Color hexToColor(String hex) {
   hex = hex.replaceAll("#", "");
   if (hex.length == 6) hex = "FF$hex";
   return Color(int.parse(hex, radix: 16));
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SESSION STORAGE HELPER
-// On web we use window.localStorage directly via dart:html.
-// On mobile we use SharedPreferences.
-// Both are hidden behind a tiny async wrapper so the menu code stays clean.
-// ─────────────────────────────────────────────────────────────────────────────
 
 class _SessionStore {
   static const _kSessionKey = 'customer_session_id';
@@ -182,8 +179,13 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
   bool _hasRestaurantIdError = false;
 
   // ── Table pre-selection from QR URL (?table=T01) ─────────────────────────
-  String? _preselectedTableId;
-  String? _preselectedTableName;
+  // ValueNotifiers so AssistanceTab reactively reads the latest value
+  // even after _readTableFromUrl() resolves asynchronously.
+  final ValueNotifier<String?> _tableIdNotifier = ValueNotifier(null);
+  final ValueNotifier<String?> _tableNameNotifier = ValueNotifier(null);
+
+  String? get _preselectedTableId => _tableIdNotifier.value;
+  String? get _preselectedTableName => _tableNameNotifier.value;
 
   // ── NEW: Session + Active Order ───────────────────────────────────────────
   /// Unique identity for this customer's device/browser session.
@@ -238,6 +240,8 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     _lastAddedItemId.dispose();
     _cartBounce.dispose();
     _selectedCategoryIdNotifier.dispose();
+    _tableIdNotifier.dispose();
+    _tableNameNotifier.dispose();
     super.dispose();
   }
 
@@ -252,7 +256,10 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
       final tableId = params['table'] ?? '';
       if (tableId.isEmpty) return;
 
-      if (mounted) setState(() => _preselectedTableId = tableId);
+      // Use ValueNotifier so AssistanceTab picks up the value reactively
+      // without needing setState (which would rebuild the whole tree).
+      _tableIdNotifier.value = tableId;
+      if (mounted) setState(() {});   // re-render table banner in Scaffold
 
       FirebaseFirestore.instance
           .collection('restaurants')
@@ -265,10 +272,14 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
           final name = doc.exists
               ? ((doc.data()?['name'] as String?) ?? tableId)
               : tableId;
-          setState(() => _preselectedTableName = name);
+          _tableNameNotifier.value = name;
+          setState(() {});   // re-render table banner label
         }
       }).catchError((_) {
-        if (mounted) setState(() => _preselectedTableName = tableId);
+        if (mounted) {
+          _tableNameNotifier.value = tableId;
+          setState(() {});
+        }
       });
     } catch (_) {}
   }
@@ -307,11 +318,15 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     try {
       final db = FirebaseFirestore.instance;
 
-      final existing = await db
-          .collection('orders')
-          .where('restaurantId', isEqualTo: widget.restaurantId)
+      // Orders subcollection: restaurants/{restaurantId}/orders/{orderId}
+      final ordersRef = db
+          .collection('restaurants')
+          .doc(widget.restaurantId)
+          .collection('orders');
+
+      final existing = await ordersRef
           .where('tableId', isEqualTo: tableId)
-          .where('userId', isEqualTo: uid)           // ← required for rules
+          .where('userId', isEqualTo: uid)
           .where('status', whereNotIn: ['completed', 'cancelled'])
           .limit(1)
           .get();
@@ -320,7 +335,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
         final orderId = existing.docs.first.id;
         debugPrint('♻️ Reusing active order: $orderId');
 
-        await db.collection('orders').doc(orderId).update({
+        await ordersRef.doc(orderId).update({
           'sessionIds': FieldValue.arrayUnion([sessionId]),
           'updatedAt': FieldValue.serverTimestamp(),
         });
@@ -330,7 +345,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
       }
 
 
-      final newRef = db.collection('orders').doc();
+      final newRef = ordersRef.doc();
       final newOrderId = newRef.id;
 
       await newRef.set({
@@ -1299,6 +1314,14 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     return AccountPage(restaurantId: widget.restaurantId);
   }
 
+  Widget _buildAssistTab() {
+    return CallWaiterPage(
+      restaurantId: widget.restaurantId,
+      tableIdNotifier: _tableIdNotifier,
+      tableNameNotifier: _tableNameNotifier,
+    );
+  }
+
   // ─── Build ────────────────────────────────────────────────────────────────
 
   @override
@@ -1498,6 +1521,10 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                           : _buildSeparateView(),
                       KeepAliveWrapper(child: _buildOrdersTab()),
                       KeepAliveWrapper(child: _buildOffersTab()),
+                      // AssistanceTab is intentionally NOT wrapped in KeepAliveWrapper
+                      // so it rebuilds whenever _preselectedTableId / _preselectedTableName
+                      // are updated by _readTableFromUrl() via setState.
+                      _buildAssistTab(),
                       KeepAliveWrapper(child: _buildAccountTab()),
                     ],
                   ),
@@ -1693,10 +1720,15 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                   isSelected: _selectedTabIndex == 2,
                   onTap: () => _switchTab(2)),
               _buildNavItem(
-                  icon: Icons.person_outline_rounded,
-                  label: "Account",
+                  icon: Icons.support_agent_rounded,
+                  label: "Assist",
                   isSelected: _selectedTabIndex == 3,
                   onTap: () => _switchTab(3)),
+              _buildNavItem(
+                  icon: Icons.person_outline_rounded,
+                  label: "Account",
+                  isSelected: _selectedTabIndex == 4,
+                  onTap: () => _switchTab(4)),
             ],
           ),
         ),
@@ -1769,9 +1801,10 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
   Widget _buildUnifiedListView() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
-          .collection("categories")
-          .where("restaurantId", isEqualTo: widget.restaurantId)
-          .orderBy("position")
+          .collection('restaurants')
+          .doc(widget.restaurantId)
+          .collection('categories')
+          .orderBy('position')
           .snapshots(),
       builder: (context, snap) {
         if (snap.hasError)
@@ -1885,12 +1918,11 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                   SizedBox(height: kIsWeb ? 2 : 2.h),
                   StreamBuilder<QuerySnapshot>(
                     stream: FirebaseFirestore.instance
-                        .collection("menu_items")
-                        .where("restaurantId",
-                        isEqualTo: widget.restaurantId)
-                        .where("categoryId", isEqualTo: cat.id)
-                        .where("isAvailable", isEqualTo: true)
-                        .orderBy("name")
+                        .collection('restaurants')
+                        .doc(widget.restaurantId)
+                        .collection('menu_items')
+                        .where('categoryId', isEqualTo: cat.id)
+                        .where('isAvailable', isEqualTo: true)
                         .snapshots(),
                     builder: (context, menuSnap) {
                       if (menuSnap.hasError)
@@ -1944,9 +1976,10 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
   Widget _buildSeparateView() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
-          .collection("categories")
-          .where("restaurantId", isEqualTo: widget.restaurantId)
-          .orderBy("position")
+          .collection('restaurants')
+          .doc(widget.restaurantId)
+          .collection('categories')
+          .orderBy('position')
           .snapshots(),
       builder: (context, snap) {
         if (snap.hasError)
@@ -2054,11 +2087,11 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     return StreamBuilder<QuerySnapshot>(
       key: ValueKey(_selectedCategoryId),
       stream: FirebaseFirestore.instance
-          .collection("menu_items")
-          .where("restaurantId", isEqualTo: widget.restaurantId)
-          .where("categoryId", isEqualTo: _selectedCategoryId)
-          .where("isAvailable", isEqualTo: true)
-          .orderBy("name")
+          .collection('restaurants')
+          .doc(widget.restaurantId)
+          .collection('menu_items')
+          .where('categoryId', isEqualTo: _selectedCategoryId)
+          .where('isAvailable', isEqualTo: true)
           .snapshots(),
       builder: (context, snap) {
         if (snap.hasError)
@@ -2289,8 +2322,6 @@ class _AnimatedCartBadgeState extends State<_AnimatedCartBadge>
     );
   }
 }
-
-// ─── Animated ADD button ──────────────────────────────────────────────────────
 
 class _AddButtonWidget extends StatefulWidget {
   final String itemId;

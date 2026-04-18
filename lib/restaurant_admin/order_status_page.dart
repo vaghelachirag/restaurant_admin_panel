@@ -68,6 +68,7 @@ extension OrderStepExt on OrderStep {
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 class OrderPlacedScreen extends StatefulWidget {
   final String orderId;
+  final String restaurantId; // ← needed to build subcollection path
 
   /// Optional callbacks wired from outside
   final VoidCallback? onTrackOrder;
@@ -76,6 +77,7 @@ class OrderPlacedScreen extends StatefulWidget {
   const OrderPlacedScreen({
     super.key,
     required this.orderId,
+    required this.restaurantId,
     this.onTrackOrder,
     this.onContinueShopping,
   });
@@ -156,6 +158,8 @@ class _OrderPlacedScreenState extends State<OrderPlacedScreen>
       if (FirebaseAuth.instance.currentUser == null) {
         await FirebaseAuth.instance.signInAnonymously();
       }
+      // Force-refresh token so Firestore receives request.auth immediately
+      await FirebaseAuth.instance.currentUser!.getIdToken(true);
     } catch (_) {
       // Even if sign-in fails, attempt the read — rules may allow it
     }
@@ -211,6 +215,8 @@ class _OrderPlacedScreenState extends State<OrderPlacedScreen>
       )
           : StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance
+            .collection('restaurants')
+            .doc(widget.restaurantId)
             .collection('orders')
             .doc(widget.orderId)
             .snapshots(),

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -33,6 +34,13 @@ class ManagerListPage extends StatefulWidget {
 }
 
 class _ManagerListPageState extends State<ManagerListPage> {
+
+  // Subcollection reference — same pattern as categories and tables
+  CollectionReference get _managersRef => FirebaseFirestore.instance
+      .collection('restaurants')
+      .doc(widget.restaurantId)
+      .collection('managers');
+
   void _snack(String msg, Color color, {IconData icon = Icons.info_rounded}) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Row(children: [
@@ -134,7 +142,7 @@ class _ManagerListPageState extends State<ManagerListPage> {
                       controller: emailCtrl,
                       hint: AppLocalizations.of(context).enterEmailAddress,
                       icon: Icons.email_outlined,
-                      enabled: !isEdit, // can't change email after creation
+                      enabled: !isEdit,
                       keyboardType: TextInputType.emailAddress,
                       validator: (v) {
                         if (v == null || v.trim().isEmpty) return AppLocalizations.of(context).emailRequired;
@@ -145,7 +153,7 @@ class _ManagerListPageState extends State<ManagerListPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Password field (only shown on add; for edit it's optional)
+                    // Password field
                     _label(isEdit ? AppLocalizations.of(context).newPasswordOptional : AppLocalizations.of(context).password),
                     const SizedBox(height: 6),
                     _field(
@@ -228,7 +236,6 @@ class _ManagerListPageState extends State<ManagerListPage> {
                               : () async {
                             if (!formKey.currentState!.validate()) return;
                             setDlg(() => isLoading = true);
-
                             try {
                               if (isEdit) {
                                 await _updateManager(
@@ -273,8 +280,7 @@ class _ManagerListPageState extends State<ManagerListPage> {
                               )
                                   : Text(
                                 isEdit ? AppLocalizations.of(context).saveChanges : AppLocalizations.of(context).addManager,
-                                style:
-                                _p(13, FontWeight.w600, Colors.white),
+                                style: _p(13, FontWeight.w600, Colors.white),
                               ),
                             ),
                           ),
@@ -289,26 +295,55 @@ class _ManagerListPageState extends State<ManagerListPage> {
     );
   }
 
-
+  // ── Add Manager ──────────────────────────────────────────────────────────
   Future<void> _addManager({
     required String name,
     required String email,
     required String password,
     required bool isActive,
   }) async {
-    // 1. Create Firebase Auth user
-    final currentUser = FirebaseAuth.instance.currentUser;
+    // ── The problem with createUserWithEmailAndPassword ────────────────────
+    // Calling it on the default FirebaseAuth instance signs OUT the current
+    // admin and signs IN as the new manager. The subsequent Firestore write
+    // then runs as the manager user who has no owner/admin permission → denied.
+    //
+    // Fix: use a secondary FirebaseApp instance so the admin session on the
+    // default app is never touched.
+    // ──────────────────────────────────────────────────────────────────────
+    final adminUser = FirebaseAuth.instance.currentUser;
+    if (adminUser == null) throw Exception('Not signed in as admin.');
 
-    UserCredential? cred;
+    // Force-refresh admin token before the write
+    await adminUser.getIdToken(true);
+
+    // 1. Create the manager account on a secondary app — this never affects
+    //    the default app's signed-in user.
+    FirebaseApp? secondaryApp;
     try {
-      cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      secondaryApp = await Firebase.initializeApp(
+        name: 'secondary_manager_creation',
+        options: Firebase.app().options,
+      );
+
+      final secondaryAuth = FirebaseAuth.instanceFor(app: secondaryApp);
+      await secondaryAuth.createUserWithEmailAndPassword(
           email: email, password: password);
+      // Sign out of secondary immediately — we only needed the UID via email
+      await secondaryAuth.signOut();
     } on FirebaseAuthException catch (e) {
       throw _authError(e);
+    } finally {
+      // Always delete the secondary app to free resources
+      await secondaryApp?.delete();
     }
 
-    // 2. Write Firestore document
-    await FirebaseFirestore.instance.collection('users').doc(cred.user!.uid).set({
+    // 2. Write manager doc as admin (default app auth is still the admin)
+    //    restaurants/{restaurantId}/managers/{docId}
+    await FirebaseFirestore.instance
+        .collection('restaurants')
+        .doc(widget.restaurantId)
+        .collection('managers')
+        .add({
       'name': name,
       'email': email,
       'role': 'manager',
@@ -317,32 +352,31 @@ class _ManagerListPageState extends State<ManagerListPage> {
       'createdAt': FieldValue.serverTimestamp(),
     });
 
-
-    if (currentUser != null) {
-    }
-
     if (mounted) {
       _snack(AppLocalizations.of(context).managerAddedSuccess, _C.green,
           icon: Icons.check_circle_rounded);
     }
   }
 
-
+  // ── Update Manager ───────────────────────────────────────────────────────
   Future<void> _updateManager({
     required String docId,
     required String name,
     required bool isActive,
     String? newPassword,
   }) async {
-    await FirebaseFirestore.instance.collection('users').doc(docId).update({
+    // Update in restaurants/{restaurantId}/managers/{docId}
+    await FirebaseFirestore.instance
+        .collection('restaurants')
+        .doc(widget.restaurantId)
+        .collection('managers')
+        .doc(docId)
+        .update({
       'name': name,
       'isActive': isActive,
       'updatedAt': FieldValue.serverTimestamp(),
     });
 
-    // Updating password requires Auth — only works if the user is the
-    // currently signed-in user. For admin-side password reset, trigger a
-    // password-reset email instead.
     if (newPassword != null && newPassword.isNotEmpty) {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null && user.uid == docId) {
@@ -350,10 +384,12 @@ class _ManagerListPageState extends State<ManagerListPage> {
       } else {
         // Send password reset email as fallback
         final doc = await FirebaseFirestore.instance
-            .collection('users')
+            .collection('restaurants')
+            .doc(widget.restaurantId)
+            .collection('managers')
             .doc(docId)
             .get();
-        final email = doc.data()?['email'] as String?;
+        final email = (doc.data() as Map<String, dynamic>?)?['email'] as String?;
         if (email != null) {
           await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
           if (mounted) {
@@ -365,28 +401,29 @@ class _ManagerListPageState extends State<ManagerListPage> {
     }
 
     if (mounted) {
-      _snack(AppLocalizations.of(context).managerUpdated, _C.green, icon: Icons.check_circle_rounded);
+      _snack(AppLocalizations.of(context).managerUpdated, _C.green,
+          icon: Icons.check_circle_rounded);
     }
   }
 
-  // ── Firebase: Toggle Active ──────────────────────────────────────────────
+  // ── Toggle Active ────────────────────────────────────────────────────────
   Future<void> _toggleActive(String docId, bool current) async {
     await FirebaseFirestore.instance
-        .collection('users')
+        .collection('restaurants')
+        .doc(widget.restaurantId)
+        .collection('managers')
         .doc(docId)
         .update({'isActive': !current});
     if (mounted) {
       _snack(
         !current ? AppLocalizations.of(context).managerActivated : AppLocalizations.of(context).managerDeactivated,
         !current ? _C.green : _C.textMid,
-        icon: !current
-            ? Icons.check_circle_rounded
-            : Icons.block_rounded,
+        icon: !current ? Icons.check_circle_rounded : Icons.block_rounded,
       );
     }
   }
 
-  // ── Firebase: Delete Manager ─────────────────────────────────────────────
+  // ── Delete Manager ───────────────────────────────────────────────────────
   Future<void> _deleteManager(String docId, String name) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -406,8 +443,8 @@ class _ManagerListPageState extends State<ManagerListPage> {
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Container(
               padding: const EdgeInsets.all(14),
-              decoration:
-              const BoxDecoration(color: Color(0xFFFEEEEE), shape: BoxShape.circle),
+              decoration: const BoxDecoration(
+                  color: Color(0xFFFEEEEE), shape: BoxShape.circle),
               child: const Icon(Icons.delete_outline_rounded,
                   color: _C.red, size: 26),
             ),
@@ -458,9 +495,17 @@ class _ManagerListPageState extends State<ManagerListPage> {
     );
 
     if (ok != true) return;
-    await FirebaseFirestore.instance.collection('users').doc(docId).delete();
+
+    await FirebaseFirestore.instance
+        .collection('restaurants')
+        .doc(widget.restaurantId)
+        .collection('managers')
+        .doc(docId)
+        .delete();
+
     if (mounted) {
-      _snack(AppLocalizations.of(context).managerDeleted, _C.red, icon: Icons.delete_rounded);
+      _snack(AppLocalizations.of(context).managerDeleted, _C.red,
+          icon: Icons.delete_rounded);
     }
   }
 
@@ -491,13 +536,12 @@ class _ManagerListPageState extends State<ManagerListPage> {
           padding: EdgeInsets.symmetric(
               horizontal: isMobile ? 16 : 28, vertical: 18),
           decoration: const BoxDecoration(
-            border:
-            Border(bottom: BorderSide(color: Color(0xFFEEEEEE), width: 1)),
+            border: Border(bottom: BorderSide(color: Color(0xFFEEEEEE), width: 1)),
           ),
           child: Row(children: [
             Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(AppLocalizations.of(context).managersTitle,
-                  style: _p(isMobile ? 20 : 22, FontWeight.w700, _C.textDark)),
+                  style: _p(isMobile ? 20 : 22, FontWeight.w200, _C.textDark)),
               Text(AppLocalizations.of(context).manageManagers,
                   style: _p(12, FontWeight.w400, _C.textLight)),
             ]),
@@ -508,11 +552,9 @@ class _ManagerListPageState extends State<ManagerListPage> {
                 padding: EdgeInsets.symmetric(
                     horizontal: isMobile ? 14 : 18, vertical: 11),
                 decoration: BoxDecoration(
-                    color: _C.orange,
-                    borderRadius: BorderRadius.circular(10)),
+                    color: _C.orange, borderRadius: BorderRadius.circular(10)),
                 child: Row(children: [
-                  const Icon(Icons.person_add_rounded,
-                      color: Colors.white, size: 18),
+                  const Icon(Icons.person_add_rounded, color: Colors.white, size: 18),
                   const SizedBox(width: 8),
                   if (!isMobile)
                     Text(AppLocalizations.of(context).addManager,
@@ -526,18 +568,21 @@ class _ManagerListPageState extends State<ManagerListPage> {
         // ── Manager list ─────────────────────────────────────────────────
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
+            // Stream from restaurants/{restaurantId}/managers
+            // Same pattern as categories: no .where('restaurantId') needed —
+            // the subcollection path already scopes to this restaurant.
             stream: FirebaseFirestore.instance
-                .collection('users')
-                .where('restaurantId', isEqualTo: widget.restaurantId)
-                .where('role', isEqualTo: 'manager')
+                .collection('restaurants')
+                .doc(widget.restaurantId)
+                .collection('managers')
                 .orderBy('createdAt', descending: true)
                 .snapshots(),
             builder: (context, snap) {
               if (snap.connectionState == ConnectionState.waiting) {
-                return const Center(
-                    child: CircularProgressIndicator(color: _C.orange));
+                return isMobile
+                    ? const _MobileManagerSkeleton()
+                    : const _DesktopManagerSkeleton();
               }
-
               if (snap.hasError) {
                 return Center(
                     child: Text(AppLocalizations.of(context).errorLoadingManagers,
@@ -554,8 +599,7 @@ class _ManagerListPageState extends State<ManagerListPage> {
                       Container(
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                            color: _C.orangeLight,
-                            shape: BoxShape.circle),
+                            color: _C.orangeLight, shape: BoxShape.circle),
                         child: const Icon(Icons.people_outline_rounded,
                             color: _C.orange, size: 40),
                       ),
@@ -575,33 +619,213 @@ class _ManagerListPageState extends State<ManagerListPage> {
                 docs: docs,
                 onEdit: (doc) => _showManagerDialog(
                   docId: doc.id,
-                  initialName: doc['name'] ?? '',
-                  initialEmail: doc['email'] ?? '',
-                  initialActive: doc['isActive'] ?? true,
+                  initialName: (doc.data() as Map<String, dynamic>)['name'] ?? '',
+                  initialEmail: (doc.data() as Map<String, dynamic>)['email'] ?? '',
+                  initialActive: (doc.data() as Map<String, dynamic>)['isActive'] ?? true,
                 ),
-                onToggle: (doc) =>
-                    _toggleActive(doc.id, doc['isActive'] ?? true),
-                onDelete: (doc) =>
-                    _deleteManager(doc.id, doc['name'] ?? 'Manager'),
+                onToggle: (doc) => _toggleActive(
+                    doc.id, (doc.data() as Map<String, dynamic>)['isActive'] ?? true),
+                onDelete: (doc) => _deleteManager(
+                    doc.id, (doc.data() as Map<String, dynamic>)['name'] ?? 'Manager'),
               )
                   : _DesktopTable(
                 docs: docs,
                 onEdit: (doc) => _showManagerDialog(
                   docId: doc.id,
-                  initialName: doc['name'] ?? '',
-                  initialEmail: doc['email'] ?? '',
-                  initialActive: doc['isActive'] ?? true,
+                  initialName: (doc.data() as Map<String, dynamic>)['name'] ?? '',
+                  initialEmail: (doc.data() as Map<String, dynamic>)['email'] ?? '',
+                  initialActive: (doc.data() as Map<String, dynamic>)['isActive'] ?? true,
                 ),
-                onToggle: (doc) =>
-                    _toggleActive(doc.id, doc['isActive'] ?? true),
-                onDelete: (doc) =>
-                    _deleteManager(doc.id, doc['name'] ?? 'Manager'),
+                onToggle: (doc) => _toggleActive(
+                    doc.id, (doc.data() as Map<String, dynamic>)['isActive'] ?? true),
+                onDelete: (doc) => _deleteManager(
+                    doc.id, (doc.data() as Map<String, dynamic>)['name'] ?? 'Manager'),
               );
             },
           ),
         ),
       ]),
     );
+  }
+}
+
+// ── Skeleton widgets ─────────────────────────────────────────────────────────
+
+class _SkeletonBox extends StatefulWidget {
+  final double? width;
+  final double height;
+  final double radius;
+
+  const _SkeletonBox({this.width, required this.height, this.radius = 8});
+
+  @override
+  State<_SkeletonBox> createState() => _SkeletonBoxState();
+}
+
+class _SkeletonBoxState extends State<_SkeletonBox>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat(reverse: true);
+    _anim = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _anim,
+      builder: (_, __) => Opacity(
+        opacity: _anim.value,
+        child: Container(
+          width: widget.width,
+          height: widget.height,
+          decoration: BoxDecoration(
+            color: const Color(0xFFEEEEEE),
+            borderRadius: BorderRadius.circular(widget.radius),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Mobile card skeleton — mirrors _MobileList card layout
+class _MobileManagerSkeleton extends StatelessWidget {
+  const _MobileManagerSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: 6,
+      itemBuilder: (_, __) => Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: _C.cardBorder),
+        ),
+        child: Column(children: [
+          Row(children: [
+            // Avatar circle
+            const _SkeletonBox(width: 38, height: 38, radius: 10),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  _SkeletonBox(width: 120, height: 14, radius: 4),
+                  SizedBox(height: 6),
+                  _SkeletonBox(width: 160, height: 12, radius: 4),
+                ],
+              ),
+            ),
+            // Status badge
+            const _SkeletonBox(width: 60, height: 24, radius: 20),
+          ]),
+          const SizedBox(height: 14),
+          const Divider(color: _C.cardBorder, height: 1),
+          const SizedBox(height: 10),
+          Row(children: const [
+            _SkeletonBox(width: 100, height: 12, radius: 4),
+            Spacer(),
+            _SkeletonBox(width: 30, height: 30, radius: 8),
+            SizedBox(width: 6),
+            _SkeletonBox(width: 30, height: 30, radius: 8),
+            SizedBox(width: 6),
+            _SkeletonBox(width: 30, height: 30, radius: 8),
+          ]),
+        ]),
+      ),
+    );
+  }
+}
+
+// Desktop table skeleton — mirrors _DesktopTable row layout
+class _DesktopManagerSkeleton extends StatelessWidget {
+  const _DesktopManagerSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(children: [
+      // Table header bar
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        decoration: const BoxDecoration(
+          color: Color(0xFFF9F9F9),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          border: Border(bottom: BorderSide(color: _C.cardBorder)),
+        ),
+        child: Row(children: const [
+          _SkeletonBox(width: 80, height: 12, radius: 4),
+          SizedBox(width: 60),
+          _SkeletonBox(width: 120, height: 12, radius: 4),
+          Spacer(),
+          _SkeletonBox(width: 60, height: 12, radius: 4),
+          SizedBox(width: 60),
+          _SkeletonBox(width: 80, height: 12, radius: 4),
+        ]),
+      ),
+      // Rows
+      Expanded(
+        child: ListView.separated(
+          itemCount: 6,
+          separatorBuilder: (_, __) =>
+          const Divider(height: 1, color: _C.cardBorder),
+          itemBuilder: (_, __) => Padding(
+            padding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            child: Row(children: const [
+              // Avatar + name
+              _SkeletonBox(width: 36, height: 36, radius: 10),
+              SizedBox(width: 12),
+              _SkeletonBox(width: 110, height: 13, radius: 4),
+              SizedBox(width: 60),
+              // Email
+              _SkeletonBox(width: 160, height: 13, radius: 4),
+              Spacer(),
+              // Status badge
+              _SkeletonBox(width: 64, height: 24, radius: 20),
+              SizedBox(width: 60),
+              // Action buttons
+              _SkeletonBox(width: 30, height: 30, radius: 8),
+              SizedBox(width: 6),
+              _SkeletonBox(width: 30, height: 30, radius: 8),
+              SizedBox(width: 6),
+              _SkeletonBox(width: 30, height: 30, radius: 8),
+            ]),
+          ),
+        ),
+      ),
+      // Footer
+      Container(
+        padding:
+        const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        decoration: const BoxDecoration(
+          color: Color(0xFFFAFAFA),
+          borderRadius:
+          BorderRadius.vertical(bottom: Radius.circular(16)),
+          border: Border(top: BorderSide(color: _C.cardBorder)),
+        ),
+        child: const _SkeletonBox(width: 100, height: 12, radius: 4),
+      ),
+    ]);
   }
 }
 
@@ -630,8 +854,7 @@ Widget _field({
       prefixIcon: Icon(icon, color: _C.textLight, size: 18),
       filled: true,
       fillColor: enabled ? const Color(0xFFF9F9F9) : const Color(0xFFF2F2F2),
-      contentPadding:
-      const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
       border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: _C.cardBorder)),
@@ -681,41 +904,26 @@ class _DesktopTable extends StatelessWidget {
           ],
         ),
         child: Column(children: [
-          // Table header
           Container(
-            padding:
-            const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             decoration: const BoxDecoration(
               color: Color(0xFFFAFAFA),
               borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-              border: Border(
-                  bottom: BorderSide(color: _C.cardBorder, width: 1)),
+              border: Border(bottom: BorderSide(color: _C.cardBorder, width: 1)),
             ),
             child: Row(children: [
-              Expanded(
-                  flex: 3,
-                  child: Text("Manager",
-                      style: _p(12, FontWeight.w600, _C.textMid))),
-              Expanded(
-                  flex: 3,
-                  child: Text("Email",
-                      style: _p(12, FontWeight.w600, _C.textMid))),
-              Expanded(
-                  flex: 2,
-                  child: Text("Password",
-                      style: _p(12, FontWeight.w600, _C.textMid))),
-              Expanded(
-                  flex: 2,
-                  child: Text("Status",
-                      style: _p(12, FontWeight.w600, _C.textMid))),
-              SizedBox(
-                  width: 100,
-                  child: Text("Actions",
-                      style: _p(12, FontWeight.w600, _C.textMid))),
+              Expanded(flex: 3,
+                  child: Text("Manager", style: _p(12, FontWeight.w600, _C.textMid))),
+              Expanded(flex: 3,
+                  child: Text("Email", style: _p(12, FontWeight.w600, _C.textMid))),
+              Expanded(flex: 2,
+                  child: Text("Password", style: _p(12, FontWeight.w600, _C.textMid))),
+              Expanded(flex: 2,
+                  child: Text("Status", style: _p(12, FontWeight.w600, _C.textMid))),
+              SizedBox(width: 100,
+                  child: Text("Actions", style: _p(12, FontWeight.w600, _C.textMid))),
             ]),
           ),
-
-          // Rows
           Expanded(
             child: ListView.separated(
               itemCount: docs.length,
@@ -724,15 +932,13 @@ class _DesktopTable extends StatelessWidget {
               itemBuilder: (_, i) {
                 final doc  = docs[i];
                 final data = doc.data() as Map<String, dynamic>;
-                final name    = data['name'] ?? '—';
-                final email   = data['email'] ?? '—';
-                final active  = data['isActive'] ?? true;
+                final name   = data['name'] ?? '—';
+                final email  = data['email'] ?? '—';
+                final active = data['isActive'] ?? true;
 
                 return Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 14),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                   child: Row(children: [
-                    // Avatar + name
                     Expanded(
                       flex: 3,
                       child: Row(children: [
@@ -745,41 +951,24 @@ class _DesktopTable extends StatelessWidget {
                         ),
                       ]),
                     ),
-                    // Email
-                    Expanded(
-                      flex: 3,
-                      child: Text(email,
-                          style: _p(13, FontWeight.w400, _C.textMid),
-                          overflow: TextOverflow.ellipsis),
-                    ),
-                    // Password (masked)
-                    Expanded(
-                      flex: 2,
-                      child: Text("••••••••",
-                          style:
-                          _p(14, FontWeight.w700, _C.textLight)),
-                    ),
-                    // Status badge
-                    Expanded(
-                      flex: 2,
-                      child: _StatusBadge(active: active),
-                    ),
-                    // Actions
+                    Expanded(flex: 3,
+                        child: Text(email,
+                            style: _p(13, FontWeight.w400, _C.textMid),
+                            overflow: TextOverflow.ellipsis)),
+                    Expanded(flex: 2,
+                        child: Text("••••••••",
+                            style: _p(14, FontWeight.w700, _C.textLight))),
+                    Expanded(flex: 2, child: _StatusBadge(active: active)),
                     SizedBox(
                       width: 100,
                       child: Row(children: [
-                        // Toggle
                         _IconBtn(
-                          icon: active
-                              ? Icons.toggle_on_rounded
-                              : Icons.toggle_off_rounded,
+                          icon: active ? Icons.toggle_on_rounded : Icons.toggle_off_rounded,
                           color: active ? _C.green : _C.textLight,
-                          tooltip:
-                          active ? AppLocalizations.of(context).deactivate : AppLocalizations.of(context).activate,
+                          tooltip: active ? AppLocalizations.of(context).deactivate : AppLocalizations.of(context).activate,
                           onTap: () => onToggle(doc),
                         ),
                         const SizedBox(width: 4),
-                        // Edit
                         _IconBtn(
                           icon: Icons.edit_outlined,
                           color: _C.orange,
@@ -787,7 +976,6 @@ class _DesktopTable extends StatelessWidget {
                           onTap: () => onEdit(doc),
                         ),
                         const SizedBox(width: 4),
-                        // Delete
                         _IconBtn(
                           icon: Icons.delete_outline_rounded,
                           color: _C.red,
@@ -801,17 +989,12 @@ class _DesktopTable extends StatelessWidget {
               },
             ),
           ),
-
-          // Footer count
           Container(
-            padding:
-            const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             decoration: const BoxDecoration(
               color: Color(0xFFFAFAFA),
-              borderRadius:
-              BorderRadius.vertical(bottom: Radius.circular(16)),
-              border: Border(
-                  top: BorderSide(color: _C.cardBorder, width: 1)),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
+              border: Border(top: BorderSide(color: _C.cardBorder, width: 1)),
             ),
             child: Row(children: [
               Text("${docs.length} manager${docs.length == 1 ? '' : 's'} total",
@@ -872,13 +1055,11 @@ class _MobileList extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(name,
-                          style:
-                          _p(14, FontWeight.w600, _C.textDark),
+                          style: _p(14, FontWeight.w600, _C.textDark),
                           overflow: TextOverflow.ellipsis),
                       const SizedBox(height: 2),
                       Text(email,
-                          style:
-                          _p(12, FontWeight.w400, _C.textMid),
+                          style: _p(12, FontWeight.w400, _C.textMid),
                           overflow: TextOverflow.ellipsis),
                     ]),
               ),
@@ -892,9 +1073,7 @@ class _MobileList extends StatelessWidget {
                   style: _p(12, FontWeight.w400, _C.textLight)),
               const Spacer(),
               _IconBtn(
-                icon: active
-                    ? Icons.toggle_on_rounded
-                    : Icons.toggle_off_rounded,
+                icon: active ? Icons.toggle_on_rounded : Icons.toggle_off_rounded,
                 color: active ? _C.green : _C.textLight,
                 tooltip: active ? "Deactivate" : "Activate",
                 onTap: () => onToggle(doc),
@@ -930,12 +1109,11 @@ class _Avatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
     return Container(
-      width: 38,
-      height: 38,
+      width: 38, height: 38,
       decoration: BoxDecoration(
           color: _C.orangeLight, borderRadius: BorderRadius.circular(10)),
-      child:
-      Center(child: Text(initial, style: _p(16, FontWeight.w700, _C.orange))),
+      child: Center(
+          child: Text(initial, style: _p(16, FontWeight.w700, _C.orange))),
     );
   }
 }
@@ -949,9 +1127,7 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: active
-            ? _C.green.withOpacity(0.12)
-            : _C.textLight.withOpacity(0.12),
+        color: active ? _C.green.withOpacity(0.12) : _C.textLight.withOpacity(0.12),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
@@ -967,11 +1143,8 @@ class _IconBtn extends StatelessWidget {
   final Color color;
   final String tooltip;
   final VoidCallback onTap;
-  const _IconBtn(
-      {required this.icon,
-        required this.color,
-        required this.tooltip,
-        required this.onTap});
+  const _IconBtn({required this.icon, required this.color,
+    required this.tooltip, required this.onTap});
 
   @override
   Widget build(BuildContext context) {

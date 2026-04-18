@@ -162,8 +162,10 @@ class CsvUploadNotifier extends StateNotifier<CsvUploadState> {
         return;
       }
 
-      // Fetch categories once
+      // Fetch categories once — refresh token first so the read is authenticated
       state = state.copyWith(step: UploadStep.resolvingCategories);
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) await currentUser.getIdToken(true);
       final catMap = await _categoryService.fetchAll(restaurantId);
 
       // Auto-assign images for valid items
@@ -246,6 +248,19 @@ class CsvUploadNotifier extends StateNotifier<CsvUploadState> {
       state = state.copyWith(
         step: UploadStep.error,
         errorMessage: 'Not authenticated. Please log in as admin before saving.',
+      );
+      return;
+    }
+
+    // Force-refresh token so ALL subsequent Firestore writes (categories +
+    // menu_items) receive request.auth. This must happen before resolveCategories
+    // because that service also writes to Firestore.
+    try {
+      await user.getIdToken(true);
+    } catch (e) {
+      state = state.copyWith(
+        step: UploadStep.error,
+        errorMessage: 'Auth token refresh failed: \${e.toString()}',
       );
       return;
     }

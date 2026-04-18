@@ -1529,19 +1529,35 @@ class _CategoryPageState extends State<CategoryPage> {
                       .snapshots(),
                   builder: (context, catSnapshot) {
                     if (!catSnapshot.hasData) {
-                      return const Center(child: CircularProgressIndicator());
+                      return LayoutBuilder(
+                        builder: (context, constraints) {
+                          int crossAxisCount = 1;
+                          if (constraints.maxWidth >= 1200) {
+                            crossAxisCount = 4;
+                          } else if (constraints.maxWidth >= 900) {
+                            crossAxisCount = 3;
+                          } else if (constraints.maxWidth >= 620) {
+                            crossAxisCount = 2;
+                          }
+                          return GridView.builder(
+                            itemCount: 6,
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: crossAxisCount,
+                              crossAxisSpacing: 16,
+                              mainAxisSpacing: 16,
+                              childAspectRatio: 1.72,
+                            ),
+                            itemBuilder: (context, index) =>
+                            const _CategoryCardSkeleton(),
+                          );
+                        },
+                      );
                     }
 
                     final categories = catSnapshot.data!.docs;
                     if (categories.isEmpty) {
-                      return Center(
-                        child: Text(
-                          AppLocalizations.of(context).noCategoriesYet,
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            color: const Color(0xFF808896),
-                          ),
-                        ),
+                      return _NoCategoriesEmptyState(
+                        onAddCategory: addCategory,
                       );
                     }
 
@@ -1696,6 +1712,368 @@ class _CategoryPageState extends State<CategoryPage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ─── No Categories Empty State ────────────────────────────────────────────────
+
+class _NoCategoriesEmptyState extends StatefulWidget {
+  final VoidCallback onAddCategory;
+
+  const _NoCategoriesEmptyState({required this.onAddCategory});
+
+  @override
+  State<_NoCategoriesEmptyState> createState() =>
+      _NoCategoriesEmptyStateState();
+}
+
+class _NoCategoriesEmptyStateState extends State<_NoCategoriesEmptyState>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _fadeAnim;
+  late Animation<Offset> _slideAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _fadeAnim = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
+    _slideAnim = Tween<Offset>(
+      begin: const Offset(0, 0.12),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _fadeAnim,
+      child: SlideTransition(
+        position: _slideAnim,
+        child: Center(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // ── Folder icon with orange badge dot ──────────────────
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      width: kIsWeb ? 96 : 80.sp,
+                      height: kIsWeb ? 96 : 80.sp,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF2E6),
+                        borderRadius:
+                        BorderRadius.circular(kIsWeb ? 20 : 16.sp),
+                      ),
+                      child: Icon(
+                        Icons.folder_open_outlined,
+                        color: const Color(0xFFE0752D),
+                        size: kIsWeb ? 44 : 36.sp,
+                      ),
+                    ),
+                    Positioned(
+                      top: -5,
+                      right: -5,
+                      child: Container(
+                        width: kIsWeb ? 20 : 16.sp,
+                        height: kIsWeb ? 20 : 16.sp,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE0752D),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2.5),
+                        ),
+                        child: Icon(
+                          Icons.add,
+                          color: Colors.white,
+                          size: kIsWeb ? 11 : 9.sp,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: kIsWeb ? 28 : 22.sp),
+
+                // ── Title ──────────────────────────────────────────────
+                Text(
+                  AppLocalizations.of(context).noCategoriesYet,
+                  style: GoogleFonts.poppins(
+                    fontSize: kIsWeb ? 22 : 18.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF111827),
+                  ),
+                ),
+
+                SizedBox(height: kIsWeb ? 10 : 8.sp),
+
+                // ── Subtitle ───────────────────────────────────────────
+                RichText(
+                  textAlign: TextAlign.center,
+                  text: TextSpan(
+                    style: GoogleFonts.poppins(
+                      fontSize: kIsWeb ? 14 : 12.sp,
+                      color: const Color(0xFF6B7280),
+                      height: 1.6,
+                    ),
+                    children: [
+                      const TextSpan(
+                          text: 'Organise your menu by creating categories\nlike '),
+                      TextSpan(
+                        text: 'Starters, Mains, Desserts',
+                        style: GoogleFonts.poppins(
+                          fontSize: kIsWeb ? 14 : 12.sp,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFFE0752D),
+                        ),
+                      ),
+                      const TextSpan(text: ' and more.'),
+                    ],
+                  ),
+                ),
+
+                SizedBox(height: kIsWeb ? 32 : 26.sp),
+
+                // ── CTA Button ─────────────────────────────────────────
+                ElevatedButton.icon(
+                  onPressed: widget.onAddCategory,
+                  icon: const Icon(Icons.add, color: Colors.white, size: 18),
+                  label: Text(
+                    'Add your first category',
+                    style: GoogleFonts.poppins(
+                      fontSize: kIsWeb ? 14 : 12.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF070B2D),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: kIsWeb ? 28 : 22.sp,
+                      vertical: kIsWeb ? 14 : 12.sp,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                      BorderRadius.circular(kIsWeb ? 12 : 10.sp),
+                    ),
+                    elevation: 0,
+                  ),
+                ),
+
+                SizedBox(height: kIsWeb ? 44 : 36.sp),
+
+                // ── Ghost preview cards ────────────────────────────────
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    _GhostCategoryCard(label: 'Starters', opacity: 0.55),
+                    _GhostCategoryCard(label: 'Mains', opacity: 0.35),
+                    _GhostCategoryCard(label: 'Desserts', opacity: 0.18),
+                  ],
+                ),
+
+                SizedBox(height: kIsWeb ? 12 : 10.sp),
+
+                Text(
+                  'Ghost preview — these will appear once you add categories',
+                  style: GoogleFonts.poppins(
+                    fontSize: kIsWeb ? 11 : 10.sp,
+                    color: const Color(0xFFC4C9D4),
+                    letterSpacing: 0.2,
+                  ),
+                ),
+
+                SizedBox(height: kIsWeb ? 40 : 32.sp),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Ghost preview card ───────────────────────────────────────────────────────
+
+class _GhostCategoryCard extends StatelessWidget {
+  final String label;
+  final double opacity;
+
+  const _GhostCategoryCard({
+    required this.label,
+    required this.opacity,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: opacity,
+      child: Container(
+        width: kIsWeb ? 140 : 110.sp,
+        padding: EdgeInsets.symmetric(
+          horizontal: kIsWeb ? 14 : 12.sp,
+          vertical: kIsWeb ? 14 : 12.sp,
+        ),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF9FAFB),
+          borderRadius: BorderRadius.circular(kIsWeb ? 12 : 10.sp),
+          border: Border.all(
+            color: const Color(0xFFD1D5DB),
+            width: 1,
+            style: BorderStyle.solid,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: kIsWeb ? 34 : 28.sp,
+              height: kIsWeb ? 34 : 28.sp,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF2E6),
+                borderRadius: BorderRadius.circular(kIsWeb ? 8 : 6.sp),
+              ),
+              child: Icon(
+                Icons.folder_open_outlined,
+                color: const Color(0xFFE0752D),
+                size: kIsWeb ? 18 : 14.sp,
+              ),
+            ),
+            SizedBox(width: kIsWeb ? 10 : 8.sp),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize: kIsWeb ? 12 : 10.sp,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF374151),
+                  ),
+                ),
+                Text(
+                  '0 items',
+                  style: GoogleFonts.poppins(
+                    fontSize: kIsWeb ? 11 : 9.sp,
+                    color: const Color(0xFF9CA3AF),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Skeleton widgets ─────────────────────────────────────────────────────────
+
+class _SkeletonBox extends StatefulWidget {
+  final double? width;
+  final double height;
+  final double radius;
+
+  const _SkeletonBox({
+    this.width,
+    required this.height,
+    this.radius = 8,
+  });
+
+  @override
+  State<_SkeletonBox> createState() => _SkeletonBoxState();
+}
+
+class _SkeletonBoxState extends State<_SkeletonBox>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat(reverse: true);
+    _anim = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _anim,
+      builder: (_, __) => Opacity(
+        opacity: _anim.value,
+        child: Container(
+          width: widget.width,
+          height: widget.height,
+          decoration: BoxDecoration(
+            color: const Color(0xFFEEEEEE),
+            borderRadius: BorderRadius.circular(widget.radius),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CategoryCardSkeleton extends StatelessWidget {
+  const _CategoryCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE6E8EF)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top row: icon box + edit/delete buttons
+          Row(
+            children: [
+              const _SkeletonBox(width: 60, height: 60, radius: 10),
+              const Spacer(),
+              const _SkeletonBox(width: 24, height: 24, radius: 4),
+              const SizedBox(width: 6),
+              const _SkeletonBox(width: 24, height: 24, radius: 4),
+            ],
+          ),
+          const Spacer(),
+          // Category name
+          const _SkeletonBox(width: 110, height: 16, radius: 4),
+          const SizedBox(height: 6),
+          // Item count
+          const _SkeletonBox(width: 70, height: 12, radius: 4),
+        ],
       ),
     );
   }

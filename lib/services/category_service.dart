@@ -1,103 +1,108 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'package:firebase_auth/firebase_auth.dart';
 import '../data/models/category_model.dart';
 import '../data/models/menu_item_model.dart';
 
+class ResolvedCategories {
+  final List<MenuItem> items;
+  final Map<String, CategoryModel> categoryMap;
+  const ResolvedCategories({required this.items, required this.categoryMap});
+}
+
+/// Handles all category reads and writes for a restaurant.
+/// All paths use the subcollection:
+///   restaurants/{restaurantId}/categories/{categoryId}
 class CategoryService {
-  final FirebaseFirestore _db;
+  CollectionReference _ref(String restaurantId) =>
+      FirebaseFirestore.instance
+          .collection('restaurants')
+          .doc(restaurantId)
+          .collection('categories');
 
-  CategoryService({FirebaseFirestore? db})
-      : _db = db ?? FirebaseFirestore.instance;
-
-  CollectionReference _catRef(String restaurantId) =>
-      _db.collection('categories');
-
+  // ── Fetch all categories for a restaurant ─────────────────────────────────
 
   Future<Map<String, CategoryModel>> fetchAll(String restaurantId) async {
-    final snap = await _catRef(restaurantId)
-        .where('restaurantId', isEqualTo: restaurantId)
-        .get();
+    final snap = await _ref(restaurantId).get();
     final map = <String, CategoryModel>{};
     for (final doc in snap.docs) {
-      final cat = CategoryModel.fromFirestore(doc);
-      map[cat.name.toLowerCase()] = cat;
+      final data = doc.data() as Map<String, dynamic>;
+      final name = (data['name'] as String? ?? '').trim().toLowerCase();
+      if (name.isNotEmpty) {
+        map[name] = CategoryModel(
+          id: doc.id,
+          name: data['name'] as String? ?? '',
+          position: (data['position'] as num?)?.toInt() ?? 0,
+          restaurantId: restaurantId,
+        );
+      }
     }
     return map;
   }
 
+  // ── Resolve categories for CSV upload ────────────────────────────────────
+  // For each item, look up its categoryName in existingCategories.
+  // If not found, create a new category document and assign its ID.
 
-  Future<({List<MenuItem> items, Map<String, CategoryModel> categoryMap})>
-  resolveCategories({
+  Future<ResolvedCategories> resolveCategories({
     required String restaurantId,
     required List<MenuItem> items,
     required Map<String, CategoryModel> existingCategories,
   }) async {
-    // Work on a mutable copy of the map
+    // Force-refresh token before any write
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) await user.getIdToken(true);
+
+    // Work on a mutable copy
     final catMap = Map<String, CategoryModel>.from(existingCategories);
+    final updatedItems = <MenuItem>[];
 
-    // Collect unique category names that need creation
-    final missingNames = <String>{};
     for (final item in items) {
-      if (item.hasError) continue;
-      final key = item.categoryName.toLowerCase().trim();
-      if (key.isNotEmpty && !catMap.containsKey(key)) {
-        missingNames.add(item.categoryName.trim());
+      if (item.hasError) {
+        updatedItems.add(item);
+        continue;
       }
-    }
 
-    // Create missing categories (batched)
-    if (missingNames.isNotEmpty) {
-      await _createCategories(
-        restaurantId: restaurantId,
-        names: missingNames.toList(),
-        catMap: catMap,
-        existingCount: catMap.length,
-      );
-    }
-
-    // Assign categoryId + categoryName to each item
-    final resolved = items.map((item) {
-      if (item.hasError) return item;
-      final key = item.categoryName.toLowerCase().trim();
-      final cat = catMap[key];
-      if (cat == null) {
-        return item.copyWith(
+      final key = item.categoryName.trim().toLowerCase();
+      if (key.isEmpty) {
+        updatedItems.add(item.copyWith(
           hasError: true,
-          errorMessage: 'Could not resolve category "${item.categoryName}".',
-        );
+          errorMessage: 'Category name is empty for "${item.name}".',
+        ));
+        continue;
       }
-      return item.copyWith(
-        categoryId: cat.id,
-        categoryName: cat.name, // use canonical Firestore name
-      );
-    }).toList();
 
-    return (items: resolved, categoryMap: catMap);
-  }
+      // Category already exists — reuse its ID
+      if (catMap.containsKey(key)) {
+        updatedItems.add(item.copyWith(categoryId: catMap[key]!.id));
+        continue;
+      }
 
+      // Create a new category in the subcollection
+      try {
+        final ref = await _ref(restaurantId).add({
+          'name': item.categoryName.trim(),
+          'image': '',
+          'restaurantId': restaurantId,
+          'position': 0,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
 
-  Future<void> _createCategories({
-    required String restaurantId,
-    required List<String> names,
-    required Map<String, CategoryModel> catMap,
-    required int existingCount,
-  }) async {
-    final batch = _db.batch();
-    int position = existingCount;
-
-    for (final name in names) {
-      final ref = _catRef(restaurantId).doc(); // auto-id
-      final cat = CategoryModel(
-        id: ref.id,
-        name: name,
-        position: position++,
-        restaurantId: restaurantId,
-        createdAt: DateTime.now(),
-      );
-      batch.set(ref, cat.toFirestoreMap());
-      catMap[name.toLowerCase()] = cat;
+        final newCat = CategoryModel(
+          id: ref.id,
+          name: item.categoryName.trim(),
+          position: 0,
+          restaurantId: restaurantId,
+        );
+        catMap[key] = newCat;
+        updatedItems.add(item.copyWith(categoryId: ref.id));
+      } catch (e) {
+        updatedItems.add(item.copyWith(
+          hasError: true,
+          errorMessage: 'Failed to create category "${item.categoryName}": $e',
+        ));
+      }
     }
 
-    await batch.commit();
+    return ResolvedCategories(items: updatedItems, categoryMap: catMap);
   }
 }

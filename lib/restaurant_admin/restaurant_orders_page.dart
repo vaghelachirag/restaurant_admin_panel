@@ -105,9 +105,6 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
       }
 
       if (mounted) setState(() => _tokenReady = true);
-
-      // Only fetch the OneSignal player ID after the token is ready so that
-      // the subsequent Firestore write to restaurants/{id} is authorised.
       await getPlayerId();
     } catch (e, st) {
       debugPrint('❌ Token refresh failed: $e\n$st');
@@ -259,10 +256,10 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
 
     // ── Wait for token refresh before starting the Firestore stream ────────────
     if (!_tokenReady) {
-      return const SafeArea(
+      return SafeArea(
         child: Scaffold(
           backgroundColor: Colors.white,
-          body: Center(child: CircularProgressIndicator()),
+          body: _buildSkeletonLoading(isDesktop, isTablet),
         ),
       );
     }
@@ -272,8 +269,9 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
         backgroundColor: Colors.white,
         body: StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance
-              .collection("orders")
-              .where("restaurantId", isEqualTo: widget.restaurantId)
+              .collection('restaurants')
+              .doc(widget.restaurantId)
+              .collection('orders')
               .orderBy("createdAt", descending: true)
               .snapshots(),
           builder: (context, snapshot) {
@@ -320,7 +318,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
             }
 
             if (!snapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
+              return _buildSkeletonLoading(isDesktop, isTablet);
             }
 
             final allOrders = snapshot.data!.docs;
@@ -433,6 +431,67 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
       loc.served: countStatus('served'),
       loc.completed: countStatus('completed'),
     };
+  }
+
+  // ── Skeleton loading (same pattern as MenuCardSkeleton in menu_page) ────────
+  Widget _buildSkeletonLoading(bool isDesktop, bool isTablet) {
+    final sidePadding = isDesktop ? 24.0 : (isTablet ? 20.0 : 14.0);
+    final crossAxisCount = isDesktop ? 3 : (isTablet ? 2 : 1);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header skeleton
+        Container(
+          padding: EdgeInsets.fromLTRB(sidePadding, isDesktop ? 20 : 14, sidePadding, 8),
+          color: Colors.white,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SkeletonBox(width: 180, height: 28, radius: 6),
+              const SizedBox(height: 8),
+              _SkeletonBox(width: 120, height: 14, radius: 4),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        // Filter tabs skeleton
+        Padding(
+          padding: EdgeInsets.fromLTRB(sidePadding, 0, sidePadding, 10),
+          child: Row(
+            children: List.generate(5, (i) => Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: _SkeletonBox(width: 80, height: 32, radius: 999),
+            )),
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Cards skeleton grid
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(sidePadding, 4, sidePadding, 24),
+            child: crossAxisCount == 1
+                ? ListView.separated(
+              itemCount: 6,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (_, __) => const _OrderCardSkeleton(),
+            )
+                : Column(
+              children: List.generate(2, (row) => Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: List.generate(crossAxisCount, (col) => [
+                    if (col > 0) const SizedBox(width: 14),
+                    const Expanded(child: _OrderCardSkeleton()),
+                  ]).expand((w) => w).toList(),
+                ),
+              )),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildHeader(
@@ -788,10 +847,11 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
 
     Future<void> updateStatus(String nextStatus) async {
       await FirebaseFirestore.instance
-          .collection("orders")
+          .collection('restaurants')
+          .doc(widget.restaurantId)
+          .collection('orders')
           .doc(order.id)
           .update({"status": nextStatus});
-
     }
 
     return Container(
@@ -1593,6 +1653,118 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
       default:
         return const Color(0xFF374151);
     }
+  }
+}
+
+// ── Skeleton widgets (mirrors MenuCardSkeleton pattern) ─────────────────────
+
+class _SkeletonBox extends StatefulWidget {
+  final double width;
+  final double height;
+  final double radius;
+
+  const _SkeletonBox({
+    required this.width,
+    required this.height,
+    this.radius = 8,
+  });
+
+  @override
+  State<_SkeletonBox> createState() => _SkeletonBoxState();
+}
+
+class _SkeletonBoxState extends State<_SkeletonBox>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat(reverse: true);
+    _anim = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _anim,
+      builder: (_, __) => Opacity(
+        opacity: _anim.value,
+        child: Container(
+          width: widget.width,
+          height: widget.height,
+          decoration: BoxDecoration(
+            color: const Color(0xFFEEEEEE),
+            borderRadius: BorderRadius.circular(widget.radius),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OrderCardSkeleton extends StatelessWidget {
+  const _OrderCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFEEEEEE)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top row: order id + status pill
+          Row(
+            children: [
+              _SkeletonBox(width: 90, height: 13, radius: 4),
+              const Spacer(),
+              _SkeletonBox(width: 64, height: 22, radius: 999),
+            ],
+          ),
+          const SizedBox(height: 14),
+          // Table + time row
+          Row(
+            children: [
+              _SkeletonBox(width: 48, height: 48, radius: 12),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _SkeletonBox(width: 100, height: 14, radius: 4),
+                  const SizedBox(height: 6),
+                  _SkeletonBox(width: 70, height: 12, radius: 4),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          // Items lines
+          _SkeletonBox(width: double.infinity, height: 12, radius: 4),
+          const SizedBox(height: 8),
+          _SkeletonBox(width: 140, height: 12, radius: 4),
+          const SizedBox(height: 16),
+          // Action button
+          _SkeletonBox(width: double.infinity, height: 38, radius: 10),
+        ],
+      ),
+    );
   }
 }
 

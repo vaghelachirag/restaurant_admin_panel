@@ -427,12 +427,15 @@ class _PastOrdersList extends StatelessWidget {
     }
 
     return StreamBuilder<QuerySnapshot>(
+      // Removed .orderBy('createdAt') — subcollection + .where('userId')
+      // requires a composite index that doesn't exist yet.
+      // We sort client-side after the query instead.
       stream: FirebaseFirestore.instance
+          .collection('restaurants')
+          .doc(restaurantId)
           .collection('orders')
-          .where('restaurantId', isEqualTo: restaurantId)
-          .where('userId', isEqualTo: uid) // ← FIX: scope to this user
-          .orderBy('createdAt', descending: true)
-          .limit(10)
+          .where('userId', isEqualTo: uid)
+          .limit(20)
           .snapshots(),
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
@@ -454,8 +457,19 @@ class _PastOrdersList extends StatelessWidget {
           );
         }
 
+        // Sort client-side by createdAt descending (avoids composite index)
+        final sortedDocs = [...snap.data!.docs];
+        sortedDocs.sort((a, b) {
+          final aTs = (a.data() as Map<String, dynamic>)['createdAt'];
+          final bTs = (b.data() as Map<String, dynamic>)['createdAt'];
+          if (aTs == null && bTs == null) return 0;
+          if (aTs == null) return 1;
+          if (bTs == null) return -1;
+          return (bTs as dynamic).compareTo(aTs as dynamic);
+        });
+
         return Column(
-          children: snap.data!.docs.map((doc) {
+          children: sortedDocs.map((doc) {
             final d = doc.data() as Map<String, dynamic>;
             final token = d['tokenNumber'] ?? '';
             final amount = d['totalAmount'] ?? 0;
@@ -906,9 +920,10 @@ class _OrderResultSection extends StatelessWidget {
 
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
+          .collection('restaurants')
+          .doc(restaurantId)
           .collection('orders')
-          .where('restaurantId', isEqualTo: restaurantId)
-          .where('userId', isEqualTo: uid) // ← FIX: scope to this user
+          .where('userId', isEqualTo: uid)
           .where('tokenNumber', isEqualTo: int.tryParse(token))
           .limit(1)
           .snapshots(),
@@ -1341,7 +1356,7 @@ class _OrderDetailCard extends StatelessWidget {
                   ),
                 ),
 
-                _KotHistorySection(orderId: orderId),
+                _KotHistorySection(orderId: orderId, restaurantId: restaurantId),
 
                 if (onContinueShopping != null) ...[
                   SizedBox(height: _h(16)),
@@ -1546,12 +1561,15 @@ class _EmptyState extends StatelessWidget {
 // ─── KOT History Section ──────────────────────────────────────────────────────
 class _KotHistorySection extends StatelessWidget {
   final String orderId;
-  const _KotHistorySection({required this.orderId});
+  final String restaurantId;
+  const _KotHistorySection({required this.orderId, required this.restaurantId});
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
+          .collection('restaurants')
+          .doc(restaurantId)
           .collection('orders')
           .doc(orderId)
           .collection('kots')
@@ -1703,8 +1721,9 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
     if (mounted) setState(() => _loadingMenu = true);
     try {
       final snap = await FirebaseFirestore.instance
+          .collection('restaurants')
+          .doc(widget.restaurantId)
           .collection('menu_items')
-          .where('restaurantId', isEqualTo: widget.restaurantId)
           .where('isAvailable', isEqualTo: true)
           .limit(100)
           .get();
@@ -1730,14 +1749,48 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
         ? Map<String, dynamic>.from(variants[_selectedVariantIdx] as Map)
         : <String, dynamic>{'name': 'Regular', 'price': 0};
 
+    final itemName = (data['name'] ?? '').toString();
+    final variantName = (variant['name'] ?? 'Regular').toString();
+
     setState(() {
-      _newItems.add({
-        'name': data['name'] ?? '',
-        'variant': (variant['name'] ?? 'Regular').toString(),
-        'qty': _newItemQty,
-        'price': variant['price'] ?? 0,
-        'status': 'active',
-      });
+      // ── Check _workingItems (existing order items) first ─────────────────
+      final workingIdx = _workingItems.indexWhere((i) =>
+      i['name'] == itemName &&
+          i['variant'] == variantName &&
+          (i['status'] ?? 'active') != 'cancelled');
+
+      if (workingIdx != -1) {
+        // Increment qty on the existing item instead of adding a duplicate
+        _workingItems[workingIdx] = {
+          ..._workingItems[workingIdx],
+          'qty': (_workingItems[workingIdx]['qty'] ?? 1) + _newItemQty,
+        };
+        _selectedMenuItem = null;
+        _selectedVariantIdx = 0;
+        _newItemQty = 1;
+        return;
+      }
+
+      // ── Check _newItems (staged but not yet saved) ───────────────────────
+      final newIdx = _newItems.indexWhere((i) =>
+      i['name'] == itemName && i['variant'] == variantName);
+
+      if (newIdx != -1) {
+        _newItems[newIdx] = {
+          ..._newItems[newIdx],
+          'qty': (_newItems[newIdx]['qty'] ?? 1) + _newItemQty,
+        };
+      } else {
+        // Completely new item — add it
+        _newItems.add({
+          'name': itemName,
+          'variant': variantName,
+          'qty': _newItemQty,
+          'price': variant['price'] ?? 0,
+          'status': 'active',
+        });
+      }
+
       _selectedMenuItem = null;
       _selectedVariantIdx = 0;
       _newItemQty = 1;
@@ -1748,6 +1801,8 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
     setState(() => _saving = true);
     try {
       final fresh = await FirebaseFirestore.instance
+          .collection('restaurants')
+          .doc(widget.restaurantId)
           .collection('orders')
           .doc(widget.orderId)
           .get();
@@ -1771,6 +1826,7 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
       }
 
       await OrderUpdateService.updateRunningOrder(
+        restaurantId: widget.restaurantId,
         orderId: widget.orderId,
         updatedExistingItems: _workingItems,
         newItems: _newItems,
