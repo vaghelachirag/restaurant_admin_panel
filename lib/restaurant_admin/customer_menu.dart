@@ -15,92 +15,42 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'account_page.dart';
 import 'cart_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
 import 'manager/call_waiter.dart';
 import 'manager/waiter_assistance.dart';
 
+// ─────────────────────────────────────────────
+// DESIGN TOKENS
+// ─────────────────────────────────────────────
+class _C {
+  static const bg            = Color(0xFFF8F5F0);
+  static const accent        = Color(0xFFE8420E);
+  static const accentLight   = Color(0xFFFFF0EB);
+  static const textPrimary   = Color(0xFF1A1A2E);
+  static const textSecondary = Color(0xFF6B7280);
+  static const textMuted     = Color(0xFF9CA3AF);
+  static const vegGreen      = Color(0xFF16A34A);
+  static const nonVegRed     = Color(0xFFDC2626);
+  static const chipBg        = Color(0xFFF3F4F6);
+  static const divider       = Color(0xFFE5E7EB);
+  static const shadow        = Color(0x0D000000);
+  static const shadowMd      = Color(0x18000000);
+}
+
+// ─────────────────────────────────────────────
+// UNCHANGED UTILITIES
+// ─────────────────────────────────────────────
 Color hexToColor(String hex) {
   hex = hex.replaceAll("#", "");
   if (hex.length == 6) hex = "FF$hex";
   return Color(int.parse(hex, radix: 16));
 }
 
-
-class _SessionStore {
-  static const _kSessionKey = 'customer_session_id';
-
-  /// Returns an existing sessionId from storage, or generates + saves a new one.
-  static Future<String> getOrCreate() async {
-    if (kIsWeb) {
-      // dart:html is only available on web — access via dynamic to avoid
-      // compile errors on mobile.
-      try {
-        // ignore: undefined_prefixed_name
-        final storage = _webLocalStorage();
-        final existing = storage[_kSessionKey] as String?;
-        if (existing != null && existing.isNotEmpty) return existing;
-        final newId = _generateUuid();
-        storage[_kSessionKey] = newId;
-        return newId;
-      } catch (_) {
-        // localStorage unavailable (e.g. private browsing) — fall through
-        return _generateUuid();
-      }
-    } else {
-      final prefs = await SharedPreferences.getInstance();
-      final existing = prefs.getString(_kSessionKey);
-      if (existing != null && existing.isNotEmpty) return existing;
-      final newId = _generateUuid();
-      await prefs.setString(_kSessionKey, newId);
-      return newId;
-    }
-  }
-
-  /// Access window.localStorage on web without importing dart:html at the
-  /// top level (which would break mobile builds).
-  static dynamic _webLocalStorage() {
-    // js-interop via dart:html accessed dynamically
-    // ignore: avoid_dynamic_calls
-    return (Uri.base.toString()); // placeholder — replaced below
-  }
-
-  static String _generateUuid() {
-    final rng = Random.secure();
-    final bytes = List<int>.generate(16, (_) => rng.nextInt(256));
-    bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
-    bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant
-    String hex(int b) => b.toRadixString(16).padLeft(2, '0');
-    return '${hex(bytes[0])}${hex(bytes[1])}${hex(bytes[2])}${hex(bytes[3])}'
-        '-${hex(bytes[4])}${hex(bytes[5])}'
-        '-${hex(bytes[6])}${hex(bytes[7])}'
-        '-${hex(bytes[8])}${hex(bytes[9])}'
-        '-${hex(bytes[10])}${hex(bytes[11])}${hex(bytes[12])}'
-        '${hex(bytes[13])}${hex(bytes[14])}${hex(bytes[15])}';
-  }
-}
-
-
-Map<String, String> _getWebStorage() {
-  try {
-    final dynamic html = _loadDartHtml();
-    return (html['window']['localStorage'] as Map<String, String>?) ?? {};
-  } catch (_) {
-    return {};
-  }
-}
-
-// ignore: unused_element
-dynamic _loadDartHtml() => null; // stub — real web uses dart:html directly
-
 class _SessionStorage {
-  static String? _memoryCache; // works for in-session use
+  static String? _memoryCache;
   static const _key = 'restaurant_customer_session_id';
 
   static Future<String> getOrCreate() async {
-    // 1. Check in-memory cache first (fastest path)
     if (_memoryCache != null) return _memoryCache!;
-
-    // 2. Try persistent storage
     try {
       final prefs = await SharedPreferences.getInstance();
       final stored = prefs.getString(_key);
@@ -108,11 +58,7 @@ class _SessionStorage {
         _memoryCache = stored;
         return stored;
       }
-    } catch (_) {
-      // SharedPreferences unavailable on some web environments — ignore
-    }
-
-    // 3. Generate new UUID
+    } catch (_) {}
     final newId = _generateSessionId();
     _memoryCache = newId;
     try {
@@ -137,10 +83,11 @@ class _SessionStorage {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
+// ─────────────────────────────────────────────
+// WIDGET  — same public signature as original
+// ─────────────────────────────────────────────
 class CustomerMenuPage extends StatefulWidget {
-  final String restaurantId;
+  final String restaurantId; // ← preserved exactly as original
   const CustomerMenuPage({super.key, required this.restaurantId});
 
   @override
@@ -149,8 +96,9 @@ class CustomerMenuPage extends StatefulWidget {
 
 class _CustomerMenuPageState extends State<CustomerMenuPage>
     with AutomaticKeepAliveClientMixin {
-  final ValueNotifier<String?> _selectedCategoryIdNotifier =
-  ValueNotifier(null);
+
+  // ── All state vars identical to original ─────────────────────────────────
+  final ValueNotifier<String?> _selectedCategoryIdNotifier = ValueNotifier(null);
   String? get _selectedCategoryId => _selectedCategoryIdNotifier.value;
   set _selectedCategoryId(String? v) => _selectedCategoryIdNotifier.value = v;
 
@@ -158,12 +106,11 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
   bool _unifiedCategoryListView = true;
   final Set<String> _collapsedCategoryIds = {};
 
-  final ValueNotifier<List<CartItem>> _cartNotifier =
-  ValueNotifier<List<CartItem>>([]);
+  final ValueNotifier<List<CartItem>> _cartNotifier = ValueNotifier([]);
   List<CartItem> get cart => _cartNotifier.value;
 
   final ValueNotifier<String?> _lastAddedItemId = ValueNotifier(null);
-  final ValueNotifier<int> _cartBounce = ValueNotifier(0);
+  final ValueNotifier<int>     _cartBounce      = ValueNotifier(0);
 
   int _selectedTabIndex = 0;
   late PageController _pageController;
@@ -171,40 +118,30 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
   String openingTime = "09:00 AM";
   String closingTime = "06:00 PM";
 
-  String _restaurantName = "";
-  String _restaurantTagline = "";
+  String  _restaurantName    = "";
+  String  _restaurantTagline = "";
   String? _restaurantLogo;
 
-  bool _isFirebaseReady = false;
+  bool _isFirebaseReady      = false;
   bool _hasRestaurantIdError = false;
 
-  // ── Table pre-selection from QR URL (?table=T01) ─────────────────────────
-  // ValueNotifiers so AssistanceTab reactively reads the latest value
-  // even after _readTableFromUrl() resolves asynchronously.
-  final ValueNotifier<String?> _tableIdNotifier = ValueNotifier(null);
+  final ValueNotifier<String?> _tableIdNotifier   = ValueNotifier(null);
   final ValueNotifier<String?> _tableNameNotifier = ValueNotifier(null);
 
-  String? get _preselectedTableId => _tableIdNotifier.value;
+  String? get _preselectedTableId   => _tableIdNotifier.value;
   String? get _preselectedTableName => _tableNameNotifier.value;
 
-  // ── NEW: Session + Active Order ───────────────────────────────────────────
-  /// Unique identity for this customer's device/browser session.
-  /// Generated once and persisted in SharedPreferences / localStorage.
   String? _sessionId;
-
-  /// If an active (non-completed) order already exists for this table,
-  /// we store its Firestore document ID here and reuse it.
   String? _activeOrderId;
+  bool    _orderLookupInProgress = false;
 
-  /// True while [_initSessionAndOrder] is running so we can show a
-  /// loading state on the cart button instead of navigating with a null orderId.
-  bool _orderLookupInProgress = false;
-
-  static const Color _primaryColor = Color(0xFFE24B4A);
+  // Accent matches the new design token but keeps the same primary reference
+  static const Color _primaryColor = Color(0xFFE8420E);
 
   @override
   bool get wantKeepAlive => true;
 
+  // ── initState / dispose (unchanged) ─────────────────────────────────────
   @override
   void initState() {
     super.initState();
@@ -215,22 +152,8 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
       _isFirebaseReady = true;
     }
     _readTableFromUrl();
-    _ensureSignedIn(); // ← sign in anonymously BEFORE session/order lookup
+    _ensureSignedIn();
     _initSession();
-  }
-
-
-  /// Signs the user in anonymously if they are not already signed in.
-  /// Must run before _getOrCreateActiveOrder so the uid is available.
-  Future<void> _ensureSignedIn() async {
-    if (FirebaseAuth.instance.currentUser == null) {
-      try {
-        await FirebaseAuth.instance.signInAnonymously();
-        debugPrint('🔑 Signed in anonymously: ${FirebaseAuth.instance.currentUser?.uid}');
-      } catch (e) {
-        debugPrint('❌ Anonymous sign-in failed: $e');
-      }
-    }
   }
 
   @override
@@ -245,7 +168,18 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     super.dispose();
   }
 
-  // ── Read ?table=T01 from URL fragment ────────────────────────────────────
+  // ── Auth / session / order (all unchanged — restaurantId wired) ──────────
+  Future<void> _ensureSignedIn() async {
+    if (FirebaseAuth.instance.currentUser == null) {
+      try {
+        await FirebaseAuth.instance.signInAnonymously();
+        debugPrint('Signed in anonymously: ${FirebaseAuth.instance.currentUser?.uid}');
+      } catch (e) {
+        debugPrint('Anonymous sign-in failed: $e');
+      }
+    }
+  }
+
   void _readTableFromUrl() {
     if (!kIsWeb) return;
     try {
@@ -255,15 +189,11 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
       final params = Uri.splitQueryString(queryString);
       final tableId = params['table'] ?? '';
       if (tableId.isEmpty) return;
-
-      // Use ValueNotifier so AssistanceTab picks up the value reactively
-      // without needing setState (which would rebuild the whole tree).
       _tableIdNotifier.value = tableId;
-      if (mounted) setState(() {});   // re-render table banner in Scaffold
-
+      if (mounted) setState(() {});
       FirebaseFirestore.instance
           .collection('restaurants')
-          .doc(widget.restaurantId)
+          .doc(widget.restaurantId)   // ← restaurantId
           .collection('tables')
           .doc(tableId)
           .get()
@@ -273,13 +203,10 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
               ? ((doc.data()?['name'] as String?) ?? tableId)
               : tableId;
           _tableNameNotifier.value = name;
-          setState(() {});   // re-render table banner label
-        }
-      }).catchError((_) {
-        if (mounted) {
-          _tableNameNotifier.value = tableId;
           setState(() {});
         }
+      }).catchError((_) {
+        if (mounted) { _tableNameNotifier.value = tableId; setState(() {}); }
       });
     } catch (_) {}
   }
@@ -287,102 +214,68 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
   Future<void> _initSession() async {
     final id = await _SessionStorage.getOrCreate();
     if (mounted) setState(() => _sessionId = id);
-    debugPrint('🪪 Session ID: $id');
   }
 
   Future<String?> _getOrCreateActiveOrder() async {
-    final tableId = _preselectedTableId;
+    final tableId   = _preselectedTableId;
     final sessionId = _sessionId;
-
-    // ── Guard: need tableId and sessionId ──────────────────────────────────
-    if (tableId == null || tableId.isEmpty) {
-      debugPrint('⚠️ No tableId — skipping order lookup');
-      return null;
-    }
-    if (sessionId == null) {
-      debugPrint('⚠️ No sessionId — skipping order lookup');
-      return null;
-    }
-
-    // ── Guard: must be signed in ───────────────────────────────────────────
-    // The Firestore rules require isAuthenticated() for every orders operation.
+    if (tableId == null || tableId.isEmpty) return null;
+    if (sessionId == null) return null;
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      debugPrint('⚠️ No signed-in user — skipping order lookup');
-      return null;
-    }
+    if (user == null) return null;
     final uid = user.uid;
-
     if (mounted) setState(() => _orderLookupInProgress = true);
-
     try {
-      final db = FirebaseFirestore.instance;
-
-      // Orders subcollection: restaurants/{restaurantId}/orders/{orderId}
-      final ordersRef = db
+      final ordersRef = FirebaseFirestore.instance
           .collection('restaurants')
-          .doc(widget.restaurantId)
+          .doc(widget.restaurantId)   // ← restaurantId
           .collection('orders');
 
       final existing = await ordersRef
-          .where('tableId', isEqualTo: tableId)
-          .where('userId', isEqualTo: uid)
-          .where('status', whereNotIn: ['completed', 'cancelled'])
+          .where('tableId',  isEqualTo: tableId)
+          .where('userId',   isEqualTo: uid)
+          .where('status',   whereNotIn: ['completed', 'cancelled'])
           .limit(1)
           .get();
 
       if (existing.docs.isNotEmpty) {
         final orderId = existing.docs.first.id;
-        debugPrint('♻️ Reusing active order: $orderId');
-
         await ordersRef.doc(orderId).update({
           'sessionIds': FieldValue.arrayUnion([sessionId]),
-          'updatedAt': FieldValue.serverTimestamp(),
+          'updatedAt':  FieldValue.serverTimestamp(),
         });
-
         if (mounted) setState(() => _activeOrderId = orderId);
         return orderId;
       }
 
-
-      final newRef = ordersRef.doc();
+      final newRef     = ordersRef.doc();
       final newOrderId = newRef.id;
-
       await newRef.set({
-        'orderId': newOrderId,
-        'restaurantId': widget.restaurantId,
-        'tableId': tableId,
-        'tableName': _preselectedTableName ?? tableId,
-        'userId': uid,                               // ← required by create rule
-        'sessionIds': [sessionId],
-        'status': 'pending',
-        'items': [],
-        'totalAmount': 0,                            // ← required by create rule
-        'createdAt': FieldValue.serverTimestamp(),   // ← must equal request.time
-        'updatedAt': FieldValue.serverTimestamp(),
+        'orderId':      newOrderId,
+        'restaurantId': widget.restaurantId,   // ← restaurantId
+        'tableId':      tableId,
+        'tableName':    _preselectedTableName ?? tableId,
+        'userId':       uid,
+        'sessionIds':   [sessionId],
+        'status':       'pending',
+        'items':        [],
+        'totalAmount':  0,
+        'createdAt':    FieldValue.serverTimestamp(),
+        'updatedAt':    FieldValue.serverTimestamp(),
       });
-
-      debugPrint('🆕 Created new order: $newOrderId');
+      debugPrint('Created new order: $newOrderId');
       if (mounted) setState(() => _activeOrderId = newOrderId);
       return newOrderId;
-
     } catch (e, st) {
-      debugPrint('❌ getOrCreateActiveOrder error: $e\n$st');
+      debugPrint('getOrCreateActiveOrder error: $e\n$st');
       return null;
     } finally {
       if (mounted) setState(() => _orderLookupInProgress = false);
     }
   }
 
-  // ─── Cart helpers ─────────────────────────────────────────────────────────
-
-  int getTotalCartQuantity() {
-    int total = 0;
-    for (var item in cart) {
-      total += item.qty;
-    }
-    return total;
-  }
+  // ── Cart helpers (unchanged) ─────────────────────────────────────────────
+  int getTotalCartQuantity() => cart.fold(0, (s, i) => s + i.qty);
 
   int getItemQuantity(String itemId, String variant) {
     int qty = 0;
@@ -394,16 +287,12 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
 
   List<dynamic> _safeList(dynamic raw) {
     if (raw == null) return [];
-    try {
-      return List<dynamic>.from(raw as List);
-    } catch (_) {
-      return [];
-    }
+    try { return List<dynamic>.from(raw as List); } catch (_) { return []; }
   }
 
   int _safeIndex(String itemId, List<dynamic> variants) {
     if (variants.isEmpty) return 0;
-    final stored = _selectedVariantIndexByItemId[itemId] ?? 0;
+    final stored  = _selectedVariantIndexByItemId[itemId] ?? 0;
     final clamped = stored.clamp(0, variants.length - 1);
     if (stored != clamped) _selectedVariantIndexByItemId[itemId] = clamped;
     return clamped;
@@ -411,9 +300,9 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
 
   int _toInt(dynamic val) {
     if (val == null) return 0;
-    if (val is int) return val;
+    if (val is int)    return val;
     if (val is double) return val.toInt();
-    if (val is num) return val.toInt();
+    if (val is num)    return val.toInt();
     return int.tryParse(val.toString()) ?? 0;
   }
 
@@ -427,18 +316,14 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
           final hm = t.split(':');
           return int.parse(hm[0]) * 60 + int.parse(hm[1]);
         }
-        final parts = t.split(' ');
-        final hm = parts[0].split(':');
+        final parts = t.split(' '); final hm = parts[0].split(':');
         int h = int.parse(hm[0]);
         if (parts[1] == 'PM' && h != 12) h += 12;
         if (parts[1] == 'AM' && h == 12) h = 0;
         return h * 60 + int.parse(hm[1]);
-      } catch (_) {
-        return 0;
-      }
+      } catch (_) { return 0; }
     }
-
-    final open = parseTime(openingTime);
+    final open  = parseTime(openingTime);
     final close = parseTime(closingTime);
     if (close < open) return cur >= open || cur <= close;
     return cur >= open && cur <= close;
@@ -446,118 +331,28 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
 
   String _formatDisplayTime(String t) {
     try {
-      t = t.trim();
-      int h, m;
+      t = t.trim(); int h, m;
       if (!t.contains(' ')) {
-        final hm = t.split(':');
-        h = int.parse(hm[0]);
-        m = int.parse(hm[1]);
+        final hm = t.split(':'); h = int.parse(hm[0]); m = int.parse(hm[1]);
       } else {
-        final parts = t.split(' ');
-        final hm = parts[0].split(':');
-        h = int.parse(hm[0]);
-        m = int.parse(hm[1]);
+        final parts = t.split(' '); final hm = parts[0].split(':');
+        h = int.parse(hm[0]); m = int.parse(hm[1]);
         if (parts[1] == 'PM' && h != 12) h += 12;
         if (parts[1] == 'AM' && h == 12) h = 0;
       }
       final period = h >= 12 ? 'PM' : 'AM';
-      final displayH = h % 12 == 0 ? 12 : h % 12;
-      return '$displayH:${m.toString().padLeft(2, '0')} $period';
-    } catch (_) {
-      return t;
-    }
+      final dh = h % 12 == 0 ? 12 : h % 12;
+      return '$dh:${m.toString().padLeft(2, '0')} $period';
+    } catch (_) { return t; }
   }
 
-  void _showRestaurantClosedPopup(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(kIsWeb ? 16 : 16.sp)),
-        title: Row(
-          children: [
-            Container(
-              padding: EdgeInsets.all(kIsWeb ? 8 : 8.sp),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
-              ),
-              child: Icon(Icons.access_time,
-                  color: Colors.red, size: kIsWeb ? 24 : 24.sp),
-            ),
-            SizedBox(width: kIsWeb ? 12 : 12.sp),
-            Text("Restaurant Closed",
-                style: GoogleFonts.poppins(
-                    fontSize: kIsWeb ? 18 : 18.sp,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Sorry, we're currently closed. Please come back during our operating hours.",
-              style: GoogleFonts.poppins(
-                  fontSize: kIsWeb ? 14 : 14.sp, color: Colors.black54),
-            ),
-            SizedBox(height: kIsWeb ? 16 : 16.sp),
-            Container(
-              padding: EdgeInsets.all(kIsWeb ? 12 : 12.sp),
-              decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.schedule,
-                      color: Colors.grey[600], size: kIsWeb ? 20 : 20.sp),
-                  SizedBox(width: kIsWeb ? 8 : 8.sp),
-                  Text(
-                      "Hours: ${_formatDisplayTime(openingTime)} – ${_formatDisplayTime(closingTime)}",
-                      style: GoogleFonts.poppins(
-                          fontSize: kIsWeb ? 13 : 13.sp,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black87)),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text("Got it",
-                style: GoogleFonts.poppins(
-                    fontSize: kIsWeb ? 14 : 14.sp,
-                    fontWeight: FontWeight.w500,
-                    color: _primaryColor)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ─── Cart update ──────────────────────────────────────────────────────────
-
-  void _updateItemQuantity(
-      String itemId,
-      String variant,
-      int change, {
-        String? itemName,
-        int? price,
-        String? image,
-      }) {
+  void _updateItemQuantity(String itemId, String variant, int change,
+      {String? itemName, int? price, String? image}) {
     final updated = List<CartItem>.from(_cartNotifier.value);
-    CartItem? existing;
-    int idx = -1;
+    CartItem? existing; int idx = -1;
     for (int i = 0; i < updated.length; i++) {
       if (updated[i].itemId == itemId && updated[i].variant == variant) {
-        existing = updated[i];
-        idx = i;
-        break;
+        existing = updated[i]; idx = i; break;
       }
     }
     if (existing != null) {
@@ -566,255 +361,152 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
         updated.removeAt(idx);
       } else {
         updated[idx] = CartItem(
-          itemId: existing.itemId,
-          name: existing.name,
-          variant: existing.variant,
-          price: existing.price,
-          qty: newQty.clamp(1, 99),
-          image: existing.image,
+          itemId: existing.itemId, name: existing.name,
+          variant: existing.variant, price: existing.price,
+          qty: newQty.clamp(1, 99), image: existing.image,
         );
       }
     } else if (change > 0 && itemName != null && price != null) {
       updated.add(CartItem(
-          itemId: itemId,
-          name: itemName,
-          variant: variant,
-          price: price,
-          qty: change,
-          image: image));
+          itemId: itemId, name: itemName, variant: variant,
+          price: price, qty: change, image: image));
       _lastAddedItemId.value = itemId;
     }
     _cartNotifier.value = updated;
-    _cartBounce.value = _cartBounce.value + 1;
+    _cartBounce.value   = _cartBounce.value + 1;
   }
 
   Future<void> _openCartPage(List<CartItem> cartItems) async {
     if (cartItems.isEmpty) return;
-
-    // Show a brief loading snackbar while we look up / create the order
     if (mounted && _preselectedTableId != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(children: [
-            const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2, color: Colors.white)),
-            const SizedBox(width: 12),
-            Text('Preparing your order...',
-                style: GoogleFonts.poppins(fontSize: kIsWeb ? 13 : 13.sp)),
-          ]),
-          duration: const Duration(seconds: 3),
-          backgroundColor: _primaryColor,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Row(children: [
+          const SizedBox(width: 16, height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+          const SizedBox(width: 12),
+          Text('Preparing your order...',
+              style: GoogleFonts.poppins(fontSize: kIsWeb ? 13 : 13.sp)),
+        ]),
+        duration: const Duration(seconds: 3),
+        backgroundColor: _primaryColor,
+      ));
     }
-
-    // ── Step 2: look up / create active order ────────────────────────────
     final orderId = await _getOrCreateActiveOrder();
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    }
-
+    if (mounted) ScaffoldMessenger.of(context).hideCurrentSnackBar();
     if (!mounted) return;
-
     final mutableCart = List<CartItem>.from(cartItems);
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => CartPage(
-          cart: mutableCart,
-          restaurantId: widget.restaurantId,
-          preselectedTableId: _preselectedTableId,
-          preselectedTableName: _preselectedTableName,
-          // ── NEW fields passed to CartPage ──────────────────────────────
-          sessionId: _sessionId,
-          activeOrderId: orderId,
-        ),
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => CartPage(
+        cart:                 mutableCart,
+        restaurantId:         widget.restaurantId,   // ← restaurantId
+        preselectedTableId:   _preselectedTableId,
+        preselectedTableName: _preselectedTableName,
+        sessionId:            _sessionId,
+        activeOrderId:        orderId,
       ),
-    ).then((_) {
+    )).then((_) {
       if (mounted) {
         _cartNotifier.value = List.from(mutableCart);
-        _cartBounce.value = _cartBounce.value + 1;
-        // Reset active order cache so next visit re-checks Firestore
-        // (the order status may have changed while user was in CartPage)
-        _activeOrderId = null;
+        _cartBounce.value   = _cartBounce.value + 1;
+        _activeOrderId      = null;
       }
     });
   }
 
-  // ─── Shared small widgets ─────────────────────────────────────────────────
+  // ── Image helpers (unchanged) ────────────────────────────────────────────
+  Widget _imagePlaceholder() => Container(
+    color: _C.chipBg,
+    child: Center(child: Icon(Icons.fastfood_rounded,
+        color: Colors.grey[300], size: kIsWeb ? 36 : 36.sp)),
+  );
 
-  Widget _imagePlaceholder() {
-    return Container(
-      color: const Color(0xFFF3F4F6),
-      child: Center(
-        child: Icon(Icons.fastfood_rounded,
-            color: Colors.grey[300], size: kIsWeb ? 36 : 36.sp),
-      ),
-    );
-  }
-
-  Widget _networkImage(String url, {BoxFit fit = BoxFit.cover}) {
-    return Image.network(
-      url,
-      fit: fit,
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-        return Container(
-          color: const Color(0xFFEEEEEE),
-          child: Center(
-            child: SizedBox(
-              width: kIsWeb ? 20 : 20.sp,
-              height: kIsWeb ? 20 : 20.sp,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.grey[400],
-                value: loadingProgress.expectedTotalBytes != null
-                    ? loadingProgress.cumulativeBytesLoaded /
-                    loadingProgress.expectedTotalBytes!
-                    : null,
-              ),
-            ),
-          ),
-        );
-      },
-      errorBuilder: (_, __, ___) => _imagePlaceholder(),
-    );
-  }
+  Widget _networkImage(String url, {BoxFit fit = BoxFit.cover}) =>
+      Image.network(url, fit: fit,
+        loadingBuilder: (_, child, prog) {
+          if (prog == null) return child;
+          return Container(color: const Color(0xFFEEEEEE),
+              child: Center(child: SizedBox(
+                width: kIsWeb ? 20 : 20.sp, height: kIsWeb ? 20 : 20.sp,
+                child: CircularProgressIndicator(strokeWidth: 2,
+                    color: Colors.grey[400],
+                    value: prog.expectedTotalBytes != null
+                        ? prog.cumulativeBytesLoaded / prog.expectedTotalBytes!
+                        : null),
+              )));
+        },
+        errorBuilder: (_, __, ___) => _imagePlaceholder(),
+      );
 
   Widget _logoFallback() {
     final initials = _restaurantName.isNotEmpty
-        ? _restaurantName
-        .trim()
-        .split(' ')
-        .take(2)
-        .map((w) => w[0].toUpperCase())
-        .join()
+        ? _restaurantName.trim().split(' ').take(2).map((w) => w[0].toUpperCase()).join()
         : '?';
     return Container(
       color: Colors.white.withOpacity(0.15),
-      child: Center(
-        child: Text(
-          initials,
-          style: GoogleFonts.poppins(
-              fontSize: kIsWeb ? 14 : 14.sp,
-              fontWeight: FontWeight.bold,
-              color: Colors.white),
-        ),
-      ),
+      child: Center(child: Text(initials,
+          style: GoogleFonts.poppins(fontSize: kIsWeb ? 14 : 14.sp,
+              fontWeight: FontWeight.bold, color: Colors.white))),
     );
   }
 
-  Widget _vegBadge(bool isVeg) {
-    return Container(
-      width: kIsWeb ? 18 : 18.sp,
-      height: kIsWeb ? 18 : 18.sp,
+  Widget _vegBadge(bool isVeg) => Container(
+    width: kIsWeb ? 18 : 18.sp, height: kIsWeb ? 18 : 18.sp,
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(kIsWeb ? 3 : 3.sp),
+      border: Border.all(color: isVeg ? _C.vegGreen : _C.nonVegRed, width: 1.5),
+    ),
+    child: Center(child: Container(
+      width: kIsWeb ? 8 : 8.sp, height: kIsWeb ? 8 : 8.sp,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(kIsWeb ? 3 : 3.sp),
-        border: Border.all(
-            color: isVeg ? Colors.green : Colors.red, width: 1.5),
-      ),
-      child: Center(
-        child: Container(
-          width: kIsWeb ? 8 : 8.sp,
-          height: kIsWeb ? 8 : 8.sp,
-          decoration: BoxDecoration(
-            color: isVeg ? Colors.green : Colors.red,
-            shape: BoxShape.circle,
-          ),
-        ),
-      ),
-    );
-  }
+          color: isVeg ? _C.vegGreen : _C.nonVegRed, shape: BoxShape.circle),
+    )),
+  );
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // VARIANT DROPDOWN (unchanged logic)
+  // ─────────────────────────────────────────────────────────────────────────
   Widget _buildVariantDropdown({
     required String itemId,
     required List<dynamic> variants,
     required int selectedIndex,
   }) {
     if (variants.isEmpty) return const SizedBox.shrink();
-
-    final selected = variants[selectedIndex] as Map<String, dynamic>;
+    final selected     = variants[selectedIndex] as Map<String, dynamic>;
     final selectedName = (selected['name'] ?? '') as String;
-
     if (variants.length == 1) {
       if (selectedName.isEmpty) return const SizedBox.shrink();
-      return Container(
-        padding: EdgeInsets.symmetric(
-            horizontal: kIsWeb ? 10 : 10.w, vertical: kIsWeb ? 4 : 4.h),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFEEEE),
-          borderRadius: BorderRadius.circular(kIsWeb ? 20 : 20.sp),
-          border: Border.all(color: Colors.grey.withOpacity(0.25)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              selectedName,
-              style: GoogleFonts.poppins(
-                  fontSize: kIsWeb ? 10 : 10.sp,
-                  color: Colors.black,
-                  fontWeight: FontWeight.w500),
-            ),
-          ],
-        ),
-      );
+      return _variantPill(selectedName, showArrow: false);
     }
-
     return GestureDetector(
       onTap: () => _showVariantDropdownSheet(
-        itemId: itemId,
-        variants: variants,
-        selectedIndex: selectedIndex,
-      ),
-      child: Container(
-        padding: EdgeInsets.symmetric(
-            horizontal: kIsWeb ? 10 : 10.w, vertical: kIsWeb ? 5 : 5.h),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
-          border:
-          Border.all(color: _primaryColor.withOpacity(0.45), width: 1.2),
-          boxShadow: [
-            BoxShadow(
-              color: _primaryColor.withOpacity(0.08),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: kIsWeb ? 6 : 6.sp,
-              height: kIsWeb ? 6 : 6.sp,
-              decoration: const BoxDecoration(
-                  color: _primaryColor, shape: BoxShape.circle),
-            ),
-            SizedBox(width: kIsWeb ? 6 : 6.w),
-            Text(
-              selectedName,
-              style: GoogleFonts.poppins(
-                  fontSize: kIsWeb ? 11 : 11.sp,
-                  color: Colors.black87,
-                  fontWeight: FontWeight.w500),
-            ),
-            SizedBox(width: kIsWeb ? 5 : 5.w),
-            Icon(Icons.keyboard_arrow_down_rounded,
-                size: kIsWeb ? 16 : 16.sp, color: _primaryColor),
-          ],
-        ),
-      ),
+          itemId: itemId, variants: variants, selectedIndex: selectedIndex),
+      child: _variantPill(selectedName, showArrow: true),
     );
   }
 
-  // ─── Variant dropdown sheet ───────────────────────────────────────────────
+  Widget _variantPill(String name, {required bool showArrow}) => Container(
+    padding: EdgeInsets.symmetric(
+        horizontal: kIsWeb ? 10 : 10.w, vertical: kIsWeb ? 5 : 5.h),
+    decoration: BoxDecoration(
+      color: _C.chipBg,
+      borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
+      border: Border.all(color: _C.divider),
+    ),
+    child: Row(mainAxisSize: MainAxisSize.min, children: [
+      Container(width: kIsWeb ? 6 : 6.sp, height: kIsWeb ? 6 : 6.sp,
+          decoration: const BoxDecoration(color: _C.textMuted, shape: BoxShape.circle)),
+      SizedBox(width: kIsWeb ? 6 : 6.w),
+      Text(name, style: GoogleFonts.poppins(
+          fontSize: kIsWeb ? 11 : 11.sp, color: _C.textSecondary,
+          fontWeight: FontWeight.w500)),
+      if (showArrow) ...[
+        SizedBox(width: kIsWeb ? 4 : 4.w),
+        Icon(Icons.keyboard_arrow_down_rounded,
+            size: kIsWeb ? 14 : 14.sp, color: _C.textMuted),
+      ],
+    ]),
+  );
 
   void _showVariantDropdownSheet({
     required String itemId,
@@ -827,218 +519,279 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
       isScrollControlled: true,
       builder: (ctx) {
         int localIndex = selectedIndex;
-        return StatefulBuilder(
-          builder: (ctx, setSheet) => Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  margin: const EdgeInsets.only(top: 12),
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.fromLTRB(kIsWeb ? 20 : 20.w,
-                      kIsWeb ? 20 : 20.h, kIsWeb ? 20 : 20.w, kIsWeb ? 4 : 4.h),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(kIsWeb ? 6 : 6.sp),
-                        decoration: BoxDecoration(
-                          color: _primaryColor.withOpacity(0.1),
-                          borderRadius:
-                          BorderRadius.circular(kIsWeb ? 8 : 8.sp),
-                        ),
-                        child: Icon(Icons.tune_rounded,
-                            color: _primaryColor, size: kIsWeb ? 18 : 18.sp),
-                      ),
-                      SizedBox(width: kIsWeb ? 10 : 10.w),
-                      Text("Select Variant",
-                          style: GoogleFonts.poppins(
-                              fontSize: kIsWeb ? 18 : 18.sp,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.black87)),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding:
-                  EdgeInsets.symmetric(horizontal: kIsWeb ? 20 : 20.w),
-                  child: Divider(color: Colors.grey[100], height: 1),
-                ),
-                SizedBox(height: kIsWeb ? 8 : 8.h),
-                ...variants.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final variant = entry.value as Map<String, dynamic>;
-                  final name = (variant['name'] ?? '') as String;
-                  final price = _toInt(variant['price']);
-                  final isSelected = index == localIndex;
-
-                  return GestureDetector(
-                    onTap: () {
-                      setSheet(() => localIndex = index);
-                      setState(
-                              () => _selectedVariantIndexByItemId[itemId] = index);
-                      Navigator.pop(ctx);
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 160),
-                      margin: EdgeInsets.symmetric(
-                          horizontal: kIsWeb ? 16 : 16.w,
-                          vertical: kIsWeb ? 4 : 4.h),
-                      padding: EdgeInsets.symmetric(
-                          horizontal: kIsWeb ? 16 : 16.w,
-                          vertical: kIsWeb ? 12 : 12.h),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? _primaryColor.withOpacity(0.06)
-                            : Colors.grey[50],
-                        borderRadius:
-                        BorderRadius.circular(kIsWeb ? 12 : 12.sp),
-                        border: Border.all(
-                          color: isSelected
-                              ? _primaryColor.withOpacity(0.4)
-                              : Colors.transparent,
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 160),
-                            width: kIsWeb ? 20 : 20.sp,
-                            height: kIsWeb ? 20 : 20.sp,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isSelected
-                                    ? _primaryColor
-                                    : Colors.grey[400]!,
-                                width: isSelected ? 0 : 1.5,
-                              ),
-                              color: isSelected ? _primaryColor : Colors.white,
-                            ),
-                            child: isSelected
-                                ? Icon(Icons.check_rounded,
-                                size: kIsWeb ? 13 : 13.sp,
-                                color: Colors.white)
-                                : null,
-                          ),
-                          SizedBox(width: kIsWeb ? 12 : 12.w),
-                          Expanded(
-                            child: Text(name,
-                                style: GoogleFonts.poppins(
-                                    fontSize: kIsWeb ? 14 : 14.sp,
-                                    fontWeight: isSelected
-                                        ? FontWeight.w600
-                                        : FontWeight.w400,
-                                    color: isSelected
-                                        ? _primaryColor
-                                        : Colors.black87)),
-                          ),
-                          Text("₹$price",
-                              style: GoogleFonts.poppins(
-                                  fontSize: kIsWeb ? 13 : 13.sp,
-                                  fontWeight: FontWeight.w600,
-                                  color: isSelected
-                                      ? _primaryColor
-                                      : Colors.black54)),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
-                SizedBox(height: kIsWeb ? 24 : 24.h),
-              ],
-            ),
+        return StatefulBuilder(builder: (ctx, setSheet) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
-        );
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(margin: const EdgeInsets.only(top: 12), width: 40, height: 4,
+                decoration: BoxDecoration(color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2))),
+            Padding(
+              padding: EdgeInsets.fromLTRB(kIsWeb ? 20 : 20.w, kIsWeb ? 20 : 20.h,
+                  kIsWeb ? 20 : 20.w, kIsWeb ? 4 : 4.h),
+              child: Row(children: [
+                Container(
+                    padding: EdgeInsets.all(kIsWeb ? 6 : 6.sp),
+                    decoration: BoxDecoration(color: _C.accentLight,
+                        borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp)),
+                    child: Icon(Icons.tune_rounded,
+                        color: _C.accent, size: kIsWeb ? 18 : 18.sp)),
+                SizedBox(width: kIsWeb ? 10 : 10.w),
+                Text("Select Variant", style: GoogleFonts.poppins(
+                    fontSize: kIsWeb ? 18 : 18.sp,
+                    fontWeight: FontWeight.w700, color: _C.textPrimary)),
+              ]),
+            ),
+            Padding(padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 20 : 20.w),
+                child: Divider(color: Colors.grey[100], height: 1)),
+            SizedBox(height: kIsWeb ? 8 : 8.h),
+            ...variants.asMap().entries.map((entry) {
+              final index   = entry.key;
+              final variant = entry.value as Map<String, dynamic>;
+              final name    = (variant['name'] ?? '') as String;
+              final price   = _toInt(variant['price']);
+              final isSel   = index == localIndex;
+              return GestureDetector(
+                onTap: () {
+                  setSheet(() => localIndex = index);
+                  setState(() => _selectedVariantIndexByItemId[itemId] = index);
+                  Navigator.pop(ctx);
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  margin: EdgeInsets.symmetric(
+                      horizontal: kIsWeb ? 16 : 16.w, vertical: kIsWeb ? 4 : 4.h),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: kIsWeb ? 16 : 16.w, vertical: kIsWeb ? 12 : 12.h),
+                  decoration: BoxDecoration(
+                    color: isSel ? _C.accentLight : Colors.grey[50],
+                    borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
+                    border: Border.all(
+                        color: isSel ? _C.accent.withOpacity(0.4) : Colors.transparent,
+                        width: 1.5),
+                  ),
+                  child: Row(children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      width: kIsWeb ? 20 : 20.sp, height: kIsWeb ? 20 : 20.sp,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                            color: isSel ? _C.accent : Colors.grey[400]!,
+                            width: isSel ? 0 : 1.5),
+                        color: isSel ? _C.accent : Colors.white,
+                      ),
+                      child: isSel
+                          ? Icon(Icons.check_rounded,
+                          size: kIsWeb ? 13 : 13.sp, color: Colors.white)
+                          : null,
+                    ),
+                    SizedBox(width: kIsWeb ? 12 : 12.w),
+                    Expanded(child: Text(name, style: GoogleFonts.poppins(
+                        fontSize: kIsWeb ? 14 : 14.sp,
+                        fontWeight: isSel ? FontWeight.w600 : FontWeight.w400,
+                        color: isSel ? _C.accent : _C.textPrimary))),
+                    Text("₹$price", style: GoogleFonts.poppins(
+                        fontSize: kIsWeb ? 13 : 13.sp, fontWeight: FontWeight.w600,
+                        color: isSel ? _C.accent : _C.textSecondary)),
+                  ]),
+                ),
+              );
+            }),
+            SizedBox(height: kIsWeb ? 24 : 24.h),
+          ]),
+        ));
       },
     );
   }
 
-  // ─── ADD / counter widget ─────────────────────────────────────────────────
-
-  Widget _buildAddOrCounterWidget(
-      BuildContext context,
-      QueryDocumentSnapshot item,
-      String itemId,
-      String variant,
-      int price,
-      ) {
+  // ── Add / counter (unchanged logic) ─────────────────────────────────────
+  Widget _buildAddOrCounterWidget(BuildContext context,
+      QueryDocumentSnapshot item, String itemId, String variant, int price) {
     final isOpen = _isRestaurantOpen();
-
     return ValueListenableBuilder<List<CartItem>>(
       valueListenable: _cartNotifier,
       builder: (context, cartItems, _) {
         int qty = 0;
         for (final c in cartItems) {
-          if (c.itemId == itemId && c.variant == variant) {
-            qty = c.qty;
-            break;
-          }
+          if (c.itemId == itemId && c.variant == variant) { qty = c.qty; break; }
         }
-
         if (!isOpen && qty == 0) {
           return GestureDetector(
             onTap: () => _showRestaurantClosedPopup(context),
             child: Container(
               height: kIsWeb ? 34 : 34.h,
-              padding:
-              EdgeInsets.symmetric(horizontal: kIsWeb ? 14 : 14.w),
+              padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 14 : 14.w),
               decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
-                border: Border.all(color: Colors.grey[350]!),
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
+                border: Border.all(color: Colors.grey[300]!),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.lock_clock,
-                      size: kIsWeb ? 13 : 13.sp, color: Colors.grey[500]),
-                  SizedBox(width: kIsWeb ? 5 : 5.w),
-                  Text(
-                    "CLOSED",
-                    style: GoogleFonts.poppins(
-                        fontSize: kIsWeb ? 11 : 11.sp,
-                        color: Colors.grey[500],
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5),
-                  ),
-                ],
-              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.lock_clock, size: kIsWeb ? 13 : 13.sp, color: Colors.grey[400]),
+                SizedBox(width: kIsWeb ? 5 : 5.w),
+                Text("CLOSED", style: GoogleFonts.poppins(
+                    fontSize: kIsWeb ? 11 : 11.sp, color: Colors.grey[500],
+                    fontWeight: FontWeight.w600, letterSpacing: 0.5)),
+              ]),
             ),
           );
         }
-
         if (qty > 0) {
           return _CounterWidget(
-            qty: qty,
-            primaryColor: _primaryColor,
+            qty: qty, primaryColor: _primaryColor,
             onDecrement: () => _updateItemQuantity(itemId, variant, -1,
                 itemName: item['name'], price: price, image: item['image']),
             onIncrement: () => _updateItemQuantity(itemId, variant, 1,
                 itemName: item['name'], price: price, image: item['image']),
           );
         }
-
         return _AddButtonWidget(
-          itemId: itemId,
-          primaryColor: _primaryColor,
+          itemId: itemId, primaryColor: _primaryColor,
           lastAddedNotifier: _lastAddedItemId,
           onTap: () => _updateItemQuantity(itemId, variant, 1,
               itemName: item['name'], price: price, image: item['image']),
           isOpen: true,
         );
       },
+    );
+  }
+
+  void _showRestaurantClosedPopup(BuildContext context) {
+    showDialog(context: context, barrierDismissible: true,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(kIsWeb ? 16 : 16.sp)),
+        title: Row(children: [
+          Container(padding: EdgeInsets.all(kIsWeb ? 8 : 8.sp),
+              decoration: BoxDecoration(color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp)),
+              child: Icon(Icons.access_time,
+                  color: Colors.red, size: kIsWeb ? 24 : 24.sp)),
+          SizedBox(width: kIsWeb ? 12 : 12.sp),
+          Text("Restaurant Closed", style: GoogleFonts.poppins(
+              fontSize: kIsWeb ? 18 : 18.sp,
+              fontWeight: FontWeight.w600, color: Colors.black87)),
+        ]),
+        content: Column(mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Sorry, we're currently closed.",
+                  style: GoogleFonts.poppins(
+                      fontSize: kIsWeb ? 14 : 14.sp, color: Colors.black54)),
+              SizedBox(height: kIsWeb ? 16 : 16.sp),
+              Container(padding: EdgeInsets.all(kIsWeb ? 12 : 12.sp),
+                  decoration: BoxDecoration(color: Colors.grey.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp)),
+                  child: Row(children: [
+                    Icon(Icons.schedule,
+                        color: Colors.grey[600], size: kIsWeb ? 20 : 20.sp),
+                    SizedBox(width: kIsWeb ? 8 : 8.sp),
+                    Text("Hours: ${_formatDisplayTime(openingTime)} – ${_formatDisplayTime(closingTime)}",
+                        style: GoogleFonts.poppins(
+                            fontSize: kIsWeb ? 13 : 13.sp,
+                            fontWeight: FontWeight.w500, color: Colors.black87)),
+                  ])),
+            ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx),
+              child: Text("Got it", style: GoogleFonts.poppins(
+                  fontSize: kIsWeb ? 14 : 14.sp,
+                  fontWeight: FontWeight.w500, color: _primaryColor))),
+        ],
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // REDESIGNED MENU CARDS (same parameters as original)
+  // ─────────────────────────────────────────────────────────────────────────
+  Widget _buildMenuCard({
+    required BuildContext context,
+    required QueryDocumentSnapshot item,
+    required String itemId,
+    required List variants,
+    required int selectedIndex,
+    required dynamic selectedVariant,
+    required dynamic price,
+    required Color cardColor,
+    required Color textColor,
+    required Color cardInfoColor,
+    required Color primaryColor,
+  }) {
+    final data = item.data() as Map<String, dynamic>;
+    final bool isVeg  = data['isVeg'] == true;
+    final String? desc = data['description'] as String?;
+    final v = _safeList(data['variants']);
+    final si = _safeIndex(itemId, v);
+    final sv = v.isNotEmpty ? v[si] : null;
+    final int safePrice = _toInt(sv?['price'] ?? data['price']);
+    final String varName = (sv?['name'] ?? '') as String;
+
+    return Container(
+      margin: EdgeInsets.symmetric(
+          horizontal: kIsWeb ? 16 : 16.w, vertical: kIsWeb ? 5 : 5.h),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(kIsWeb ? 16 : 16.sp),
+        boxShadow: [BoxShadow(color: _C.shadow, blurRadius: 14, offset: const Offset(0, 4))],
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(kIsWeb ? 12 : 12.w),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // Image
+          Stack(clipBehavior: Clip.none, children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
+              child: SizedBox(
+                width: kIsWeb ? 88 : 88.w, height: kIsWeb ? 88 : 88.h,
+                child: item['image'] != null
+                    ? _networkImage(item['image'] as String)
+                    : _imagePlaceholder(),
+              ),
+            ),
+            Positioned(top: -4, left: -4, child: _vegBadge(isVeg)),
+          ]),
+          SizedBox(width: kIsWeb ? 12 : 12.w),
+          // Content
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(item['name'] ?? "Item",
+                      style: GoogleFonts.poppins(
+                          fontSize: kIsWeb ? 13 : 13.sp,
+                          fontWeight: FontWeight.w700,
+                          color: _C.textPrimary, height: 1.3),
+                      maxLines: 2, overflow: TextOverflow.ellipsis),
+                  if (desc != null && desc.isNotEmpty) ...[
+                    SizedBox(height: kIsWeb ? 2 : 2.h),
+                    Text(desc, style: GoogleFonts.poppins(
+                        fontSize: kIsWeb ? 10 : 10.sp, color: _C.textMuted, height: 1.3),
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ],
+                  SizedBox(height: kIsWeb ? 7 : 7.h),
+                  Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                    Expanded(child: _buildVariantDropdown(
+                        itemId: itemId, variants: v, selectedIndex: si)),
+                    SizedBox(width: kIsWeb ? 8 : 8.w),
+                    Column(crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text("₹$safePrice", style: GoogleFonts.poppins(
+                              fontSize: kIsWeb ? 15 : 15.sp,
+                              fontWeight: FontWeight.w800, color: _C.accent)),
+                          SizedBox(height: kIsWeb ? 6 : 6.h),
+                          _buildAddOrCounterWidget(
+                              context, item, itemId, varName, safePrice),
+                        ]),
+                  ]),
+                ]),
+          ),
+        ]),
+      ),
     );
   }
 
@@ -1056,333 +809,156 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     required Color primaryColor,
   }) {
     final data = item.data() as Map<String, dynamic>;
-    final bool isVeg = data['isVeg'] == true;
-    final String? description = data['description'] as String?;
-
-    final List<dynamic> v = _safeList(data['variants']);
-    final int si = _safeIndex(itemId, v);
-    final dynamic sv = v.isNotEmpty ? v[si] : null;
+    final bool isVeg  = data['isVeg'] == true;
+    final String? desc = data['description'] as String?;
+    final v = _safeList(data['variants']);
+    final si = _safeIndex(itemId, v);
+    final sv = v.isNotEmpty ? v[si] : null;
     final int safePrice = _toInt(sv?['price'] ?? data['price']);
-    final String variantName = (sv?['name'] ?? '') as String;
+    final String varName = (sv?['name'] ?? '') as String;
 
     return Container(
       margin: EdgeInsets.symmetric(
           horizontal: kIsWeb ? 16 : 16.w, vertical: kIsWeb ? 5 : 5.h),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(kIsWeb ? 14 : 14.sp),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 10,
-              offset: const Offset(0, 3)),
-        ],
+        borderRadius: BorderRadius.circular(kIsWeb ? 16 : 16.sp),
+        boxShadow: [BoxShadow(color: _C.shadow, blurRadius: 16, offset: const Offset(0, 4))],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(kIsWeb ? 14 : 14.sp),
-              bottomLeft: Radius.circular(kIsWeb ? 14 : 14.sp),
-            ),
-            child: SizedBox(
-              width: 110,
-              height: 110,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  item['image'] != null
-                      ? _networkImage(item['image'] as String)
-                      : _imagePlaceholder(),
-                  Positioned(top: 8, left: 8, child: _vegBadge(isVeg)),
-                ],
-              ),
-            ),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        ClipRRect(
+          borderRadius: BorderRadius.only(
+            topLeft:    Radius.circular(kIsWeb ? 16 : 16.sp),
+            bottomLeft: Radius.circular(kIsWeb ? 16 : 16.sp),
           ),
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                  horizontal: kIsWeb ? 14 : 14.w,
-                  vertical: kIsWeb ? 10 : 10.h),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    item['name'] ?? "Item",
-                    style: GoogleFonts.poppins(
-                        fontSize: kIsWeb ? 14 : 14.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                        height: 1.3),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (description != null && description.isNotEmpty) ...[
-                    SizedBox(height: kIsWeb ? 2 : 2.h),
-                    Text(description,
-                        style: GoogleFonts.poppins(
-                            fontSize: kIsWeb ? 11 : 11.sp,
-                            color: Colors.grey[500],
-                            height: 1.3),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis),
-                  ],
-                  SizedBox(height: kIsWeb ? 7 : 7.h),
-                  _buildVariantDropdown(
-                    itemId: itemId,
-                    variants: v,
-                    selectedIndex: si,
-                  ),
-                  SizedBox(height: kIsWeb ? 8 : 8.h),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text("₹$safePrice",
-                          style: GoogleFonts.poppins(
-                              fontSize: kIsWeb ? 15 : 15.sp,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.red[600])),
-                      _buildAddOrCounterWidget(
-                          context, item, itemId, variantName, safePrice),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+          child: SizedBox(
+            width: kIsWeb ? 110 : 110.w, height: kIsWeb ? 110 : 110.h,
+            child: Stack(fit: StackFit.expand, children: [
+              item['image'] != null
+                  ? _networkImage(item['image'] as String)
+                  : _imagePlaceholder(),
+              Positioned(top: 8, left: 8, child: _vegBadge(isVeg)),
+            ]),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMenuCard({
-    required BuildContext context,
-    required QueryDocumentSnapshot item,
-    required String itemId,
-    required List variants,
-    required int selectedIndex,
-    required dynamic selectedVariant,
-    required dynamic price,
-    required Color cardColor,
-    required Color textColor,
-    required Color cardInfoColor,
-    required Color primaryColor,
-  }) {
-    final data = item.data() as Map<String, dynamic>;
-    final bool isVeg = data['isVeg'] == true;
-    final String? description = data['description'] as String?;
-
-    final List<dynamic> v = _safeList(data['variants']);
-    final int si = _safeIndex(itemId, v);
-    final dynamic sv = v.isNotEmpty ? v[si] : null;
-    final int safePrice = _toInt(sv?['price'] ?? data['price']);
-    final String variantName = (sv?['name'] ?? '') as String;
-
-    return Container(
-      margin: EdgeInsets.symmetric(
-          horizontal: kIsWeb ? 16 : 16.w, vertical: kIsWeb ? 3 : 3.h),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 6,
-              offset: const Offset(0, 1)),
-        ],
-      ),
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-            horizontal: kIsWeb ? 10 : 10.w, vertical: kIsWeb ? 8 : 8.h),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
-                  child: SizedBox(
-                    width: 80,
-                    height: 80,
-                    child: item['image'] != null
-                        ? _networkImage(item['image'] as String)
-                        : _imagePlaceholder(),
-                  ),
-                ),
-                Positioned(top: 3, left: 3, child: _vegBadge(isVeg)),
-              ],
-            ),
-            SizedBox(width: kIsWeb ? 10 : 10.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(item['name'] ?? "Item",
-                            style: GoogleFonts.poppins(
-                                fontSize: kIsWeb ? 13 : 13.sp,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis),
-                      ),
-                      SizedBox(width: kIsWeb ? 8 : 8.w),
-                      Text("₹$safePrice",
-                          style: GoogleFonts.poppins(
-                              fontSize: kIsWeb ? 14 : 14.sp,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.red[600])),
-                    ],
-                  ),
-                  if (description != null && description.isNotEmpty) ...[
-                    SizedBox(height: kIsWeb ? 1 : 1.h),
-                    Text(description,
-                        style: GoogleFonts.poppins(
-                            fontSize: kIsWeb ? 10 : 10.sp,
-                            color: Colors.grey[500]),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis),
-                  ],
-                  SizedBox(height: kIsWeb ? 5 : 5.h),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        child: _buildVariantDropdown(
-                          itemId: itemId,
-                          variants: v,
-                          selectedIndex: si,
-                        ),
-                      ),
-                      SizedBox(width: kIsWeb ? 8 : 8.w),
-                      _buildAddOrCounterWidget(
-                          context, item, itemId, variantName, safePrice),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
         ),
-      ),
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+                horizontal: kIsWeb ? 14 : 14.w, vertical: kIsWeb ? 12 : 12.h),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(item['name'] ?? "Item",
+                      style: GoogleFonts.poppins(
+                          fontSize: kIsWeb ? 14 : 14.sp,
+                          fontWeight: FontWeight.w700,
+                          color: _C.textPrimary, height: 1.3),
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                  if (desc != null && desc.isNotEmpty) ...[
+                    SizedBox(height: kIsWeb ? 2 : 2.h),
+                    Text(desc, style: GoogleFonts.poppins(
+                        fontSize: kIsWeb ? 11 : 11.sp, color: _C.textMuted, height: 1.3),
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ],
+                  SizedBox(height: kIsWeb ? 8 : 8.h),
+                  _buildVariantDropdown(
+                      itemId: itemId, variants: v, selectedIndex: si),
+                  SizedBox(height: kIsWeb ? 8 : 8.h),
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text("₹$safePrice", style: GoogleFonts.poppins(
+                            fontSize: kIsWeb ? 15 : 15.sp,
+                            fontWeight: FontWeight.w800, color: _C.accent)),
+                        _buildAddOrCounterWidget(
+                            context, item, itemId, varName, safePrice),
+                      ]),
+                ]),
+          ),
+        ),
+      ]),
     );
   }
 
-  // ─── Tab Content Widgets ──────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
+  // TAB BUILDERS — all pass widget.restaurantId unchanged
+  // ─────────────────────────────────────────────────────────────────────────
+  Widget _buildHomeTab() => HomeTab(
+    restaurantId:                widget.restaurantId,
+    unifiedCategoryListView:     _unifiedCategoryListView,
+    selectedCategoryId:          _selectedCategoryId,
+    collapsedCategoryIds:        _collapsedCategoryIds,
+    onCategorySelected:          (id) => setState(() => _selectedCategoryId = id),
+    onCategoryToggle: (id) => setState(() {
+      if (_collapsedCategoryIds.contains(id)) {
+        _collapsedCategoryIds.remove(id);
+      } else {
+        _collapsedCategoryIds.add(id);
+      }
+    }),
+    selectedVariantIndexByItemId: _selectedVariantIndexByItemId,
+    updateItemQuantity:           _updateItemQuantity,
+    getItemQuantity:              getItemQuantity,
+    primaryColor:                 _primaryColor,
+  );
 
-  Widget _buildHomeTab() {
-    return HomeTab(
-      restaurantId: widget.restaurantId,
-      unifiedCategoryListView: _unifiedCategoryListView,
-      selectedCategoryId: _selectedCategoryId,
-      collapsedCategoryIds: _collapsedCategoryIds,
-      onCategorySelected: (categoryId) {
-        setState(() => _selectedCategoryId = categoryId);
-      },
-      onCategoryToggle: (categoryId) {
-        setState(() {
-          if (_collapsedCategoryIds.contains(categoryId)) {
-            _collapsedCategoryIds.remove(categoryId);
-          } else {
-            _collapsedCategoryIds.add(categoryId);
-          }
-        });
-      },
-      selectedVariantIndexByItemId: _selectedVariantIndexByItemId,
-      updateItemQuantity: _updateItemQuantity,
-      getItemQuantity: getItemQuantity,
-      primaryColor: _primaryColor,
-    );
-  }
+  Widget _buildOrdersTab()  => TrackOrderPage(restaurantId: widget.restaurantId);
+  Widget _buildOffersTab()  => SpecialOffersScreen();
+  Widget _buildAccountTab() => AccountPage(restaurantId: widget.restaurantId);
+  Widget _buildAssistTab()  => CallWaiterPage(
+    restaurantId:       widget.restaurantId,
+    tableIdNotifier:   _tableIdNotifier,
+    tableNameNotifier: _tableNameNotifier,
+  );
 
-  Widget _buildOrdersTab() {
-    return TrackOrderPage(restaurantId: widget.restaurantId);
-  }
-
-  Widget _buildOffersTab() {
-    return SpecialOffersScreen();
-  }
-
-  Widget _buildAccountTab() {
-    return AccountPage(restaurantId: widget.restaurantId);
-  }
-
-  Widget _buildAssistTab() {
-    return CallWaiterPage(
-      restaurantId: widget.restaurantId,
-      tableIdNotifier: _tableIdNotifier,
-      tableNameNotifier: _tableNameNotifier,
-    );
-  }
-
-  // ─── Build ────────────────────────────────────────────────────────────────
-
+  // ─────────────────────────────────────────────────────────────────────────
+  // BUILD
+  // ─────────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     super.build(context);
 
     if (_hasRestaurantIdError || widget.restaurantId.isEmpty) {
       return Scaffold(
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.link_off, size: 64, color: Colors.grey),
-                const SizedBox(height: 16),
-                Text(
-                  'Invalid Menu Link',
-                  style: GoogleFonts.poppins(
-                      fontSize: kIsWeb ? 20 : 20.sp,
-                      fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Please scan the QR code again or ask the restaurant for a valid link.',
+        backgroundColor: _C.bg,
+        body: Center(child: Padding(padding: const EdgeInsets.all(32),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.link_off, size: 64, color: Colors.grey),
+              const SizedBox(height: 16),
+              Text('Invalid Menu Link', style: GoogleFonts.poppins(
+                  fontSize: kIsWeb ? 20 : 20.sp, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              Text('Please scan the QR code again or ask the restaurant for a valid link.',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.poppins(
-                      fontSize: kIsWeb ? 14 : 14.sp, color: Colors.grey),
-                ),
-              ],
-            ),
-          ),
-        ),
+                      fontSize: kIsWeb ? 14 : 14.sp, color: Colors.grey)),
+            ]))),
       );
     }
 
     return WillPopScope(
       onWillPop: () async {
-        final exit = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
-            title: const Text("Exit Menu?"),
-            content: const Text("Are you sure you want to close the menu?"),
-            actions: [
-              TextButton(
-                  onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text("Cancel")),
-              ElevatedButton(
-                  onPressed: () => Navigator.pop(ctx, true),
-                  child: const Text("Close")),
-            ],
-          ),
-        );
+        final exit = await showDialog<bool>(context: context,
+            builder: (ctx) => AlertDialog(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
+              title: const Text("Exit Menu?"),
+              content: const Text("Are you sure you want to close the menu?"),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx, false),
+                    child: const Text("Cancel")),
+                ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: _primaryColor),
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: const Text("Close", style: TextStyle(color: Colors.white))),
+              ],
+            ));
         return exit ?? false;
       },
       child: StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance
             .collection('restaurants')
-            .doc(widget.restaurantId)
+            .doc(widget.restaurantId)   // ← restaurantId
             .snapshots(),
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
@@ -1393,577 +969,399 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
               secondaryColor: Color(0xFFEC4899),
             );
           }
-
           if (snap.hasError) {
-            return Scaffold(
-              appBar: AppBar(title: const Text('Error')),
-              body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.error_outline,
-                        size: 64, color: Colors.red),
-                    const SizedBox(height: 16),
-                    Text('Error loading restaurant data',
-                        style: GoogleFonts.poppins(
-                            fontSize: kIsWeb ? 18 : 18.sp,
-                            fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 8),
-                    Text('${snap.error}',
-                        style: GoogleFonts.poppins(
-                            fontSize: kIsWeb ? 14 : 14.sp,
-                            color: Colors.grey),
-                        textAlign: TextAlign.center),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Go Back')),
-                  ],
-                ),
-              ),
-            );
+            return Scaffold(appBar: AppBar(title: const Text('Error')),
+                body: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                      const SizedBox(height: 16),
+                      Text('Error loading restaurant data', style: GoogleFonts.poppins(
+                          fontSize: kIsWeb ? 18 : 18.sp, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 8),
+                      Text('${snap.error}', style: GoogleFonts.poppins(
+                          fontSize: kIsWeb ? 14 : 14.sp, color: Colors.grey),
+                          textAlign: TextAlign.center),
+                      const SizedBox(height: 16),
+                      ElevatedButton(onPressed: () => Navigator.pop(context),
+                          child: const Text('Go Back')),
+                    ])));
           }
-
           if (!snap.hasData || snap.data?.data() == null) {
-            return Scaffold(
-              appBar: AppBar(title: const Text('Not Found')),
-              body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.restaurant, size: 64, color: Colors.grey),
-                    const SizedBox(height: 16),
-                    Text('Restaurant not found',
-                        style: TextStyle(
-                            fontSize: kIsWeb ? 18 : 18.sp,
-                            fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 8),
-                    Text('The restaurant link may be invalid or expired.',
-                        style: TextStyle(
-                            fontSize: kIsWeb ? 14 : 14.sp,
-                            color: Colors.grey),
-                        textAlign: TextAlign.center),
-                  ],
-                ),
-              ),
-            );
+            return Scaffold(appBar: AppBar(title: const Text('Not Found')),
+                body: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.restaurant, size: 64, color: Colors.grey),
+                      const SizedBox(height: 16),
+                      Text('Restaurant not found', style: GoogleFonts.poppins(
+                          fontSize: kIsWeb ? 18 : 18.sp, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 8),
+                      Text('The restaurant link may be invalid or expired.',
+                          style: GoogleFonts.poppins(
+                              fontSize: kIsWeb ? 14 : 14.sp, color: Colors.grey),
+                          textAlign: TextAlign.center),
+                    ])));
           }
 
           final data = snap.data!.data() as Map<String, dynamic>;
-
-          if (data['openingTime'] != null)
-            openingTime = data['openingTime'] as String;
-          if (data['closingTime'] != null)
-            closingTime = data['closingTime'] as String;
-
-          final String loadedName =
-          (data['name'] ?? data['restaurantName'] ?? '') as String;
-          final String loadedTagline =
-          (data['tagline'] ?? data['description'] ?? '') as String;
-          final String? loadedLogo =
-          (data['logoUrl'] ?? data['logo']) as String?;
-
-          _restaurantName = loadedName;
-          _restaurantTagline = loadedTagline;
-          _restaurantLogo = loadedLogo;
+          if (data['openingTime'] != null) openingTime = data['openingTime'] as String;
+          if (data['closingTime'] != null) closingTime = data['closingTime'] as String;
+          _restaurantName    = (data['name'] ?? data['restaurantName'] ?? '') as String;
+          _restaurantTagline = (data['tagline'] ?? data['description'] ?? '') as String;
+          _restaurantLogo    = (data['logoUrl'] ?? data['logo']) as String?;
 
           return Scaffold(
-            backgroundColor: const Color(0xFFF8F9FA),
-            body: Column(
-              children: [
-                _buildHeader(),
+            backgroundColor: _C.bg,
+            body: Column(children: [
+              _buildHeader(),
 
-                if (_preselectedTableId != null &&
-                    _preselectedTableId!.isNotEmpty)
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.symmetric(
-                        horizontal: kIsWeb ? 16 : 16.w,
-                        vertical: kIsWeb ? 8 : 8.h),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFFFF0E8),
-                      border: Border(
-                          bottom:
-                          BorderSide(color: Color(0xFFFFD5BC), width: 1)),
-                    ),
-                    child: Row(children: [
-                      const Icon(Icons.table_restaurant_rounded,
-                          color: Color(0xFFE8622A), size: 16),
-                      SizedBox(width: kIsWeb ? 8 : 8.w),
-                      Expanded(
-                        child: Text(
-                          'Ordering for: ${_preselectedTableName ?? _preselectedTableId}',
-                          style: GoogleFonts.poppins(
-                            fontSize: kIsWeb ? 12 : 12.sp,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFFE8622A),
-                          ),
-                        ),
-                      ),
-                      const Icon(Icons.check_circle_rounded,
-                          color: Color(0xFF2ECC71), size: 14),
-                      SizedBox(width: kIsWeb ? 4 : 4.w),
-                      Text('Auto-selected',
-                          style: GoogleFonts.poppins(
-                            fontSize: kIsWeb ? 10 : 10.sp,
-                            color: const Color(0xFF2ECC71),
-                            fontWeight: FontWeight.w500,
-                          )),
-                    ]),
+              // ── Table banner ──────────────────────────────────────────────
+              if (_preselectedTableId != null && _preselectedTableId!.isNotEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.symmetric(
+                      horizontal: kIsWeb ? 16 : 16.w,
+                      vertical:   kIsWeb ? 9 : 9.h),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF4ED),
+                    border: Border(bottom: BorderSide(
+                        color: _C.accent.withOpacity(0.2))),
                   ),
-
-                Expanded(
-                  child: IndexedStack(
-                    index: _selectedTabIndex,
-                    children: [
-                      _unifiedCategoryListView
-                          ? _buildUnifiedListView()
-                          : _buildSeparateView(),
-                      KeepAliveWrapper(child: _buildOrdersTab()),
-                      KeepAliveWrapper(child: _buildOffersTab()),
-                      // AssistanceTab is intentionally NOT wrapped in KeepAliveWrapper
-                      // so it rebuilds whenever _preselectedTableId / _preselectedTableName
-                      // are updated by _readTableFromUrl() via setState.
-                      _buildAssistTab(),
-                      KeepAliveWrapper(child: _buildAccountTab()),
-                    ],
-                  ),
+                  child: Row(children: [
+                    const Icon(Icons.table_restaurant_rounded,
+                        color: _C.accent, size: 15),
+                    SizedBox(width: kIsWeb ? 8 : 8.w),
+                    Expanded(child: Text(
+                      'Ordering for: ${_preselectedTableName ?? _preselectedTableId}',
+                      style: GoogleFonts.poppins(
+                          fontSize: kIsWeb ? 12 : 12.sp,
+                          fontWeight: FontWeight.w600, color: _C.accent),
+                    )),
+                    const Icon(Icons.check_circle_rounded,
+                        color: Color(0xFF2ECC71), size: 14),
+                    SizedBox(width: kIsWeb ? 4 : 4.w),
+                    Text('Auto-selected', style: GoogleFonts.poppins(
+                        fontSize: kIsWeb ? 10 : 10.sp,
+                        color: const Color(0xFF2ECC71),
+                        fontWeight: FontWeight.w500)),
+                  ]),
                 ),
-                _buildBottomNavigationBar(),
-              ],
-            ),
+
+              Expanded(
+                child: IndexedStack(index: _selectedTabIndex, children: [
+                  _unifiedCategoryListView
+                      ? _buildUnifiedListView()
+                      : _buildSeparateView(),
+                  KeepAliveWrapper(child: _buildOrdersTab()),
+                  KeepAliveWrapper(child: _buildOffersTab()),
+                  _buildAssistTab(),
+                  KeepAliveWrapper(child: _buildAccountTab()),
+                ]),
+              ),
+              _buildBottomNavigationBar(),
+            ]),
           );
         },
       ),
     );
   }
 
-  // ─── Header ───────────────────────────────────────────────────────────────
-
-  Widget _buildHeader() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF7C3AED), Color(0xFFA855F7), Color(0xFFC084FC)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+  // ─────────────────────────────────────────────────────────────────────────
+  // REDESIGNED HEADER
+  // ─────────────────────────────────────────────────────────────────────────
+  Widget _buildHeader() => Container(
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        colors: [Color(0xFF7C3AED), Color(0xFF9333EA), Color(0xFFA855F7)],
+        begin: Alignment.topLeft, end: Alignment.bottomRight,
       ),
-      child: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-              horizontal: kIsWeb ? 15 : 15.sp,
-              vertical: kIsWeb ? 10 : 10.sp),
-          child: Row(
-            children: [
-              Container(
-                width: kIsWeb ? 44 : 44.sp,
-                height: kIsWeb ? 44 : 44.sp,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
-                  border: Border.all(
-                      color: Colors.white.withOpacity(0.3), width: 1),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
-                  child: _restaurantLogo != null && _restaurantLogo!.isNotEmpty
-                      ? _networkImage(_restaurantLogo!, fit: BoxFit.cover)
-                      : _logoFallback(),
-                ),
-              ),
-              SizedBox(width: kIsWeb ? 10 : 10.sp),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _restaurantName.isNotEmpty
-                          ? _restaurantName
-                          : "Loading...",
-                      style: GoogleFonts.poppins(
-                          fontSize: kIsWeb ? 16 : 16.sp,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (_restaurantTagline.isNotEmpty)
-                      Text(
-                        _restaurantTagline,
-                        style: GoogleFonts.poppins(
-                            fontSize: kIsWeb ? 10 : 10.sp,
-                            color: Colors.white.withOpacity(0.8)),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                  ],
-                ),
-              ),
-              if (_selectedTabIndex == 0) ...[
-                GestureDetector(
-                  onTap: () => setState(() =>
-                  _unifiedCategoryListView = !_unifiedCategoryListView),
-                  child: _headerIconButton(
-                    _unifiedCategoryListView
-                        ? Icons.grid_view_rounded
-                        : Icons.view_agenda_rounded,
-                  ),
-                ),
-                SizedBox(width: kIsWeb ? 8 : 8.sp),
-              ],
-
-              // ── Cart icon — now calls _openCartPage ──────────────────────
-              ValueListenableBuilder<int>(
-                valueListenable: _cartBounce,
-                builder: (context, bounceCount, _) {
-                  return ValueListenableBuilder<List<CartItem>>(
-                    valueListenable: _cartNotifier,
-                    builder: (context, cartItems, _) {
-                      final total =
-                      cartItems.fold<int>(0, (s, i) => s + i.qty);
-                      return GestureDetector(
-                        // ── CHANGED: was Navigator.push inline;
-                        //    now calls _openCartPage which handles
-                        //    session + order lookup first. ────────────────
-                        onTap: _orderLookupInProgress
-                            ? null // disable while lookup is in progress
-                            : () => _openCartPage(cartItems),
-                        child: _AnimatedCartBadge(
-                          bounceCount: bounceCount,
-                          badge: total > 0 ? '$total' : null,
-                          primaryColor: _primaryColor,
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _headerIconButton(IconData icon, {String? badge}) {
-    return Container(
-      width: kIsWeb ? 40 : 40.sp,
-      height: kIsWeb ? 40 : 40.sp,
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(kIsWeb ? 20 : 20.sp),
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Icon(icon, size: kIsWeb ? 20 : 20.sp, color: Colors.white),
-          if (badge != null)
-            Positioned(
-              top: kIsWeb ? 2 : 2.sp,
-              right: kIsWeb ? 2 : 2.sp,
-              child: Container(
-                width: kIsWeb ? 16 : 16.sp,
-                height: kIsWeb ? 16 : 16.sp,
-                decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius:
-                    BorderRadius.circular(kIsWeb ? 8 : 8.sp)),
-                child: Center(
-                  child: Text(badge,
-                      style: GoogleFonts.poppins(
-                          fontSize: kIsWeb ? 10 : 10.sp,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white)),
-                ),
-              ),
+    ),
+    child: SafeArea(bottom: false,
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+            horizontal: kIsWeb ? 16 : 16.sp,
+            vertical:   kIsWeb ? 10 : 10.sp),
+        child: Row(children: [
+          // Logo
+          Container(
+            width: kIsWeb ? 44 : 44.sp, height: kIsWeb ? 44 : 44.sp,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
+              border: Border.all(color: Colors.white.withOpacity(0.3)),
             ),
-        ],
-      ),
-    );
-  }
-
-  // ─── Bottom nav ───────────────────────────────────────────────────────────
-
-  Widget _buildBottomNavigationBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 10,
-              offset: const Offset(0, -2))
-        ],
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-              horizontal: kIsWeb ? 16 : 16.sp,
-              vertical: kIsWeb ? 8 : 8.sp),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(
-                  icon: Icons.home_rounded,
-                  label: "Home",
-                  isSelected: _selectedTabIndex == 0,
-                  onTap: () => _switchTab(0)),
-              _buildNavItem(
-                  icon: Icons.inventory_2_outlined,
-                  label: "Orders",
-                  isSelected: _selectedTabIndex == 1,
-                  onTap: () => _switchTab(1)),
-              _buildNavItem(
-                  icon: Icons.card_giftcard_outlined,
-                  label: "Offers",
-                  isSelected: _selectedTabIndex == 2,
-                  onTap: () => _switchTab(2)),
-              _buildNavItem(
-                  icon: Icons.support_agent_rounded,
-                  label: "Assist",
-                  isSelected: _selectedTabIndex == 3,
-                  onTap: () => _switchTab(3)),
-              _buildNavItem(
-                  icon: Icons.person_outline_rounded,
-                  label: "Account",
-                  isSelected: _selectedTabIndex == 4,
-                  onTap: () => _switchTab(4)),
-            ],
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
+              child: _restaurantLogo != null && _restaurantLogo!.isNotEmpty
+                  ? _networkImage(_restaurantLogo!, fit: BoxFit.cover)
+                  : _logoFallback(),
+            ),
           ),
-        ),
+          SizedBox(width: kIsWeb ? 10 : 10.sp),
+          // Name + tagline
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(_restaurantName.isNotEmpty ? _restaurantName : "Loading...",
+                style: GoogleFonts.poppins(
+                    fontSize: kIsWeb ? 17 : 17.sp,
+                    fontWeight: FontWeight.w700, color: Colors.white),
+                maxLines: 1, overflow: TextOverflow.ellipsis),
+            if (_restaurantTagline.isNotEmpty)
+              Text(_restaurantTagline,
+                  style: GoogleFonts.poppins(
+                      fontSize: kIsWeb ? 10 : 10.sp,
+                      color: Colors.white.withOpacity(0.8)),
+                  maxLines: 1, overflow: TextOverflow.ellipsis),
+          ])),
+          // Grid toggle (home tab only)
+          if (_selectedTabIndex == 0) ...[
+            GestureDetector(
+              onTap: () => setState(
+                      () => _unifiedCategoryListView = !_unifiedCategoryListView),
+              child: _headerIconButton(
+                  _unifiedCategoryListView
+                      ? Icons.grid_view_rounded
+                      : Icons.view_agenda_rounded),
+            ),
+            SizedBox(width: kIsWeb ? 8 : 8.sp),
+          ],
+          // Animated cart
+          ValueListenableBuilder<int>(
+            valueListenable: _cartBounce,
+            builder: (_, bounceCount, __) =>
+                ValueListenableBuilder<List<CartItem>>(
+                  valueListenable: _cartNotifier,
+                  builder: (_, cartItems, __) {
+                    final total = cartItems.fold<int>(0, (s, i) => s + i.qty);
+                    return GestureDetector(
+                      onTap: _orderLookupInProgress
+                          ? null
+                          : () => _openCartPage(cartItems),
+                      child: _AnimatedCartBadge(
+                          bounceCount:  bounceCount,
+                          badge:        total > 0 ? '$total' : null,
+                          primaryColor: _primaryColor),
+                    );
+                  },
+                ),
+          ),
+        ]),
       ),
-    );
-  }
+    ),
+  );
+
+  Widget _headerIconButton(IconData icon) => Container(
+    width: kIsWeb ? 40 : 40.sp, height: kIsWeb ? 40 : 40.sp,
+    decoration: BoxDecoration(
+      color: Colors.white.withOpacity(0.18),
+      borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
+    ),
+    child: Icon(icon, size: kIsWeb ? 20 : 20.sp, color: Colors.white),
+  );
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // REDESIGNED BOTTOM NAV
+  // ─────────────────────────────────────────────────────────────────────────
+  Widget _buildBottomNavigationBar() => Container(
+    decoration: BoxDecoration(
+      color: Colors.white,
+      boxShadow: [BoxShadow(
+          color: _C.shadowMd, blurRadius: 16, offset: const Offset(0, -3))],
+    ),
+    child: SafeArea(top: false,
+      child: SizedBox(
+        height: kIsWeb ? 60 : 60.h,
+        child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
+          _buildNavItem(icon: Icons.home_rounded,          label: "Home",    index: 0),
+          _buildNavItem(icon: Icons.inventory_2_outlined,  label: "Orders",  index: 1),
+          _buildNavItem(icon: Icons.card_giftcard_outlined,label: "Offers",  index: 2),
+          _buildNavItem(icon: Icons.support_agent_rounded, label: "Assist",  index: 3),
+          _buildNavItem(icon: Icons.person_outline_rounded,label: "Account", index: 4),
+        ]),
+      ),
+    ),
+  );
 
   void _switchTab(int index) => setState(() => _selectedTabIndex = index);
 
   Widget _buildNavItem({
     required IconData icon,
     required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-    bool showBadge = false,
-    String? badgeCount,
+    required int index,
   }) {
+    final isSelected = _selectedTabIndex == index;
     return GestureDetector(
-      onTap: onTap,
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-            horizontal: kIsWeb ? 12 : 12.sp,
-            vertical: kIsWeb ? 8 : 8.sp),
-        child: Column(
+      onTap: () => _switchTab(index),
+      child: Column(mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Stack(
-              children: [
-                Icon(icon,
-                    size: kIsWeb ? 24 : 24.sp,
-                    color: isSelected ? _primaryColor : Colors.grey[500]),
-                if (showBadge && badgeCount != null)
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    child: Container(
-                      width: kIsWeb ? 14 : 14.sp,
-                      height: kIsWeb ? 14 : 14.sp,
-                      decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius:
-                          BorderRadius.circular(kIsWeb ? 7 : 7.sp)),
-                      child: Center(
-                        child: Text(badgeCount,
-                            style: GoogleFonts.poppins(
-                                fontSize: kIsWeb ? 8 : 8.sp,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white)),
-                      ),
-                    ),
-                  ),
-              ],
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: EdgeInsets.symmetric(
+                  horizontal: isSelected ? (kIsWeb ? 10 : 10.sp) : 0,
+                  vertical:   kIsWeb ? 4 : 4.sp),
+              decoration: BoxDecoration(
+                color: isSelected ? _C.accentLight : Colors.transparent,
+                borderRadius: BorderRadius.circular(kIsWeb ? 20 : 20.sp),
+              ),
+              child: Icon(icon,
+                  size:  kIsWeb ? 22 : 22.sp,
+                  color: isSelected ? _C.accent : Colors.grey[400]),
             ),
             SizedBox(height: kIsWeb ? 3 : 3.sp),
-            Text(label,
-                style: GoogleFonts.poppins(
-                    fontSize: kIsWeb ? 10 : 10.sp,
-                    color: isSelected ? _primaryColor : Colors.grey[500],
-                    fontWeight: isSelected
-                        ? FontWeight.w600
-                        : FontWeight.normal)),
-          ],
-        ),
-      ),
+            Text(label, style: GoogleFonts.poppins(
+                fontSize: kIsWeb ? 10 : 10.sp,
+                color: isSelected ? _C.accent : Colors.grey[500],
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.normal)),
+          ]),
     );
   }
 
-  // ─── Unified list view ────────────────────────────────────────────────────
-
+  // ─────────────────────────────────────────────────────────────────────────
+  // REDESIGNED UNIFIED LIST VIEW
+  // Firestore path: restaurants/{widget.restaurantId}/... — unchanged
+  // ─────────────────────────────────────────────────────────────────────────
   Widget _buildUnifiedListView() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('restaurants')
-          .doc(widget.restaurantId)
+          .doc(widget.restaurantId)   // ← restaurantId
           .collection('categories')
           .orderBy('position')
           .snapshots(),
       builder: (context, snap) {
-        if (snap.hasError)
-          return _errorWidget('Error loading categories', snap.error);
-
+        if (snap.hasError) return _errorWidget('Error loading categories', snap.error);
         if (snap.connectionState == ConnectionState.waiting) {
           return ListView.builder(
-            padding: EdgeInsets.only(
-                top: kIsWeb ? 4 : 4.h, bottom: kIsWeb ? 8 : 8.h),
-            itemCount: 3,
-            itemBuilder: (context, index) => const CategoryCardSkeleton(
-              width: double.infinity,
-              height: 80,
-            ),
-          );
+              padding: EdgeInsets.only(
+                  top: kIsWeb ? 8 : 8.h, bottom: kIsWeb ? 8 : 8.h),
+              itemCount: 3,
+              itemBuilder: (_, __) => const CategoryCardSkeleton(
+                  width: double.infinity, height: 80));
         }
-
-        if (!snap.hasData || snap.data!.docs.isEmpty) {
+        if (!snap.hasData || snap.data!.docs.isEmpty)
           return _emptyWidget('No Categories Found');
-        }
 
         final categories = snap.data!.docs;
         if (_selectedCategoryId == null && categories.isNotEmpty) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              setState(() => _selectedCategoryId = categories.first.id);
-            }
+            if (mounted) setState(() => _selectedCategoryId = categories.first.id);
           });
         }
 
         return ListView.builder(
-          padding: EdgeInsets.only(
-              top: kIsWeb ? 4 : 4.h, bottom: kIsWeb ? 8 : 8.h),
+          padding: EdgeInsets.fromLTRB(
+              kIsWeb ? 12 : 12.w, kIsWeb ? 12 : 12.h,
+              kIsWeb ? 12 : 12.w, kIsWeb ? 20 : 20.h),
           itemCount: categories.length,
           itemBuilder: (context, i) {
-            final cat = categories[i];
+            final cat        = categories[i];
             final isExpanded = !_collapsedCategoryIds.contains(cat.id);
-            final bool isCatSelected = _selectedCategoryId == cat.id;
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                GestureDetector(
-                  onTap: () {
-                    setState(() {
+
+            return Container(
+              margin: EdgeInsets.only(bottom: kIsWeb ? 16 : 16.h),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(kIsWeb ? 18 : 18.sp),
+                boxShadow: [BoxShadow(
+                    color: _C.shadow, blurRadius: 16, offset: const Offset(0, 4))],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(kIsWeb ? 18 : 18.sp),
+                child: Column(children: [
+                  // Category header
+                  GestureDetector(
+                    onTap: () => setState(() {
                       if (isExpanded) {
                         _collapsedCategoryIds.add(cat.id);
                       } else {
                         _collapsedCategoryIds.remove(cat.id);
                       }
                       _selectedCategoryId = cat.id;
-                    });
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: EdgeInsets.symmetric(
-                        horizontal: kIsWeb ? 16 : 16.w,
-                        vertical: kIsWeb ? 2 : 2.h),
-                    padding: EdgeInsets.symmetric(
-                        horizontal: kIsWeb ? 14 : 14.sp,
-                        vertical: kIsWeb ? 9 : 9.sp),
-                    decoration: BoxDecoration(
-                      color: isCatSelected
-                          ? _primaryColor.withOpacity(0.08)
-                          : Colors.grey[50],
-                      borderRadius:
-                      BorderRadius.circular(kIsWeb ? 8 : 8.sp),
-                      border: Border.all(
-                        color: isCatSelected
-                            ? _primaryColor.withOpacity(0.35)
-                            : Colors.transparent,
-                        width: 1.2,
+                    }),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: kIsWeb ? 16 : 16.sp,
+                          vertical:   kIsWeb ? 14 : 14.sp),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [_C.accentLight, _C.accentLight.withOpacity(0.3)],
+                          begin: Alignment.centerLeft, end: Alignment.centerRight,
+                        ),
                       ),
-                    ),
-                    child: Row(
-                      children: [
-                        if (isCatSelected) ...[
-                          Container(
-                            width: kIsWeb ? 3 : 3.w,
-                            height: kIsWeb ? 18 : 18.h,
-                            decoration: BoxDecoration(
-                              color: _primaryColor,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                          SizedBox(width: kIsWeb ? 8 : 8.w),
-                        ],
-                        Expanded(
-                          child: Text(cat['name'] ?? "Category",
-                              style: GoogleFonts.poppins(
-                                  fontSize: kIsWeb ? 14 : 14.sp,
-                                  fontWeight: isCatSelected
-                                      ? FontWeight.w700
-                                      : FontWeight.w600,
-                                  color: isCatSelected
-                                      ? _primaryColor
-                                      : Colors.black87)),
+                      child: Row(children: [
+                        Container(
+                          width: kIsWeb ? 4 : 4.w, height: kIsWeb ? 20 : 20.h,
+                          decoration: BoxDecoration(
+                              color: _C.accent,
+                              borderRadius: BorderRadius.circular(2)),
                         ),
-                        Icon(
-                          isExpanded
-                              ? Icons.keyboard_arrow_up_rounded
-                              : Icons.keyboard_arrow_down_rounded,
-                          color:
-                          isCatSelected ? _primaryColor : Colors.black45,
-                          size: kIsWeb ? 20 : 20.sp,
+                        SizedBox(width: kIsWeb ? 10 : 10.w),
+                        Expanded(child: Text(cat['name'] ?? "Category",
+                            style: GoogleFonts.poppins(
+                                fontSize: kIsWeb ? 15 : 15.sp,
+                                fontWeight: FontWeight.w700,
+                                color: _C.textPrimary))),
+                        AnimatedRotation(
+                          turns:    isExpanded ? 0 : -0.5,
+                          duration: const Duration(milliseconds: 250),
+                          child: Icon(Icons.keyboard_arrow_up_rounded,
+                              color: _C.accent, size: kIsWeb ? 22 : 22.sp),
                         ),
-                      ],
+                      ]),
                     ),
                   ),
-                ),
-                if (isExpanded) ...[
-                  SizedBox(height: kIsWeb ? 2 : 2.h),
-                  StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection('restaurants')
-                        .doc(widget.restaurantId)
-                        .collection('menu_items')
-                        .where('categoryId', isEqualTo: cat.id)
-                        .where('isAvailable', isEqualTo: true)
-                        .snapshots(),
-                    builder: (context, menuSnap) {
-                      if (menuSnap.hasError)
-                        return _inlineError('Error loading items');
-                      if (menuSnap.connectionState ==
-                          ConnectionState.waiting) return _inlineLoading();
-                      if (!menuSnap.hasData || menuSnap.data!.docs.isEmpty)
-                        return _inlineEmpty(
-                            'No available items in this category');
-
-                      final items = menuSnap.data!.docs;
-                      return Column(
-                        children: items.map((item) {
-                          final itemId = item.id;
-                          final raw = (item.data()
-                          as Map<String, dynamic>)['variants'];
-                          final v = _safeList(raw);
-                          final si = _safeIndex(itemId, v);
-                          final sv = v.isNotEmpty ? v[si] : null;
-                          final price =
-                          sv != null ? sv['price'] : item['price'];
-                          return _buildMenuCard(
-                            context: context,
-                            item: item,
-                            itemId: itemId,
-                            variants: v,
-                            selectedIndex: si,
-                            selectedVariant: sv,
-                            price: price,
-                            cardColor: Colors.white,
-                            textColor: Colors.black87,
-                            cardInfoColor: Colors.grey,
-                            primaryColor: _primaryColor,
-                          );
-                        }).toList(),
-                      );
-                    },
+                  // Items
+                  AnimatedCrossFade(
+                    duration: const Duration(milliseconds: 280),
+                    crossFadeState: isExpanded
+                        ? CrossFadeState.showFirst
+                        : CrossFadeState.showSecond,
+                    firstChild: StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('restaurants')
+                          .doc(widget.restaurantId)   // ← restaurantId
+                          .collection('menu_items')
+                          .where('categoryId', isEqualTo: cat.id)
+                          .where('isAvailable', isEqualTo: true)
+                          .snapshots(),
+                      builder: (context, menuSnap) {
+                        if (menuSnap.hasError) return _inlineError('Error loading items');
+                        if (menuSnap.connectionState == ConnectionState.waiting)
+                          return _inlineLoading();
+                        if (!menuSnap.hasData || menuSnap.data!.docs.isEmpty)
+                          return _inlineEmpty('No available items in this category');
+                        final items = menuSnap.data!.docs;
+                        return Column(
+                          children: items.asMap().entries.map((entry) {
+                            final item   = entry.value;
+                            final itemId = item.id;
+                            final raw    = (item.data() as Map<String, dynamic>)['variants'];
+                            final v      = _safeList(raw);
+                            final si     = _safeIndex(itemId, v);
+                            final sv     = v.isNotEmpty ? v[si] : null;
+                            final price  = sv != null ? sv['price'] : item['price'];
+                            final isLast = entry.key == items.length - 1;
+                            return Column(children: [
+                              _buildMenuCard(
+                                context: context, item: item, itemId: itemId,
+                                variants: v, selectedIndex: si,
+                                selectedVariant: sv, price: price,
+                                cardColor: Colors.white, textColor: Colors.black87,
+                                cardInfoColor: Colors.grey, primaryColor: _primaryColor,
+                              ),
+                              if (!isLast)
+                                Padding(
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: kIsWeb ? 16 : 16.w),
+                                    child: Divider(height: 1, color: _C.divider)),
+                            ]);
+                          }).toList(),
+                        );
+                      },
+                    ),
+                    secondChild: const SizedBox.shrink(),
                   ),
-                ],
-                SizedBox(height: kIsWeb ? 4 : 4.h),
-              ],
+                ]),
+              ),
             );
           },
         );
@@ -1971,171 +1369,135 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     );
   }
 
-  // ─── Separate / grid view ─────────────────────────────────────────────────
-
+  // ─────────────────────────────────────────────────────────────────────────
+  // SEPARATE / GRID VIEW (unchanged logic, restyled chips)
+  // ─────────────────────────────────────────────────────────────────────────
   Widget _buildSeparateView() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('restaurants')
-          .doc(widget.restaurantId)
+          .doc(widget.restaurantId)   // ← restaurantId
           .collection('categories')
           .orderBy('position')
           .snapshots(),
       builder: (context, snap) {
-        if (snap.hasError)
-          return _errorWidget('Error loading categories', snap.error);
-
+        if (snap.hasError) return _errorWidget('Error loading categories', snap.error);
         if (snap.connectionState == ConnectionState.waiting) {
           return ListView.builder(
-            padding: EdgeInsets.only(
-                top: kIsWeb ? 4 : 4.h, bottom: kIsWeb ? 8 : 8.h),
-            itemCount: 3,
-            itemBuilder: (context, index) => const CategoryCardSkeleton(
-              width: double.infinity,
-              height: 80,
-            ),
-          );
+              padding: EdgeInsets.only(
+                  top: kIsWeb ? 4 : 4.h, bottom: kIsWeb ? 8 : 8.h),
+              itemCount: 3,
+              itemBuilder: (_, __) => const CategoryCardSkeleton(
+                  width: double.infinity, height: 80));
         }
-
-        if (!snap.hasData || snap.data!.docs.isEmpty) {
+        if (!snap.hasData || snap.data!.docs.isEmpty)
           return _emptyWidget('No Categories Found');
-        }
 
         final categories = snap.data!.docs;
         if (_selectedCategoryId == null && categories.isNotEmpty) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              setState(() => _selectedCategoryId = categories.first.id);
-            }
+            if (mounted) setState(() => _selectedCategoryId = categories.first.id);
           });
         }
 
-        return Column(
-          children: [
-            ValueListenableBuilder<String?>(
-              valueListenable: _selectedCategoryIdNotifier,
-              builder: (context, selectedCatId, _) {
-                return SizedBox(
-                  height: kIsWeb ? 56 : 56.h,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: EdgeInsets.symmetric(
-                        horizontal: kIsWeb ? 16 : 16.w,
-                        vertical: kIsWeb ? 8 : 8.h),
-                    itemCount: categories.length,
-                    itemBuilder: (ctx, i) {
-                      final cat = categories[i];
-                      final isSelected = cat.id == selectedCatId;
-                      return GestureDetector(
-                        onTap: () =>
-                        _selectedCategoryIdNotifier.value = cat.id,
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          margin:
-                          EdgeInsets.only(right: kIsWeb ? 10 : 10.w),
-                          padding: EdgeInsets.symmetric(
-                              horizontal: kIsWeb ? 18 : 18.w,
-                              vertical: kIsWeb ? 8 : 8.h),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? _primaryColor
-                                : Colors.grey[100],
-                            borderRadius:
-                            BorderRadius.circular(kIsWeb ? 24 : 24.sp),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(cat['name'] ?? "Category",
-                                  style: GoogleFonts.poppins(
-                                      fontSize: kIsWeb ? 13 : 13.sp,
-                                      fontWeight: FontWeight.w500,
-                                      color: isSelected
-                                          ? Colors.white
-                                          : Colors.black87)),
-                              if (isSelected) ...[
-                                SizedBox(width: kIsWeb ? 5 : 5.w),
-                                Icon(Icons.check,
-                                    size: kIsWeb ? 14 : 14.sp,
-                                    color: Colors.white),
-                              ],
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
-            Expanded(
-              child: ValueListenableBuilder<String?>(
-                valueListenable: _selectedCategoryIdNotifier,
-                builder: (context, selectedCatId, _) =>
-                    _buildMenuItemsList(),
+        return Column(children: [
+          ValueListenableBuilder<String?>(
+            valueListenable: _selectedCategoryIdNotifier,
+            builder: (context, selectedCatId, _) => SizedBox(
+              height: kIsWeb ? 56 : 56.h,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: EdgeInsets.symmetric(
+                    horizontal: kIsWeb ? 16 : 16.w,
+                    vertical:   kIsWeb ? 10 : 10.h),
+                itemCount: categories.length,
+                itemBuilder: (ctx, i) {
+                  final cat   = categories[i];
+                  final isSel = cat.id == selectedCatId;
+                  return GestureDetector(
+                    onTap: () => _selectedCategoryIdNotifier.value = cat.id,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: EdgeInsets.only(right: kIsWeb ? 8 : 8.w),
+                      padding: EdgeInsets.symmetric(
+                          horizontal: kIsWeb ? 16 : 16.w,
+                          vertical:   kIsWeb ? 6 : 6.h),
+                      decoration: BoxDecoration(
+                        color: isSel ? _C.accent : _C.chipBg,
+                        borderRadius: BorderRadius.circular(kIsWeb ? 24 : 24.sp),
+                        border: Border.all(
+                            color: isSel ? _C.accent : _C.divider),
+                      ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Text(cat['name'] ?? "Category",
+                            style: GoogleFonts.poppins(
+                                fontSize: kIsWeb ? 13 : 13.sp,
+                                fontWeight: FontWeight.w500,
+                                color: isSel ? Colors.white : _C.textSecondary)),
+                        if (isSel) ...[
+                          SizedBox(width: kIsWeb ? 5 : 5.w),
+                          Icon(Icons.check,
+                              size: kIsWeb ? 14 : 14.sp, color: Colors.white),
+                        ],
+                      ]),
+                    ),
+                  );
+                },
               ),
             ),
-          ],
-        );
+          ),
+          Expanded(child: ValueListenableBuilder<String?>(
+            valueListenable: _selectedCategoryIdNotifier,
+            builder: (_, __, ___) => _buildMenuItemsList(),
+          )),
+        ]);
       },
     );
   }
 
   Widget _buildMenuItemsList() {
     if (_selectedCategoryId == null) return _emptyWidget('Select a Category');
-
     return StreamBuilder<QuerySnapshot>(
       key: ValueKey(_selectedCategoryId),
       stream: FirebaseFirestore.instance
           .collection('restaurants')
-          .doc(widget.restaurantId)
+          .doc(widget.restaurantId)   // ← restaurantId
           .collection('menu_items')
           .where('categoryId', isEqualTo: _selectedCategoryId)
           .where('isAvailable', isEqualTo: true)
           .snapshots(),
       builder: (context, snap) {
-        if (snap.hasError)
-          return _errorWidget('Error loading menu items', snap.error);
-
+        if (snap.hasError) return _errorWidget('Error loading menu items', snap.error);
         if (snap.connectionState == ConnectionState.waiting) {
           return ListView.builder(
-            padding:
-            EdgeInsets.symmetric(vertical: kIsWeb ? 8 : 8.h),
-            itemCount: 5,
-            itemBuilder: (context, index) => const MenuCardSkeleton(),
-          );
+              padding: EdgeInsets.symmetric(vertical: kIsWeb ? 8 : 8.h),
+              itemCount: 5,
+              itemBuilder: (_, __) => const MenuCardSkeleton());
         }
-
         if (!snap.hasData || snap.data!.docs.isEmpty)
           return _emptyWidget('No Menu Items Available');
 
         final items = snap.data!.docs;
         return ListView.builder(
-          padding: EdgeInsets.symmetric(vertical: kIsWeb ? 8 : 8.h),
+          padding: EdgeInsets.fromLTRB(
+              kIsWeb ? 12 : 12.w, kIsWeb ? 10 : 10.h,
+              kIsWeb ? 12 : 12.w, kIsWeb ? 16 : 16.h),
           itemCount: items.length,
           itemBuilder: (ctx, i) {
-            final item = items[i];
+            final item   = items[i];
             final itemId = item.id;
-            final raw = (item.data() as Map<String, dynamic>)['variants'];
-            final v = _safeList(raw);
-            final si = _safeIndex(itemId, v);
-            final sv = v.isNotEmpty ? v[si] : null;
-            final price = sv != null
+            final raw    = (item.data() as Map<String, dynamic>)['variants'];
+            final v      = _safeList(raw);
+            final si     = _safeIndex(itemId, v);
+            final sv     = v.isNotEmpty ? v[si] : null;
+            final price  = sv != null
                 ? sv['price']
                 : (item.data() as Map<String, dynamic>)['price'];
-
             return _buildMenuGridCard(
-              context: context,
-              item: item,
-              itemId: itemId,
-              variants: v,
-              selectedIndex: si,
-              selectedVariant: sv,
-              price: price,
-              cardColor: Colors.white,
-              textColor: Colors.black87,
-              cardInfoColor: Colors.grey,
-              primaryColor: _primaryColor,
+              context: context, item: item, itemId: itemId,
+              variants: v, selectedIndex: si, selectedVariant: sv, price: price,
+              cardColor: Colors.white, textColor: Colors.black87,
+              cardInfoColor: Colors.grey, primaryColor: _primaryColor,
             );
           },
         );
@@ -2143,106 +1505,80 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     );
   }
 
-  // ─── Reusable state widgets ───────────────────────────────────────────────
+  // ── Inline state helpers (unchanged) ────────────────────────────────────
+  Widget _loadingWidget(String msg) => Center(child: ProfessionalLoader(
+    type: LoaderType.waveBounce, message: msg,
+    primaryColor: _primaryColor, secondaryColor: const Color(0xFFEC4899),
+    size: kIsWeb ? 60 : 60.w,
+  ));
 
-  Widget _loadingWidget(String msg) => Center(
-    child: ProfessionalLoader(
-      type: LoaderType.waveBounce,
-      message: msg,
-      primaryColor: _primaryColor,
-      secondaryColor: const Color(0xFFEC4899),
-      size: kIsWeb ? 60 : 60.w,
-    ),
-  );
-
-  Widget _errorWidget(String msg, Object? error) => Center(
-    child: Padding(
-      padding: EdgeInsets.all(kIsWeb ? 24 : 24.sp),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.error_outline, color: Colors.red, size: 48),
-        const SizedBox(height: 12),
-        Text(msg,
-            style: GoogleFonts.poppins(
-                fontSize: kIsWeb ? 16 : 16.sp,
-                fontWeight: FontWeight.w600,
-                color: Colors.red)),
-        if (error != null) ...[
-          const SizedBox(height: 6),
-          Text('$error',
-              style: GoogleFonts.poppins(
-                  fontSize: kIsWeb ? 12 : 12.sp,
-                  color: Colors.red.withOpacity(0.7)),
-              textAlign: TextAlign.center),
-        ],
-      ]),
-    ),
-  );
-
-  Widget _emptyWidget(String msg) => Center(
-    child:
-    Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-      Icon(Icons.restaurant_menu,
-          color: Colors.grey[300], size: kIsWeb ? 56 : 56.sp),
+  Widget _errorWidget(String msg, Object? error) => Center(child: Padding(
+    padding: EdgeInsets.all(kIsWeb ? 24 : 24.sp),
+    child: Column(mainAxisSize: MainAxisSize.min, children: [
+      const Icon(Icons.error_outline, color: Colors.red, size: 48),
       const SizedBox(height: 12),
-      Text(msg,
-          style: GoogleFonts.poppins(
-              fontSize: kIsWeb ? 16 : 16.sp,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey[400])),
+      Text(msg, style: GoogleFonts.poppins(
+          fontSize: kIsWeb ? 16 : 16.sp, fontWeight: FontWeight.w600, color: Colors.red)),
+      if (error != null) ...[
+        const SizedBox(height: 6),
+        Text('$error', style: GoogleFonts.poppins(
+            fontSize: kIsWeb ? 12 : 12.sp, color: Colors.red.withOpacity(0.7)),
+            textAlign: TextAlign.center),
+      ],
     ]),
-  );
+  ));
+
+  Widget _emptyWidget(String msg) => Center(child: Column(
+      mainAxisAlignment: MainAxisAlignment.center, children: [
+    Icon(Icons.restaurant_menu, color: Colors.grey[300], size: kIsWeb ? 56 : 56.sp),
+    const SizedBox(height: 12),
+    Text(msg, style: GoogleFonts.poppins(
+        fontSize: kIsWeb ? 16 : 16.sp, fontWeight: FontWeight.w500,
+        color: Colors.grey[400])),
+  ]));
 
   Widget _inlineError(String msg) => Padding(
-    padding: EdgeInsets.symmetric(
-        horizontal: kIsWeb ? 16 : 16.w, vertical: kIsWeb ? 8 : 8.h),
-    child: Row(children: [
-      const Icon(Icons.error_outline, color: Colors.red, size: 16),
-      const SizedBox(width: 6),
-      Text(msg,
-          style: GoogleFonts.poppins(
-              fontSize: kIsWeb ? 12 : 12.sp, color: Colors.red)),
-    ]),
-  );
+      padding: EdgeInsets.symmetric(
+          horizontal: kIsWeb ? 16 : 16.w, vertical: kIsWeb ? 8 : 8.h),
+      child: Row(children: [
+        const Icon(Icons.error_outline, color: Colors.red, size: 16),
+        const SizedBox(width: 6),
+        Text(msg, style: GoogleFonts.poppins(
+            fontSize: kIsWeb ? 12 : 12.sp, color: Colors.red)),
+      ]));
 
   Widget _inlineLoading() => Padding(
-    padding: EdgeInsets.symmetric(
-        horizontal: kIsWeb ? 16 : 16.w, vertical: kIsWeb ? 8 : 8.h),
-    child: const Row(children: [
-      SizedBox(
-          width: 16,
-          height: 16,
-          child: CircularProgressIndicator(strokeWidth: 2)),
-      SizedBox(width: 8),
-      Text('Loading...'),
-    ]),
-  );
+      padding: EdgeInsets.symmetric(
+          horizontal: kIsWeb ? 16 : 16.w, vertical: kIsWeb ? 8 : 8.h),
+      child: const Row(children: [
+        SizedBox(width: 16, height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2)),
+        SizedBox(width: 8), Text('Loading...'),
+      ]));
 
   Widget _inlineEmpty(String msg) => Padding(
-    padding: EdgeInsets.symmetric(
-        horizontal: kIsWeb ? 16 : 16.w, vertical: kIsWeb ? 8 : 8.h),
-    child: Row(children: [
-      Icon(Icons.restaurant_menu, color: Colors.grey[400], size: 16),
-      const SizedBox(width: 6),
-      Text(msg,
-          style: GoogleFonts.poppins(
-              fontSize: kIsWeb ? 12 : 12.sp, color: Colors.grey[400])),
-    ]),
-  );
+      padding: EdgeInsets.symmetric(
+          horizontal: kIsWeb ? 16 : 16.w, vertical: kIsWeb ? 8 : 8.h),
+      child: Row(children: [
+        Icon(Icons.restaurant_menu, color: Colors.grey[400], size: 16),
+        const SizedBox(width: 6),
+        Text(msg, style: GoogleFonts.poppins(
+            fontSize: kIsWeb ? 12 : 12.sp, color: Colors.grey[400])),
+      ]));
 }
 
-// ─── Animated cart badge in header ───────────────────────────────────────────
-
+// ─────────────────────────────────────────────────────────────────────────────
+// ANIMATED CART BADGE (unchanged from original)
+// ─────────────────────────────────────────────────────────────────────────────
 class _AnimatedCartBadge extends StatefulWidget {
-  final int bounceCount;
+  final int     bounceCount;
   final String? badge;
-  final Color primaryColor;
-
+  final Color   primaryColor;
   const _AnimatedCartBadge({
     required this.bounceCount,
     required this.badge,
     required this.primaryColor,
   });
-
   @override
   State<_AnimatedCartBadge> createState() => _AnimatedCartBadgeState();
 }
@@ -2250,12 +1586,11 @@ class _AnimatedCartBadge extends StatefulWidget {
 class _AnimatedCartBadgeState extends State<_AnimatedCartBadge>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
-  late Animation<double> _scale;
-
+  late Animation<double>   _scale;
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(
+    _ctrl  = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 350));
     _scale = TweenSequence([
       TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.35), weight: 40),
@@ -2263,73 +1598,52 @@ class _AnimatedCartBadgeState extends State<_AnimatedCartBadge>
       TweenSequenceItem(tween: Tween(begin: 0.90, end: 1.0), weight: 30),
     ]).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
   }
-
   @override
   void didUpdateWidget(_AnimatedCartBadge old) {
     super.didUpdateWidget(old);
-    if (old.bounceCount != widget.bounceCount) {
-      _ctrl.forward(from: 0);
-    }
+    if (old.bounceCount != widget.bounceCount) _ctrl.forward(from: 0);
   }
-
   @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
+  void dispose() { _ctrl.dispose(); super.dispose(); }
   @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _scale,
-      builder: (_, child) =>
-          Transform.scale(scale: _scale.value, child: child),
-      child: Container(
-        width: kIsWeb ? 40 : 40.sp,
-        height: kIsWeb ? 40 : 40.sp,
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(kIsWeb ? 20 : 20.sp),
-        ),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Icon(Icons.shopping_cart,
-                size: kIsWeb ? 20 : 20.sp, color: Colors.white),
-            if (widget.badge != null)
-              Positioned(
-                top: kIsWeb ? 2 : 2.sp,
-                right: kIsWeb ? 2 : 2.sp,
-                child: Container(
-                  width: kIsWeb ? 16 : 16.sp,
-                  height: kIsWeb ? 16 : 16.sp,
-                  decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius:
-                      BorderRadius.circular(kIsWeb ? 8 : 8.sp)),
-                  child: Center(
-                    child: Text(widget.badge!,
-                        style: GoogleFonts.poppins(
-                            fontSize: kIsWeb ? 10 : 10.sp,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white)),
-                  ),
-                ),
-              ),
-          ],
-        ),
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: _scale,
+    builder: (_, child) => Transform.scale(scale: _scale.value, child: child),
+    child: Container(
+      width: kIsWeb ? 40 : 40.sp, height: kIsWeb ? 40 : 40.sp,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(kIsWeb ? 20 : 20.sp),
       ),
-    );
-  }
+      child: Stack(alignment: Alignment.center, children: [
+        Icon(Icons.shopping_cart, size: kIsWeb ? 20 : 20.sp, color: Colors.white),
+        if (widget.badge != null)
+          Positioned(
+            top: kIsWeb ? 2 : 2.sp, right: kIsWeb ? 2 : 2.sp,
+            child: Container(
+              width: kIsWeb ? 16 : 16.sp, height: kIsWeb ? 16 : 16.sp,
+              decoration: BoxDecoration(color: Colors.red,
+                  borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp)),
+              child: Center(child: Text(widget.badge!,
+                  style: GoogleFonts.poppins(
+                      fontSize: kIsWeb ? 10 : 10.sp,
+                      fontWeight: FontWeight.bold, color: Colors.white))),
+            ),
+          ),
+      ]),
+    ),
+  );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ADD BUTTON WIDGET (unchanged logic, polished style)
+// ─────────────────────────────────────────────────────────────────────────────
 class _AddButtonWidget extends StatefulWidget {
-  final String itemId;
-  final Color primaryColor;
+  final String                 itemId;
+  final Color                  primaryColor;
   final ValueNotifier<String?> lastAddedNotifier;
-  final VoidCallback onTap;
-  final bool isOpen;
-
+  final VoidCallback           onTap;
+  final bool                   isOpen;
   const _AddButtonWidget({
     required this.itemId,
     required this.primaryColor,
@@ -2337,7 +1651,6 @@ class _AddButtonWidget extends StatefulWidget {
     required this.onTap,
     required this.isOpen,
   });
-
   @override
   State<_AddButtonWidget> createState() => _AddButtonWidgetState();
 }
@@ -2345,12 +1658,11 @@ class _AddButtonWidget extends StatefulWidget {
 class _AddButtonWidgetState extends State<_AddButtonWidget>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
-  late Animation<double> _scale;
-
+  late Animation<double>   _scale;
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(
+    _ctrl  = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 400));
     _scale = TweenSequence([
       TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.85), weight: 20),
@@ -2359,65 +1671,62 @@ class _AddButtonWidgetState extends State<_AddButtonWidget>
     ]).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
     widget.lastAddedNotifier.addListener(_onAdded);
   }
-
   void _onAdded() {
-    if (widget.lastAddedNotifier.value == widget.itemId) {
-      _ctrl.forward(from: 0);
-    }
+    if (widget.lastAddedNotifier.value == widget.itemId) _ctrl.forward(from: 0);
   }
-
   @override
   void dispose() {
     widget.lastAddedNotifier.removeListener(_onAdded);
     _ctrl.dispose();
     super.dispose();
   }
-
   @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _scale,
-      builder: (_, child) =>
-          Transform.scale(scale: _scale.value, child: child),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: Container(
-          height: kIsWeb ? 34 : 34.h,
-          padding:
-          EdgeInsets.symmetric(horizontal: kIsWeb ? 18 : 18.w),
-          decoration: BoxDecoration(
-            color: widget.isOpen ? widget.primaryColor : Colors.grey[400],
-            borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
-          ),
-          child: Center(
-            child: Text("ADD",
-                style: GoogleFonts.poppins(
-                    fontSize: kIsWeb ? 12 : 12.sp,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.6)),
-          ),
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: _scale,
+    builder: (_, child) => Transform.scale(scale: _scale.value, child: child),
+    child: GestureDetector(
+      onTap: widget.onTap,
+      child: Container(
+        height: kIsWeb ? 34 : 34.h,
+        padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 18 : 18.w),
+        decoration: BoxDecoration(
+          gradient: widget.isOpen
+              ? const LinearGradient(
+              colors: [Color(0xFFE8420E), Color(0xFFFF5722)],
+              begin: Alignment.topLeft, end: Alignment.bottomRight)
+              : null,
+          color: widget.isOpen ? null : Colors.grey[300],
+          borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
+          boxShadow: widget.isOpen
+              ? [BoxShadow(color: const Color(0xFFE8420E).withOpacity(0.30),
+              blurRadius: 8, offset: const Offset(0, 3))]
+              : null,
         ),
+        child: Center(child: Text("ADD",
+            style: GoogleFonts.poppins(
+                fontSize: kIsWeb ? 12 : 12.sp,
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.8))),
       ),
-    );
-  }
+    ),
+  );
 }
 
-// ─── Animated counter (+/−) widget ───────────────────────────────────────────
-
+// ─────────────────────────────────────────────────────────────────────────────
+// COUNTER WIDGET (unchanged logic, restyled)
+// ─────────────────────────────────────────────────────────────────────────────
 class _CounterWidget extends StatefulWidget {
-  final int qty;
-  final Color primaryColor;
+  final int          qty;
+  final Color        primaryColor;
   final VoidCallback onDecrement;
   final VoidCallback onIncrement;
-
   const _CounterWidget({
     required this.qty,
     required this.primaryColor,
     required this.onDecrement,
     required this.onIncrement,
   });
-
   @override
   State<_CounterWidget> createState() => _CounterWidgetState();
 }
@@ -2425,92 +1734,67 @@ class _CounterWidget extends StatefulWidget {
 class _CounterWidgetState extends State<_CounterWidget>
     with SingleTickerProviderStateMixin {
   late AnimationController _numCtrl;
-  late Animation<double> _numScale;
-
+  late Animation<double>   _numScale;
   @override
   void initState() {
     super.initState();
-    _numCtrl = AnimationController(
+    _numCtrl  = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 250));
     _numScale = TweenSequence([
       TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.4), weight: 50),
       TweenSequenceItem(tween: Tween(begin: 1.4, end: 1.0), weight: 50),
     ]).animate(CurvedAnimation(parent: _numCtrl, curve: Curves.easeOut));
   }
-
   @override
   void didUpdateWidget(_CounterWidget old) {
     super.didUpdateWidget(old);
     if (old.qty != widget.qty) _numCtrl.forward(from: 0);
   }
-
   @override
-  void dispose() {
-    _numCtrl.dispose();
-    super.dispose();
-  }
-
+  void dispose() { _numCtrl.dispose(); super.dispose(); }
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: kIsWeb ? 34 : 34.h,
-      decoration: BoxDecoration(
-        color: widget.primaryColor.withOpacity(0.07),
-        borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
-        border: Border.all(color: widget.primaryColor.withOpacity(0.25)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          GestureDetector(
-            onTap: widget.onDecrement,
-            child: Container(
-              width: kIsWeb ? 32 : 32.w,
-              height: double.infinity,
-              decoration: BoxDecoration(
-                color: widget.primaryColor.withOpacity(0.12),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(kIsWeb ? 8 : 8.sp),
-                  bottomLeft: Radius.circular(kIsWeb ? 8 : 8.sp),
-                ),
-              ),
-              child: Icon(Icons.remove,
-                  size: kIsWeb ? 15 : 15.sp, color: widget.primaryColor),
+  Widget build(BuildContext context) => Container(
+    height: kIsWeb ? 34 : 34.h,
+    decoration: BoxDecoration(
+      color: widget.primaryColor.withOpacity(0.07),
+      borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
+      border: Border.all(color: widget.primaryColor.withOpacity(0.25)),
+    ),
+    child: Row(mainAxisSize: MainAxisSize.min, children: [
+      GestureDetector(onTap: widget.onDecrement,
+          child: Container(
+            width: kIsWeb ? 32 : 32.w, height: double.infinity,
+            decoration: BoxDecoration(
+              color: widget.primaryColor.withOpacity(0.12),
+              borderRadius: BorderRadius.only(
+                  topLeft:    Radius.circular(kIsWeb ? 10 : 10.sp),
+                  bottomLeft: Radius.circular(kIsWeb ? 10 : 10.sp)),
             ),
-          ),
-          SizedBox(
-            width: kIsWeb ? 34 : 34.w,
-            child: Center(
-              child: AnimatedBuilder(
-                animation: _numScale,
-                builder: (_, child) =>
-                    Transform.scale(scale: _numScale.value, child: child),
-                child: Text("${widget.qty}",
-                    style: GoogleFonts.poppins(
-                        fontSize: kIsWeb ? 13 : 13.sp,
-                        fontWeight: FontWeight.w700,
-                        color: widget.primaryColor)),
-              ),
+            child: Icon(Icons.remove,
+                size: kIsWeb ? 15 : 15.sp, color: widget.primaryColor),
+          )),
+      SizedBox(width: kIsWeb ? 34 : 34.w,
+          child: Center(child: AnimatedBuilder(
+            animation: _numScale,
+            builder: (_, child) =>
+                Transform.scale(scale: _numScale.value, child: child),
+            child: Text("${widget.qty}", style: GoogleFonts.poppins(
+                fontSize: kIsWeb ? 13 : 13.sp,
+                fontWeight: FontWeight.w700,
+                color: widget.primaryColor)),
+          ))),
+      GestureDetector(onTap: widget.onIncrement,
+          child: Container(
+            width: kIsWeb ? 32 : 32.w, height: double.infinity,
+            decoration: BoxDecoration(
+              color: widget.primaryColor.withOpacity(0.12),
+              borderRadius: BorderRadius.only(
+                  topRight:    Radius.circular(kIsWeb ? 10 : 10.sp),
+                  bottomRight: Radius.circular(kIsWeb ? 10 : 10.sp)),
             ),
-          ),
-          GestureDetector(
-            onTap: widget.onIncrement,
-            child: Container(
-              width: kIsWeb ? 32 : 32.w,
-              height: double.infinity,
-              decoration: BoxDecoration(
-                color: widget.primaryColor.withOpacity(0.12),
-                borderRadius: BorderRadius.only(
-                  topRight: Radius.circular(kIsWeb ? 8 : 8.sp),
-                  bottomRight: Radius.circular(kIsWeb ? 8 : 8.sp),
-                ),
-              ),
-              child: Icon(Icons.add,
-                  size: kIsWeb ? 15 : 15.sp, color: widget.primaryColor),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+            child: Icon(Icons.add,
+                size: kIsWeb ? 15 : 15.sp, color: widget.primaryColor),
+          )),
+    ]),
+  );
 }

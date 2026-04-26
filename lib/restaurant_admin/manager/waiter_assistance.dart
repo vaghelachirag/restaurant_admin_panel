@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../services/localization_service.dart';
 
 
 class WaiterAssistancePage extends StatefulWidget {
@@ -111,14 +112,42 @@ class _WaiterAssistancePageState extends State<WaiterAssistancePage> {
     },
   };
 
-  String _formatTime(Timestamp? ts) {
+
+  String _typeLabel(String type, AppLocalizations l10n) {
+    switch (type) {
+      case 'call_waiter': return l10n.waiterTypeCallWaiter;
+      case 'water':       return l10n.waiterTypeWater;
+      case 'order':       return l10n.waiterTypeOrder;
+      case 'bill':        return l10n.waiterTypeBill;
+      default:            return type;
+    }
+  }
+
+  String _statusLabel(String status, AppLocalizations l10n) {
+    switch (status) {
+      case 'pending':      return l10n.waiterStatusPending;
+      case 'acknowledged': return l10n.waiterStatusAcknowledged;
+      case 'completed':    return l10n.waiterStatusCompleted;
+      default:             return status;
+    }
+  }
+
+  String _nextActionLabel(String status, AppLocalizations l10n) {
+    switch (status) {
+      case 'pending':      return l10n.waiterActionAcknowledge;
+      case 'acknowledged': return l10n.waiterActionComplete;
+      default:             return '';
+    }
+  }
+
+  String _formatTime(Timestamp? ts, AppLocalizations l10n) {
     if (ts == null) return '--:--';
     final dt = ts.toDate();
     final now = DateTime.now();
     final diff = now.difference(dt);
-    if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inMinutes < 1) return l10n.waiterJustNow;
+    if (diff.inMinutes < 60) return l10n.waiterMinutesAgo(diff.inMinutes);
+    if (diff.inHours < 24) return l10n.waiterHoursAgo(diff.inHours);
     return '${dt.day}/${dt.month}';
   }
 
@@ -144,6 +173,7 @@ class _WaiterAssistancePageState extends State<WaiterAssistancePage> {
   }
 
   void _confirmDelete(BuildContext context, String docId, String tableLabel) {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
@@ -172,12 +202,12 @@ class _WaiterAssistancePageState extends State<WaiterAssistancePage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Delete Request',
+                        Text(l10n.waiterDeleteTitle,
                             style: GoogleFonts.poppins(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
                                 color: const Color(0xFF111827))),
-                        Text('Table $tableLabel',
+                        Text(l10n.waiterTableLabel(tableLabel),
                             style: GoogleFonts.poppins(
                                 fontSize: 12, color: const Color(0xFF6B7280))),
                       ],
@@ -192,7 +222,7 @@ class _WaiterAssistancePageState extends State<WaiterAssistancePage> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Are you sure you want to delete this assistance request? This action cannot be undone.',
+                l10n.waiterDeleteBody,
                 style: GoogleFonts.poppins(
                     fontSize: 13, color: const Color(0xFF6B7280), height: 1.5),
               ),
@@ -208,7 +238,7 @@ class _WaiterAssistancePageState extends State<WaiterAssistancePage> {
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10)),
                       ),
-                      child: Text('Cancel',
+                      child: Text(l10n.waiterCancel,
                           style: GoogleFonts.poppins(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
@@ -230,7 +260,7 @@ class _WaiterAssistancePageState extends State<WaiterAssistancePage> {
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10)),
                       ),
-                      child: Text('Delete',
+                      child: Text(l10n.waiterDelete,
                           style: GoogleFonts.poppins(
                               fontSize: 13, fontWeight: FontWeight.w600)),
                     ),
@@ -248,6 +278,7 @@ class _WaiterAssistancePageState extends State<WaiterAssistancePage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isDesktop = kIsWeb || MediaQuery.of(context).size.width >= 900;
 
     return Scaffold(
@@ -266,7 +297,7 @@ class _WaiterAssistancePageState extends State<WaiterAssistancePage> {
               Row(
                 children: [
                   Text(
-                    'Waiter Assistance',
+                    l10n.waiterAssistanceTitle,
                     style: GoogleFonts.poppins(
                       fontSize: kIsWeb ? 24 : 20.sp,
                       fontWeight: FontWeight.w200,
@@ -307,7 +338,7 @@ class _WaiterAssistancePageState extends State<WaiterAssistancePage> {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              '$count pending',
+                              l10n.waiterPendingBadge(count),
                               style: GoogleFonts.poppins(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
@@ -336,7 +367,7 @@ class _WaiterAssistancePageState extends State<WaiterAssistancePage> {
                     icon: const Icon(Icons.cleaning_services_outlined,
                         size: 15, color: Color(0xFF6B7280)),
                     label: Text(
-                      'Clear Completed',
+                      l10n.waiterClearCompleted,
                       style: GoogleFonts.poppins(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -367,13 +398,13 @@ class _WaiterAssistancePageState extends State<WaiterAssistancePage> {
                   children: [
                     // Status filters
                     _FilterChip(
-                      label: 'All',
+                      label: l10n.waiterFilterAll,
                       isSelected: _filterStatus == 'all',
                       onTap: () => setState(() => _filterStatus = 'all'),
                     ),
                     const SizedBox(width: 8),
                     _FilterChip(
-                      label: 'Pending',
+                      label: l10n.waiterFilterPending,
                       isSelected: _filterStatus == 'pending',
                       color: const Color(0xFFD97706),
                       onTap: () =>
@@ -381,7 +412,7 @@ class _WaiterAssistancePageState extends State<WaiterAssistancePage> {
                     ),
                     const SizedBox(width: 8),
                     _FilterChip(
-                      label: 'Acknowledged',
+                      label: l10n.waiterFilterAcknowledged,
                       isSelected: _filterStatus == 'acknowledged',
                       color: const Color(0xFF0EA5E9),
                       onTap: () =>
@@ -389,7 +420,7 @@ class _WaiterAssistancePageState extends State<WaiterAssistancePage> {
                     ),
                     const SizedBox(width: 8),
                     _FilterChip(
-                      label: 'Completed',
+                      label: l10n.waiterFilterCompleted,
                       isSelected: _filterStatus == 'completed',
                       color: const Color(0xFF059669),
                       onTap: () =>
@@ -403,7 +434,7 @@ class _WaiterAssistancePageState extends State<WaiterAssistancePage> {
                     ..._typeConfig.entries.map((e) => Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: _FilterChip(
-                        label: (e.value['label'] as String),
+                        label: _RequestCard._localizedTypeLabel(e.key, AppLocalizations.of(context)),
                         isSelected: _filterType == e.key,
                         color: e.value['color'] as Color,
                         onTap: () => setState(() => _filterType ==
@@ -437,7 +468,7 @@ class _WaiterAssistancePageState extends State<WaiterAssistancePage> {
                       SizedBox(width: kIsWeb ? 8 : 8.w),
                       Expanded(
                         child: Text(
-                          'Table: ${_selectedTableName ?? _selectedTableId}',
+                          l10n.waiterTableLabel(_selectedTableName ?? _selectedTableId!),
                           style: GoogleFonts.poppins(
                             fontSize: kIsWeb ? 13 : 12.sp,
                             fontWeight: FontWeight.w600,
@@ -449,7 +480,7 @@ class _WaiterAssistancePageState extends State<WaiterAssistancePage> {
                           color: Color(0xFF2ECC71), size: 14),
                       SizedBox(width: kIsWeb ? 4 : 4.w),
                       Text(
-                        'Auto-selected',
+                        l10n.waiterAutoSelected,
                         style: GoogleFonts.poppins(
                           fontSize: kIsWeb ? 10 : 10.sp,
                           color: const Color(0xFF2ECC71),
@@ -529,7 +560,7 @@ class _WaiterAssistancePageState extends State<WaiterAssistancePage> {
                                 data: data,
                                 typeConfig: _typeConfig,
                                 statusConfig: _statusConfig,
-                                formatTime: _formatTime,
+                                formatTime: (ts) => _formatTime(ts, l10n),
                                 onStatusChange: _updateStatus,
                                 onDelete: (id) => _confirmDelete(
                                     context,
@@ -558,7 +589,7 @@ class _WaiterAssistancePageState extends State<WaiterAssistancePage> {
                           data: data,
                           typeConfig: _typeConfig,
                           statusConfig: _statusConfig,
-                          formatTime: _formatTime,
+                          formatTime: (ts) => _formatTime(ts, l10n),
                           onStatusChange: _updateStatus,
                           onDelete: (id) => _confirmDelete(
                               context,
@@ -587,6 +618,7 @@ class _SummaryCards extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('restaurants')
@@ -607,7 +639,7 @@ class _SummaryCards extends StatelessWidget {
         return Row(
           children: [
             _StatCard(
-              label: 'Pending',
+              label: l10n.waiterSummaryPending,
               count: pending,
               icon: Icons.hourglass_top_rounded,
               color: const Color(0xFFD97706),
@@ -615,7 +647,7 @@ class _SummaryCards extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             _StatCard(
-              label: 'In Progress',
+              label: l10n.waiterSummaryAcknowledged,
               count: acknowledged,
               icon: Icons.directions_run_rounded,
               color: const Color(0xFF0EA5E9),
@@ -623,7 +655,7 @@ class _SummaryCards extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             _StatCard(
-              label: 'Completed',
+              label: l10n.waiterSummaryCompleted,
               count: completed,
               icon: Icons.task_alt_rounded,
               color: const Color(0xFF059669),
@@ -631,7 +663,7 @@ class _SummaryCards extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             _StatCard(
-              label: 'Total Today',
+              label: l10n.waiterSummaryTotal,
               count: docs.length,
               icon: Icons.bar_chart_rounded,
               color: const Color(0xFF070B2D),
@@ -778,8 +810,28 @@ class _RequestCard extends StatelessWidget {
     required this.onDelete,
   });
 
+  static String _localizedTypeLabel(String type, AppLocalizations l10n) {
+    switch (type) {
+      case 'call_waiter': return l10n.waiterTypeCallWaiter;
+      case 'water':       return l10n.waiterTypeWater;
+      case 'order':       return l10n.waiterTypeOrder;
+      case 'bill':        return l10n.waiterTypeBill;
+      default:            return type;
+    }
+  }
+
+  static String _localizedStatusLabel(String status, AppLocalizations l10n) {
+    switch (status) {
+      case 'pending':      return l10n.waiterStatusPending;
+      case 'acknowledged': return l10n.waiterStatusAcknowledged;
+      case 'completed':    return l10n.waiterStatusCompleted;
+      default:             return status;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final String type = (data['type'] ?? 'call_waiter') as String;
     final String status = (data['status'] ?? 'pending') as String;
     final String tableLabel =
@@ -793,11 +845,11 @@ class _RequestCard extends StatelessWidget {
     final Color typeColor = typeCfg['color'] as Color;
     final Color typeBg = typeCfg['bg'] as Color;
     final IconData typeIcon = typeCfg['icon'] as IconData;
-    final String typeLabel = typeCfg['label'] as String;
+    final String typeLabel = _localizedTypeLabel(type, l10n);
 
     final Color statusColor = statusCfg['color'] as Color;
     final Color statusBg = statusCfg['bg'] as Color;
-    final String statusLabel = statusCfg['label'] as String;
+    final String statusLabel = _localizedStatusLabel(status, l10n);
 
     // Next status action
     String? nextStatus;
@@ -805,11 +857,11 @@ class _RequestCard extends StatelessWidget {
     IconData? nextIcon;
     if (status == 'pending') {
       nextStatus = 'acknowledged';
-      nextLabel = 'Acknowledge';
+      nextLabel = l10n.waiterActionAcknowledge;
       nextIcon = Icons.check_rounded;
     } else if (status == 'acknowledged') {
       nextStatus = 'completed';
-      nextLabel = 'Complete';
+      nextLabel = l10n.waiterActionComplete;
       nextIcon = Icons.task_alt_rounded;
     }
 
@@ -1013,7 +1065,7 @@ class _RequestCard extends StatelessWidget {
                     size: kIsWeb ? 18 : 16.sp),
                 SizedBox(width: kIsWeb ? 6 : 5.sp),
                 Text(
-                  'Done',
+                  l10n.waiterDone,
                   style: GoogleFonts.poppins(
                       fontSize: kIsWeb ? 12 : 11.sp,
                       fontWeight: FontWeight.w600,
@@ -1041,6 +1093,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final bool isFiltered =
         filterStatus != 'all' || filterType != 'all';
 
@@ -1066,8 +1119,8 @@ class _EmptyState extends StatelessWidget {
           SizedBox(height: kIsWeb ? 20 : 16.sp),
           Text(
             isFiltered
-                ? 'No requests match your filter'
-                : 'No assistance requests yet',
+                ? l10n.waiterNoRequestsFiltered
+                : l10n.waiterNoRequests,
             style: GoogleFonts.poppins(
               fontSize: kIsWeb ? 18 : 16.sp,
               fontWeight: FontWeight.w700,
@@ -1077,8 +1130,8 @@ class _EmptyState extends StatelessWidget {
           SizedBox(height: kIsWeb ? 8 : 6.sp),
           Text(
             isFiltered
-                ? 'Try changing or clearing your filters.'
-                : 'Requests from customers will appear here in real time.',
+                ? l10n.waiterNoRequestsFilteredHint
+                : l10n.waiterNoRequestsHint,
             textAlign: TextAlign.center,
             style: GoogleFonts.poppins(
               fontSize: kIsWeb ? 13 : 12.sp,

@@ -3,12 +3,27 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import '../core/constants/app_colors.dart';
 import '../services/localization_service.dart';
 import '../widgets/language_switcher.dart';
 import '../uttils/snackbar_helper.dart';
+
+class _C {
+  static const bg          = Color(0xFFFFF3EE);
+  static const card        = Color(0xFFFFFFFF);
+  static const orange      = Color(0xFFE8622A);
+  static const orangeLight = Color(0xFFFFF0E8);
+  static const textDark    = Color(0xFF1A1A1A);
+  static const textMid     = Color(0xFF666666);
+  static const textLight   = Color(0xFF999999);
+  static const cardBorder  = Color(0xFFEEEEEE);
+  static const green       = Color(0xFF2ECC71);
+  static const red         = Color(0xFFE74C3C);
+}
+
 
 class SettingsPage extends StatefulWidget {
   final String restaurantId;
@@ -259,8 +274,12 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  TextStyle _p(double size, FontWeight weight, Color color) =>
+      GoogleFonts.poppins(fontSize: size, fontWeight: weight, color: color);
+
   // ─── Page Header ──────────────────────────────────────────────────────────
   Widget _buildPageHeader() {
+    final isMobile = MediaQuery.of(context).size.width < 650;
     return Container(
       width: double.infinity,
       padding: EdgeInsets.symmetric(
@@ -294,15 +313,8 @@ class _SettingsPageState extends State<SettingsPage> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                AppLocalizations.of(context).restaurantSettings,
-                style: TextStyle(
-                  fontSize: _isWeb ? 22 : 18.sp,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF111827),
-                  letterSpacing: -0.3,
-                ),
-              ),
+              Text(AppLocalizations.of(context).settingsTitle,
+                  style: _p(isMobile ? 20 : 22, FontWeight.w200, _C.textDark)),
               const SizedBox(height: 2),
               Text(
                 AppLocalizations.of(context).manageRestaurantInfo,

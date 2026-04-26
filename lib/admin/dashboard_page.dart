@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../restaurant_admin/restaurant_orders_page.dart';
-import '../service/restaurant_service.dart';
+import '../services/restaurant_service.dart';
 import '../data/models/restaurant_model.dart';
 
 class DashboardPage extends StatefulWidget {

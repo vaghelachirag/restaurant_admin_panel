@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../service/restaurant_service.dart';
+import '../services/restaurant_service.dart';
 
 class AddRestaurantPage extends StatefulWidget {
   const AddRestaurantPage({super.key});

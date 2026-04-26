@@ -188,10 +188,10 @@ class _SplashScreenState extends State<SplashScreen>
           // ── Background – warm dark matching Rasora brand ──
           Container(
             decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [bgDark, bgMid, bgLight],
+              gradient: RadialGradient(
+                center: Alignment.center,
+                radius: 1.2,
+                colors: [Color(0xFF2A1000), Color(0xFF110500), bgDark],
                 stops: [0.0, 0.5, 1.0],
               ),
             ),
@@ -246,195 +246,197 @@ class _SplashScreenState extends State<SplashScreen>
             },
           ),
 
-          // ── Main content ──
+          // ── Main content – single scrollable column ──
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 36),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // ── Logo: rasora_web.png (flame + Rasora wordmark) ──
-                  ScaleTransition(
-                    scale: _logoScale,
-                    child: FadeTransition(
-                      opacity: _logoFade,
-                      child: Container(
-                        width: 220,
-                        height: 220,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(32),
-                          boxShadow: [
-                            BoxShadow(
-                              color: orange.withOpacity(0.35),
-                              blurRadius: 48,
-                              spreadRadius: 4,
-                              offset: const Offset(0, 12),
+            child: Center(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 36,
+                    vertical: 48,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // ── Logo: flame + Rasora wordmark ──
+                      ScaleTransition(
+                        scale: _logoScale,
+                        child: FadeTransition(
+                          opacity: _logoFade,
+                          child: Container(
+                            width: 140,
+                            height: 140,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: orange.withOpacity(0.45),
+                                  blurRadius: 60,
+                                  spreadRadius: 10,
+                                ),
+                              ],
+                            ),
+                            child: Image.asset(
+                              'assets/images/rasora_web.png',
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 40),
+
+                      // ── App title ──
+                      SlideTransition(
+                        position: _titleSlide,
+                        child: FadeTransition(
+                          opacity: _titleFade,
+                          child: Column(
+                            children: [
+                              ShaderMask(
+                                shaderCallback: (bounds) =>
+                                    const LinearGradient(
+                                      colors: [
+                                        Color(0xFFFFAA00),
+                                        Color(0xFFE8622A),
+                                      ],
+                                    ).createShader(bounds),
+                                child: Text(
+                                  'Rasora',
+                                  style: GoogleFonts.playfairDisplay(
+                                    fontSize: 52,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                    letterSpacing: 1.2,
+                                    height: 1.1,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Management Portal',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                  color: orangeLight.withOpacity(0.85),
+                                  letterSpacing: 2.0,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // ── Subtitle ──
+                      FadeTransition(
+                        opacity: _subtitleFade,
+                        child: Text(
+                          'Manage orders, menus, and your restaurant\noperations from one unified dashboard.',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.white.withOpacity(0.50),
+                            height: 1.7,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 36),
+
+                      // ── Feature pills ──
+                      FadeTransition(
+                        opacity: _taglineFade,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _FeaturePill(
+                              icon: Icons.bolt_rounded,
+                              label: 'Live Orders',
+                              orange: orange,
+                            ),
+                            const SizedBox(width: 10),
+                            _FeaturePill(
+                              icon: Icons.menu_book_rounded,
+                              label: 'Menu Mgmt',
+                              orange: orange,
+                            ),
+                            const SizedBox(width: 10),
+                            _FeaturePill(
+                              icon: Icons.bar_chart_rounded,
+                              label: 'Analytics',
+                              orange: orange,
                             ),
                           ],
                         ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(32),
-                          child: Image.asset(
-                            'rasora_web.png',
-                            fit: BoxFit.contain,
-                          ),
-                        ),
                       ),
-                    ),
-                  ),
 
-                  const SizedBox(height: 36),
+                      const SizedBox(height: 40),
 
-                  // ── App title ──
-                  SlideTransition(
-                    position: _titleSlide,
-                    child: FadeTransition(
-                      opacity: _titleFade,
-                      child: Column(
-                        children: [
-                          ShaderMask(
-                            shaderCallback: (bounds) => const LinearGradient(
-                              colors: [Color(0xFFFFAA00), Color(0xFFE8622A)],
-                            ).createShader(bounds),
-                            child: Text(
-                              'Rasora',
-                              style: GoogleFonts.playfairDisplay(
-                                fontSize: 46,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                                letterSpacing: 1.2,
-                                height: 1.1,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            'Management Portal',
-                            style: GoogleFonts.playfairDisplay(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w500,
-                              color: orangeLight.withOpacity(0.85),
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // ── Subtitle ──
-                  FadeTransition(
-                    opacity: _subtitleFade,
-                    child: Text(
-                      'Manage orders, menus, and your restaurant\noperations from one unified dashboard.',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.white.withOpacity(0.50),
-                        height: 1.7,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 48),
-
-                  // ── Progress bar ──
-                  AnimatedBuilder(
-                    animation: _progressController,
-                    builder: (context, _) {
-                      return Column(
-                        children: [
-                          Container(
-                            width: double.infinity,
-                            height: 3,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.08),
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                            child: FractionallySizedBox(
-                              alignment: Alignment.centerLeft,
-                              widthFactor: _progressValue.value,
-                              child: Container(
+                      // ── Progress bar ──
+                      AnimatedBuilder(
+                        animation: _progressController,
+                        builder: (context, _) {
+                          return Column(
+                            children: [
+                              Container(
+                                width: double.infinity,
+                                height: 3,
                                 decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [orange, orangeLight],
-                                  ),
+                                  color: Colors.white.withOpacity(0.08),
                                   borderRadius: BorderRadius.circular(2),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: orange.withOpacity(0.6),
-                                      blurRadius: 6,
-                                      offset: const Offset(0, 1),
+                                ),
+                                child: FractionallySizedBox(
+                                  alignment: Alignment.centerLeft,
+                                  widthFactor: _progressValue.value,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        colors: [orange, orangeLight],
+                                      ),
+                                      borderRadius: BorderRadius.circular(2),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: orange.withOpacity(0.6),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 1),
+                                        ),
+                                      ],
                                     ),
-                                  ],
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          FadeTransition(
-                            opacity: _subtitleFade,
-                            child: Text(
-                              'Preparing your dashboard...',
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.white.withOpacity(0.35),
-                                letterSpacing: 0.3,
+                              const SizedBox(height: 12),
+                              FadeTransition(
+                                opacity: _subtitleFade,
+                                child: Text(
+                                  'Preparing your dashboard...',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.white.withOpacity(0.35),
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
+                            ],
+                          );
+                        },
+                      ),
 
-          // ── Feature pills at bottom ──
-          Positioned(
-            bottom: 120,
-            left: 0,
-            right: 0,
-            child: FadeTransition(
-              opacity: _taglineFade,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _FeaturePill(
-                    icon: Icons.bolt_rounded,
-                    label: 'Live Orders',
-                    orange: orange,
-                  ),
-                  const SizedBox(width: 10),
-                  _FeaturePill(
-                    icon: Icons.menu_book_rounded,
-                    label: 'Menu Mgmt',
-                    orange: orange,
-                  ),
-                  const SizedBox(width: 10),
-                  _FeaturePill(
-                    icon: Icons.bar_chart_rounded,
-                    label: 'Analytics',
-                    orange: orange,
-                  ),
-                ],
-              ),
-            ),
-          ),
+                      const SizedBox(height: 32),
 
-          // ── App Store Download Buttons ──
-          Positioned(
-            bottom: 40,
-            left: 0,
-            right: 0,
-            child: FadeTransition(
-              opacity: _downloadFade,
-              child: _DownloadButtons(orange: orange),
+                      // ── Download Button ──
+                      FadeTransition(
+                        opacity: _downloadFade,
+                        child: _DownloadButtons(orange: orange),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         ],

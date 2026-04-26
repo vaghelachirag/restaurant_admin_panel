@@ -1,45 +1,79 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
+    <!--
+      If you are serving your web app in a path other than the root, change the
+      href value below to reflect the base path you are serving from.
 
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
+      The path provided below has to start and end with a slash "/" in order for
+      it to work correctly.
 
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+      For more details:
+      * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
 
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
-  <base href="$FLUTTER_BASE_HREF">
+      This is a placeholder for base href that will be replaced by the value of
+      the `--base-href` argument provided to `flutter build`.
+    -->
+    <base href="$FLUTTER_BASE_HREF">
 
-  <meta charset="UTF-8">
-  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="Restaurant Admin Panel - Manage your restaurant with ease">
+    <meta charset="UTF-8">
+    <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+    <meta name="description" content="Restaurant Admin Panel - Manage your restaurant with ease">
 
-  <!-- iOS meta tags & icons -->
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="Restaurant Admin Panel">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+    <!-- iOS meta tags & icons -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Restaurant Admin Panel">
+    <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
-  <!-- Favicon for all contexts -->
-  <link rel="icon" type="image/png" sizes="32x32" href="favicon.png"/>
-  <link rel="icon" type="image/png" sizes="16x16" href="favicon.png"/>
-  <link rel="icon" type="image/png" href="favicon.png"/>
-  <link rel="shortcut icon" href="favicon.png"/>
-  
-  <!-- PWA icons -->
-  <link rel="icon" sizes="192x192" href="icons/Icon-192.png">
-  <link rel="icon" sizes="512x512" href="icons/Icon-512.png">
+    <!-- Favicon for all contexts -->
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon.png"/>
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon.png"/>
+    <link rel="icon" type="image/png" href="favicon.png"/>
+    <link rel="shortcut icon" href="favicon.png"/>
 
-  <title>Restaurant Admin Panel</title>
-  <link rel="manifest" href="manifest.json">
+    <!-- PWA icons -->
+    <link rel="icon" sizes="192x192" href="icons/Icon-192.png">
+    <link rel="icon" sizes="512x512" href="icons/Icon-512.png">
+
+    <title>Restaurant Admin Panel</title>
+    <link rel="manifest" href="manifest.json">
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         Tesseract.js v2  —  stable version, free browser OCR, no API key
+    ═══════════════════════════════════════════════════════════════════ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/2.1.5/tesseract.min.js"
+            crossorigin="anonymous"
+            referrerpolicy="no-referrer"></script>
+
+    <script>
+        window.runTesseractOCR = async function(base64DataUrl) {
+          try {
+            console.log('[Tesseract] Starting OCR...');
+            const result = await Tesseract.recognize(
+              base64DataUrl,
+              'eng',
+              {
+                logger: function(m) {
+                  if (m.status === 'recognizing text') {
+                    console.log('[Tesseract] ' + Math.round(m.progress * 100) + '%');
+                  }
+                }
+              }
+            );
+            console.log('[Tesseract] Done:', result.data.text.substring(0, 120));
+            return result.data.text;
+          } catch (err) {
+            console.error('[Tesseract] ERROR:', err);
+            throw err;
+          }
+        };
+        console.log('[Tesseract] window.runTesseractOCR ready:', typeof window.runTesseractOCR);
+    </script>
+    </script>
+
 </head>
 <body>
-  <script src="flutter_bootstrap.js" async></script>
+<script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

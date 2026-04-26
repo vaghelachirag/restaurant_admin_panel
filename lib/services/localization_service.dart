@@ -106,6 +106,7 @@ class LocalizationService extends ChangeNotifier {
           },
           "categories": {"title": "Categories"},
           "menu_items": {"title": "Menu Items"},
+          "menu_links": {"title": "Menu Links"},
           "customer_menu": {"title": "Customer Menu"},
           "menu_link": {"title": "Menu Link"},
           "managers": {"title": "Managers"},
@@ -201,6 +202,7 @@ class LocalizationService extends ChangeNotifier {
             "logout": "Logout",
             "logout_confirmation": "Are you sure you want to logout?"
           },
+
           "settings": {
             "title": "Settings",
             "restaurant_settings": "Restaurant Settings",
@@ -323,6 +325,42 @@ class LocalizationService extends ChangeNotifier {
             "seats": "seats",
             "disable_table_question": "Disable Table?",
             "disable_table_description": "\"{tableName}\" will be hidden from the table list. This can be undone from Firestore."
+          },
+          "waiter_assistance": {
+            "title": "Waiter Assistance",
+            "pending_badge": "{count} pending",
+            "clear_completed": "Clear Completed",
+            "auto_selected": "Auto-selected",
+            "table_label": "Table: {name}",
+            "filter_all": "All",
+            "filter_pending": "Pending",
+            "filter_acknowledged": "Acknowledged",
+            "filter_completed": "Completed",
+            "type_call_waiter": "Call Waiter",
+            "type_water": "Water",
+            "type_order": "Order",
+            "type_bill": "Bill",
+            "status_pending": "Pending",
+            "status_acknowledged": "Acknowledged",
+            "status_completed": "Completed",
+            "action_acknowledge": "Acknowledge",
+            "action_complete": "Complete",
+            "done": "Done",
+            "just_now": "Just now",
+            "minutes_ago": "{count}m ago",
+            "hours_ago": "{count}h ago",
+            "delete_request_title": "Delete Request",
+            "delete_request_body": "Are you sure you want to delete this assistance request? This action cannot be undone.",
+            "delete": "Delete",
+            "cancel": "Cancel",
+            "no_requests": "No assistance requests yet",
+            "no_requests_filtered": "No requests match your filter",
+            "no_requests_hint": "Requests from customers will appear here in real time.",
+            "no_requests_filtered_hint": "Try changing or clearing your filters.",
+            "summary_pending": "Pending",
+            "summary_acknowledged": "Acknowledged",
+            "summary_completed": "Completed",
+            "summary_total": "Total"
           },
           "common": {
             "and": "and",
@@ -637,6 +675,42 @@ class LocalizationService extends ChangeNotifier {
             "disable_table_question": "Disable Table?",
             "disable_table_description": "\"{tableName}\" will be hidden from the table list. This can be undone from Firestore."
           },
+          "waiter_assistance": {
+            "title": "वेटर सहायता",
+            "pending_badge": "{count} लंबित",
+            "clear_completed": "पूर्ण हटाएं",
+            "auto_selected": "स्वतः चयनित",
+            "table_label": "टेबल: {name}",
+            "filter_all": "सभी",
+            "filter_pending": "लंबित",
+            "filter_acknowledged": "स्वीकृत",
+            "filter_completed": "पूर्ण",
+            "type_call_waiter": "वेटर बुलाएं",
+            "type_water": "पानी",
+            "type_order": "ऑर्डर",
+            "type_bill": "बिल",
+            "status_pending": "लंबित",
+            "status_acknowledged": "स्वीकृत",
+            "status_completed": "पूर्ण",
+            "action_acknowledge": "स्वीकार करें",
+            "action_complete": "पूर्ण करें",
+            "done": "हो गया",
+            "just_now": "अभी",
+            "minutes_ago": "{count}मि पहले",
+            "hours_ago": "{count}घ पहले",
+            "delete_request_title": "अनुरोध हटाएं",
+            "delete_request_body": "क्या आप वाकई इस सहायता अनुरोध को हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।",
+            "delete": "हटाएं",
+            "cancel": "रद्द करें",
+            "no_requests": "अभी तक कोई सहायता अनुरोध नहीं",
+            "no_requests_filtered": "कोई अनुरोध फ़िल्टर से मेल नहीं खाता",
+            "no_requests_hint": "ग्राहकों के अनुरोध यहाँ रीयल टाइम में दिखेंगे।",
+            "no_requests_filtered_hint": "फ़िल्टर बदलें या हटाएं।",
+            "summary_pending": "लंबित",
+            "summary_acknowledged": "स्वीकृत",
+            "summary_completed": "पूर्ण",
+            "summary_total": "कुल"
+          },
           "common": {
             "and": "और",
             "yes": "हां",
@@ -700,6 +774,7 @@ class LocalizationService extends ChangeNotifier {
           },
           "categories": {"title": "શ્રેણીઓ"},
           "menu_items": {"title": "મેનૂ આઇટમ"},
+          "menu_links": {"title": "મેનૂ આઇટમ"},
           "customer_menu": {"title": "ગ્રાહક મેનૂ"},
           "menu_link": {"title": "મેનૂ લિંક"},
           "managers": {"title": "મેનેજર"},
@@ -917,6 +992,42 @@ class LocalizationService extends ChangeNotifier {
             "disable_table_question": "ટેબલ નિષ્ક્રિય કરશો?",
             "disable_table_description": "\"{tableName}\" ટેબલ યાદીમાંથી છુપાઈ જશે. આ Firestore માંથી પાછું કરી શકાય છે."
           },
+          "waiter_assistance": {
+            "title": "વેઇટર સહાય",
+            "pending_badge": "{count} બાકી",
+            "clear_completed": "પૂર્ણ સાફ કરો",
+            "auto_selected": "સ્વ-પસંદ",
+            "table_label": "ટેબલ: {name}",
+            "filter_all": "બધા",
+            "filter_pending": "બાકી",
+            "filter_acknowledged": "સ્વીકૃત",
+            "filter_completed": "પૂર્ણ",
+            "type_call_waiter": "વેઇટર બોલાવો",
+            "type_water": "પાણી",
+            "type_order": "ઓર્ડર",
+            "type_bill": "બિલ",
+            "status_pending": "બાકી",
+            "status_acknowledged": "સ્વીકૃત",
+            "status_completed": "પૂર્ણ",
+            "action_acknowledge": "સ્વીકારો",
+            "action_complete": "પૂર્ણ કરો",
+            "done": "થઈ ગયું",
+            "just_now": "હમણાં જ",
+            "minutes_ago": "{count}મિ પહેલા",
+            "hours_ago": "{count}ક. પહેલા",
+            "delete_request_title": "વિનંતી કાઢી નાખો",
+            "delete_request_body": "શું તમે ખરેખર આ સહાય વિનંતી કાઢી નાખવા માંગો છો? આ ક્રિયા પૂર્વવત કરી શકાતી નથી.",
+            "delete": "કાઢી નાખો",
+            "cancel": "રદ કરો",
+            "no_requests": "હજુ સુધી કોઈ સહાય વિનંતી નથી",
+            "no_requests_filtered": "કોઈ વિનંતી ફિલ્ટર સાથે મેળ ખાતી નથી",
+            "no_requests_hint": "ગ્રાહકોની વિનંતીઓ અહીં રીઅલ ટાઇમમાં દેખાશે.",
+            "no_requests_filtered_hint": "ફિલ્ટર બદલો અથવા સાફ કરો.",
+            "summary_pending": "બાકી",
+            "summary_acknowledged": "સ્વીકૃત",
+            "summary_completed": "પૂર્ણ",
+            "summary_total": "કુલ"
+          },
           "common": {
             "and": "અને",
             "yes": "હા",
@@ -972,13 +1083,13 @@ class LocalizationService extends ChangeNotifier {
       if (value is Map && value.containsKey(k)) {
         value = value[k];
       } else {
-       // debugPrint('Translation key not found: $key (missing: $k)');
+        // debugPrint('Translation key not found: $key (missing: $k)');
         return key; // Return key if translation not found
       }
     }
 
     final result = value?.toString() ?? key;
-   // debugPrint('Translation: $key -> $result');
+    // debugPrint('Translation: $key -> $result');
     return result;
   }
 }
@@ -1175,6 +1286,7 @@ class AppLocalizations {
   // Sidebar nav labels (used via translate(key) in _getSidebarItems)
   String get categoriesTitle => _service.translate('categories.title');
   String get menuItemsTitle => _service.translate('menu_items.title');
+  String get menuItemsLink => _service.translate('menu_link.title');
   String get customerMenuTitle => _service.translate('customer_menu.title');
   String get menuLinkTitle => _service.translate('menu_link.title');
 
@@ -1283,6 +1395,42 @@ class AppLocalizations {
   String get seats => _service.translate('tables.seats');
   String get disableTableQuestion => _service.translate('tables.disable_table_question');
   String get disableTableDescription => _service.translate('tables.disable_table_description');
+
+  // Waiter Assistance
+  String get waiterAssistanceTitle => _service.translate('waiter_assistance.title');
+  String get waiterClearCompleted => _service.translate('waiter_assistance.clear_completed');
+  String get waiterAutoSelected => _service.translate('waiter_assistance.auto_selected');
+  String get waiterFilterAll => _service.translate('waiter_assistance.filter_all');
+  String get waiterFilterPending => _service.translate('waiter_assistance.filter_pending');
+  String get waiterFilterAcknowledged => _service.translate('waiter_assistance.filter_acknowledged');
+  String get waiterFilterCompleted => _service.translate('waiter_assistance.filter_completed');
+  String get waiterTypeCallWaiter => _service.translate('waiter_assistance.type_call_waiter');
+  String get waiterTypeWater => _service.translate('waiter_assistance.type_water');
+  String get waiterTypeOrder => _service.translate('waiter_assistance.type_order');
+  String get waiterTypeBill => _service.translate('waiter_assistance.type_bill');
+  String get waiterStatusPending => _service.translate('waiter_assistance.status_pending');
+  String get waiterStatusAcknowledged => _service.translate('waiter_assistance.status_acknowledged');
+  String get waiterStatusCompleted => _service.translate('waiter_assistance.status_completed');
+  String get waiterActionAcknowledge => _service.translate('waiter_assistance.action_acknowledge');
+  String get waiterActionComplete => _service.translate('waiter_assistance.action_complete');
+  String get waiterDone => _service.translate('waiter_assistance.done');
+  String get waiterJustNow => _service.translate('waiter_assistance.just_now');
+  String get waiterDeleteTitle => _service.translate('waiter_assistance.delete_request_title');
+  String get waiterDeleteBody => _service.translate('waiter_assistance.delete_request_body');
+  String get waiterDelete => _service.translate('waiter_assistance.delete');
+  String get waiterCancel => _service.translate('waiter_assistance.cancel');
+  String get waiterNoRequests => _service.translate('waiter_assistance.no_requests');
+  String get waiterNoRequestsFiltered => _service.translate('waiter_assistance.no_requests_filtered');
+  String get waiterNoRequestsHint => _service.translate('waiter_assistance.no_requests_hint');
+  String get waiterNoRequestsFilteredHint => _service.translate('waiter_assistance.no_requests_filtered_hint');
+  String get waiterSummaryPending => _service.translate('waiter_assistance.summary_pending');
+  String get waiterSummaryAcknowledged => _service.translate('waiter_assistance.summary_acknowledged');
+  String get waiterSummaryCompleted => _service.translate('waiter_assistance.summary_completed');
+  String get waiterSummaryTotal => _service.translate('waiter_assistance.summary_total');
+  String waiterPendingBadge(int count) => _service.translate('waiter_assistance.pending_badge').replaceAll('{count}', '$count');
+  String waiterTableLabel(String name) => _service.translate('waiter_assistance.table_label').replaceAll('{name}', name);
+  String waiterMinutesAgo(int count) => _service.translate('waiter_assistance.minutes_ago').replaceAll('{count}', '$count');
+  String waiterHoursAgo(int count) => _service.translate('waiter_assistance.hours_ago').replaceAll('{count}', '$count');
 
   /// Generic key-based lookup — allows widgets to call
   /// AppLocalizations.of(context).translate('some.key')

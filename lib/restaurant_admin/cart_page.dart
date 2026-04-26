@@ -859,7 +859,7 @@ class _CartPageState extends State<CartPage> {
                                               height:
                                               kIsWeb ? 4 : 4.h),
                                           Text(
-                                            table.tableId,
+                                            table.name,
                                             style: GoogleFonts.poppins(
                                               fontSize:
                                               kIsWeb ? 12 : 12.sp,
@@ -867,19 +867,6 @@ class _CartPageState extends State<CartPage> {
                                               color: isSelected
                                                   ? primaryColor
                                                   : textColor,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                              height:
-                                              kIsWeb ? 2 : 2.h),
-                                          Text(
-                                            table.name,
-                                            style: GoogleFonts.poppins(
-                                              fontSize:
-                                              kIsWeb ? 10 : 10.sp,
-                                              color: isSelected
-                                                  ? primaryColor
-                                                  : cardInfoColor,
                                             ),
                                             textAlign: TextAlign.center,
                                           ),

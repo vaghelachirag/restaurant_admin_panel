@@ -533,7 +533,16 @@ class ImageService {
     'italian':           'https://images.unsplash.com/photo-1473093295043-cdd812d0e601?w=400&q=80',
     'chicken':           'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&q=80',
     'seafood':           'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=400&q=80',
+
+
+    // ── Gujarati / Street Food ─────────────────────────────
+
+    'bhaji pav':              'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80',
+    'bhajiya pav':            'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80',
+    'bhaji pav masala':       'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80',
   };
+
+
 
   // ─────────────────────────────────────────────────────────────────────────
   //  Main resolve method — call this for each menu item

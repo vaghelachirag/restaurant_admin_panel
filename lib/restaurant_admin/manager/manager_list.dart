@@ -302,22 +302,10 @@ class _ManagerListPageState extends State<ManagerListPage> {
     required String password,
     required bool isActive,
   }) async {
-    // ── The problem with createUserWithEmailAndPassword ────────────────────
-    // Calling it on the default FirebaseAuth instance signs OUT the current
-    // admin and signs IN as the new manager. The subsequent Firestore write
-    // then runs as the manager user who has no owner/admin permission → denied.
-    //
-    // Fix: use a secondary FirebaseApp instance so the admin session on the
-    // default app is never touched.
-    // ──────────────────────────────────────────────────────────────────────
     final adminUser = FirebaseAuth.instance.currentUser;
     if (adminUser == null) throw Exception('Not signed in as admin.');
-
-    // Force-refresh admin token before the write
     await adminUser.getIdToken(true);
 
-    // 1. Create the manager account on a secondary app — this never affects
-    //    the default app's signed-in user.
     FirebaseApp? secondaryApp;
     try {
       secondaryApp = await Firebase.initializeApp(
@@ -337,8 +325,6 @@ class _ManagerListPageState extends State<ManagerListPage> {
       await secondaryApp?.delete();
     }
 
-    // 2. Write manager doc as admin (default app auth is still the admin)
-    //    restaurants/{restaurantId}/managers/{docId}
     await FirebaseFirestore.instance
         .collection('restaurants')
         .doc(widget.restaurantId)
@@ -389,7 +375,7 @@ class _ManagerListPageState extends State<ManagerListPage> {
             .collection('managers')
             .doc(docId)
             .get();
-        final email = (doc.data() as Map<String, dynamic>?)?['email'] as String?;
+        final email = (doc.data())?['email'] as String?;
         if (email != null) {
           await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
           if (mounted) {
@@ -568,9 +554,6 @@ class _ManagerListPageState extends State<ManagerListPage> {
         // ── Manager list ─────────────────────────────────────────────────
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
-            // Stream from restaurants/{restaurantId}/managers
-            // Same pattern as categories: no .where('restaurantId') needed —
-            // the subcollection path already scopes to this restaurant.
             stream: FirebaseFirestore.instance
                 .collection('restaurants')
                 .doc(widget.restaurantId)

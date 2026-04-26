@@ -62,9 +62,9 @@ class _LoginPageState extends State<LoginPage>
   }
 
   Future<void> login() async {
-/*    emailController.text = "jaybhavani@gmail.com";
-    passwordController.text = "123456";*/
-
+    /*emailController.text = "jaybhavani@gmail.com";
+    passwordController.text = "123456";
+*/
     final l10n = AppLocalizations.of(context);
     if (emailController.text.trim().isEmpty ||
         passwordController.text.trim().isEmpty) {
@@ -217,7 +217,7 @@ class _LoginPageState extends State<LoginPage>
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(20),
                               child: Image.asset(
-                                'rasora_web.png',
+                                'assets/images/rasora_web.png',
                                 fit: BoxFit.contain,
                               ),
                             ),

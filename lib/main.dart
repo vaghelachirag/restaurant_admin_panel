@@ -18,7 +18,7 @@ import 'super_admin/restaurants_page.dart';
 import 'widgets/splash_screen.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 
-/// 🔍 Extract restaurantId from URL like: /#/menu/{id}
+
 String? _getMenuRestaurantIdFromInitialUrl() {
   if (!kIsWeb) return null;
 
@@ -151,9 +151,8 @@ class _MyAppState extends State<MyApp> {
     }
 
     if (widget.restaurantId == null) return const LoginPage();
-    return WaiterShell(
-      restaurantId: widget.restaurantId!, waiterId: '1SS',
-    );
+    return DashboardPage(
+      restaurantId: widget.restaurantId!);
   }
 
   Widget _buildApp({required Widget home}) {

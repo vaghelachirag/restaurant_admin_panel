@@ -4,6 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'order_update_service.dart';
 
 const _kPrimary = Color(0xFF7C3AED);
@@ -881,10 +884,516 @@ class _PastOrderCard extends StatelessWidget {
                 ),
               ),
             ],
+
+            // ── Invoice button (only when completed) ─────────────────────────
+            if (_isCompleted) ...[
+              Divider(height: 1, color: _kBorder),
+              Padding(
+                padding: EdgeInsets.fromLTRB(_s(12), _s(10), _s(12), _s(12)),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: _s(40),
+                  child: ElevatedButton.icon(
+                    onPressed: () => _showInvoiceDialog(context),
+                    icon: Icon(Icons.receipt_long_rounded, size: _s(16)),
+                    label: Text(
+                      'View Invoice',
+                      style: GoogleFonts.poppins(
+                        fontSize: _s(13), fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF065F46),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(_s(10)),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
+  }
+
+  // ── Generate & download invoice PDF ─────────────────────────────────────────
+  Future<void> _downloadInvoicePdf(BuildContext context) async {
+    try {
+      final activeItems = items
+          .where((i) => (i['status'] ?? 'active') != 'cancelled')
+          .toList();
+
+      final num subtotal = activeItems.fold<num>(
+          0, (s, i) => s + ((i['price'] as num? ?? 0) * (i['qty'] as num? ?? 1)));
+
+      final pdf = pw.Document();
+
+      pdf.addPage(pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(36),
+        build: (pw.Context ctx) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // ── Header bar ────────────────────────────────────────────────
+              pw.Container(
+                width: double.infinity,
+                padding: const pw.EdgeInsets.symmetric(
+                    horizontal: 20, vertical: 14),
+                decoration: pw.BoxDecoration(
+                  color: PdfColor.fromHex('065F46'),
+                  borderRadius: pw.BorderRadius.circular(10),
+                ),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Bill / Invoice',
+                        style: pw.TextStyle(
+                          fontSize: 18,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.white,
+                        )),
+                    pw.Text('Token #$token',
+                        style: pw.TextStyle(
+                          fontSize: 13,
+                          color: PdfColors.white,
+                        )),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 16),
+
+              // ── Order meta ────────────────────────────────────────────────
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text('Order ID: $orderId',
+                          style: const pw.TextStyle(
+                              fontSize: 10, color: PdfColors.grey600)),
+                      pw.Text('Date: $date',
+                          style: const pw.TextStyle(
+                              fontSize: 10, color: PdfColors.grey600)),
+                    ],
+                  ),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: pw.BoxDecoration(
+                      color: PdfColor.fromHex('DCFCE7'),
+                      borderRadius: pw.BorderRadius.circular(99),
+                    ),
+                    child: pw.Text('Completed',
+                        style: pw.TextStyle(
+                          fontSize: 10,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColor.fromHex('15803D'),
+                        )),
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 14),
+              pw.Divider(color: PdfColors.grey300),
+              pw.SizedBox(height: 10),
+
+              // ── Column headers ────────────────────────────────────────────
+              pw.Row(children: [
+                pw.Expanded(
+                    child: pw.Text('Item',
+                        style: pw.TextStyle(
+                            fontSize: 11,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.grey600))),
+                pw.Text('Qty',
+                    style: pw.TextStyle(
+                        fontSize: 11,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.grey600)),
+                pw.SizedBox(width: 16),
+                pw.SizedBox(
+                  width: 72,
+                  child: pw.Text('Amount',
+                      textAlign: pw.TextAlign.right,
+                      style: pw.TextStyle(
+                          fontSize: 11,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.grey600)),
+                ),
+              ]),
+              pw.SizedBox(height: 6),
+
+              // ── Item rows ────────────────────────────────────────────────
+              ...activeItems.map((item) {
+                final name    = (item['name']    ?? '').toString();
+                final variant = (item['variant'] ?? '').toString();
+                final qty     = (item['qty']     ?? 1) as num;
+                final price   = (item['price']   ?? 0) as num;
+                final lineTotal = qty * price;
+                return pw.Padding(
+                  padding: const pw.EdgeInsets.symmetric(vertical: 5),
+                  child: pw.Row(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Expanded(
+                        child: pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Text(name,
+                                style: pw.TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: pw.FontWeight.bold)),
+                            if (variant.isNotEmpty)
+                              pw.Text(variant,
+                                  style: const pw.TextStyle(
+                                      fontSize: 10, color: PdfColors.grey600)),
+                            pw.Text('₹${price.toStringAsFixed(2)} each',
+                                style: const pw.TextStyle(
+                                    fontSize: 10, color: PdfColors.grey600)),
+                          ],
+                        ),
+                      ),
+                      pw.Text('×$qty',
+                          style: const pw.TextStyle(fontSize: 12)),
+                      pw.SizedBox(width: 16),
+                      pw.SizedBox(
+                        width: 72,
+                        child: pw.Text('₹${lineTotal.toStringAsFixed(2)}',
+                            textAlign: pw.TextAlign.right,
+                            style: pw.TextStyle(
+                                fontSize: 12,
+                                fontWeight: pw.FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+
+              pw.SizedBox(height: 8),
+              pw.Divider(color: PdfColors.grey300),
+              pw.SizedBox(height: 8),
+
+              // ── Subtotal ─────────────────────────────────────────────────
+              pw.Row(children: [
+                pw.Expanded(
+                    child: pw.Text('Subtotal',
+                        style: const pw.TextStyle(fontSize: 12))),
+                pw.Text('₹${subtotal.toStringAsFixed(2)}',
+                    style: pw.TextStyle(
+                        fontSize: 12, fontWeight: pw.FontWeight.bold)),
+              ]),
+              pw.SizedBox(height: 10),
+              pw.Divider(thickness: 1.5),
+              pw.SizedBox(height: 10),
+
+              // ── Grand Total ───────────────────────────────────────────────
+              pw.Row(children: [
+                pw.Expanded(
+                    child: pw.Text('Grand Total',
+                        style: pw.TextStyle(
+                            fontSize: 15, fontWeight: pw.FontWeight.bold))),
+                pw.Text('₹$amount',
+                    style: pw.TextStyle(
+                        fontSize: 16,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColor.fromHex('065F46'))),
+              ]),
+
+              pw.SizedBox(height: 24),
+              pw.Center(
+                child: pw.Text('Thank you for dining with us!',
+                    style: const pw.TextStyle(
+                        fontSize: 11, color: PdfColors.grey500)),
+              ),
+            ],
+          );
+        },
+      ));
+
+      // On web: opens the PDF in a new tab / triggers browser download.
+      // On mobile: opens the share / save sheet via the Printing package.
+      await Printing.layoutPdf(
+        onLayout: (_) async => pdf.save(),
+        name: 'Invoice_Token_$token.pdf',
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Could not generate invoice: $e'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.red,
+        ));
+      }
+    }
+  }
+
+  // ── Invoice / Bill dialog (same layout as RestaurantOrdersPage) ─────────────
+  void _showInvoiceDialog(BuildContext context) {
+    // Read pricing fields from the items list (same field names as order doc)
+    final activeItems = items.where((i) => (i['status'] ?? 'active') != 'cancelled').toList();
+    final num subtotal = activeItems.fold<num>(
+        0, (sum, i) => sum + ((i['price'] as num? ?? 0) * (i['qty'] as num? ?? 1)));
+    final num totalAmount = subtotal; // order doc total; override below if field exists
+
+    TextStyle _p(double size, FontWeight fw, Color color) =>
+        GoogleFonts.poppins(fontSize: _s(size), fontWeight: fw, color: color);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_s(18))),
+        insetPadding: EdgeInsets.symmetric(horizontal: _s(20), vertical: _s(24)),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: 420,
+            maxHeight: MediaQuery.of(context).size.height * 0.85,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ── Header ──────────────────────────────────────────────────────
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.fromLTRB(_s(20), _s(18), _s(20), _s(16)),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF065F46),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(_s(18))),
+                ),
+                child: Row(children: [
+                  Icon(Icons.receipt_long_rounded, color: Colors.white, size: _s(22)),
+                  SizedBox(width: _s(10)),
+                  Expanded(child: Text('Bill / Invoice',
+                      style: _p(17, FontWeight.w700, Colors.white))),
+                  GestureDetector(
+                    onTap: () => Navigator.of(ctx).pop(),
+                    child: Icon(Icons.close, color: Colors.white70, size: _s(20)),
+                  ),
+                ]),
+              ),
+
+              // ── Scrollable bill body ─────────────────────────────────────────
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(_s(20), _s(16), _s(20), 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Order meta row
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Token #$token',
+                                    style: _p(13, FontWeight.w700, const Color(0xFF1C1C1C))),
+                                Text('Order ID: $orderId',
+                                    style: _p(11, FontWeight.w400, const Color(0xFF6B7280))),
+                              ],
+                            ),
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(date,
+                                  style: _p(11, FontWeight.w400, const Color(0xFF6B7280))),
+                              SizedBox(height: _h(4)),
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: _s(8), vertical: _s(3)),
+                                decoration: BoxDecoration(
+                                  color: _kGreenBg,
+                                  borderRadius: BorderRadius.circular(_s(99)),
+                                ),
+                                child: Text('Completed',
+                                    style: _p(10, FontWeight.w600, _kGreenText)),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+
+                      SizedBox(height: _h(12)),
+                      Container(height: 1, color: const Color(0xFFF0F0F0)),
+                      SizedBox(height: _h(10)),
+
+                      // Column header
+                      Row(children: [
+                        Expanded(child: Text('Item',
+                            style: _p(11, FontWeight.w600, const Color(0xFF9E9E9E)))),
+                        Text('Qty',
+                            style: _p(11, FontWeight.w600, const Color(0xFF9E9E9E))),
+                        SizedBox(width: _s(12)),
+                        SizedBox(
+                          width: _s(72),
+                          child: Text('Amount',
+                              textAlign: TextAlign.right,
+                              style: _p(11, FontWeight.w600, const Color(0xFF9E9E9E))),
+                        ),
+                      ]),
+                      SizedBox(height: _h(6)),
+
+                      // Item rows
+                      ...activeItems.map((item) {
+                        final name    = (item['name']    ?? '').toString();
+                        final variant = (item['variant'] ?? '').toString();
+                        final qty     = (item['qty']     ?? 1) as num;
+                        final price   = (item['price']   ?? 0) as num;
+                        final lineTotal = qty * price;
+                        return Padding(
+                          padding: EdgeInsets.symmetric(vertical: _s(5)),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(name,
+                                        style: _p(12, FontWeight.w600, const Color(0xFF232323))),
+                                    if (variant.isNotEmpty)
+                                      Text(variant,
+                                          style: _p(10, FontWeight.w400, const Color(0xFF9E9E9E))),
+                                    Text('₹${price.toStringAsFixed(2)} each',
+                                        style: _p(10, FontWeight.w400, const Color(0xFF9E9E9E))),
+                                  ],
+                                ),
+                              ),
+                              Text('×$qty',
+                                  style: _p(12, FontWeight.w500, const Color(0xFF555555))),
+                              SizedBox(width: _s(12)),
+                              SizedBox(
+                                width: _s(72),
+                                child: Text(
+                                  '₹${lineTotal.toStringAsFixed(2)}',
+                                  textAlign: TextAlign.right,
+                                  style: _p(12, FontWeight.w600, const Color(0xFF2F2F2F)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+
+                      SizedBox(height: _h(8)),
+                      Container(height: 1, color: const Color(0xFFF0F0F0)),
+                      SizedBox(height: _h(10)),
+
+                      // Subtotal
+                      _InvoiceAmountRow(label: 'Subtotal',
+                          value: '₹${subtotal.toStringAsFixed(2)}'),
+
+                      SizedBox(height: _h(10)),
+                      Container(height: 1.5, color: const Color(0xFF1C1C1C)),
+                      SizedBox(height: _h(10)),
+
+                      // Grand Total
+                      Row(children: [
+                        Expanded(child: Text('Grand Total',
+                            style: _p(15, FontWeight.w700, const Color(0xFF1C1C1C)))),
+                        Text('₹${amount}',
+                            style: _p(16, FontWeight.w800, const Color(0xFF065F46))),
+                      ]),
+
+                      SizedBox(height: _h(14)),
+                      Center(child: Text('Thank you for dining with us! 🙏',
+                          style: _p(11, FontWeight.w400, const Color(0xFF9E9E9E)))),
+                      SizedBox(height: _h(16)),
+                    ],
+                  ),
+                ),
+              ),
+
+              // ── Footer actions ───────────────────────────────────────────────
+              Padding(
+                padding: EdgeInsets.fromLTRB(_s(20), _s(12), _s(20), _s(16)),
+                child: Row(children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      icon: Icon(Icons.close, size: _s(16)),
+                      label: Text('Close',
+                          style: GoogleFonts.poppins(
+                              fontSize: _s(13), fontWeight: FontWeight.w500,
+                              color: const Color(0xFF374151))),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF374151),
+                        side: const BorderSide(color: Color(0xFFD1D5DB)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(_s(10))),
+                        padding: EdgeInsets.symmetric(vertical: _s(12)),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: _s(10)),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        Navigator.of(ctx).pop();
+                        await _downloadInvoicePdf(context);
+                      },
+                      icon: Icon(Icons.download_rounded, size: _s(16)),
+                      label: Text('Download Invoice',
+                          style: GoogleFonts.poppins(
+                              fontSize: _s(13), fontWeight: FontWeight.w600,
+                              color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF065F46),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(_s(10))),
+                        padding: EdgeInsets.symmetric(vertical: _s(12)),
+                      ),
+                    ),
+                  ),
+                ]),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Reusable bill amount row ──────────────────────────────────────────────────
+class _InvoiceAmountRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool dimmed;
+
+  const _InvoiceAmountRow({
+    required this.label,
+    required this.value,
+    this.dimmed = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(children: [
+      Expanded(
+        child: Text(label,
+            style: GoogleFonts.poppins(
+              fontSize: dimmed ? _s(12) : _s(13),
+              fontWeight: dimmed ? FontWeight.w400 : FontWeight.w500,
+              color: dimmed ? const Color(0xFF6B7280) : const Color(0xFF555555),
+            )),
+      ),
+      Text(value,
+          style: GoogleFonts.poppins(
+            fontSize: dimmed ? _s(12) : _s(13),
+            fontWeight: dimmed ? FontWeight.w400 : FontWeight.w600,
+            color: dimmed ? const Color(0xFF6B7280) : const Color(0xFF2F2F2F),
+          )),
+    ]);
   }
 }
 

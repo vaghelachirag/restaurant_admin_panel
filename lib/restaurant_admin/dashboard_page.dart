@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -16,7 +17,7 @@ import 'package:restaurant_admin_panel/restaurant_admin/restaurant_orders_page.d
 
 import '../uttils/session_manager.dart';
 import '../data/models/restaurant_model.dart';
-import '../service/restaurant_service.dart';
+import '../services/restaurant_service.dart';
 import '../services/localization_service.dart';
 import 'category_page.dart';
 import 'customer_menu.dart';
@@ -105,10 +106,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
   final LocalizationService _localizationService = LocalizationService();
 
-  final List<FlSpot> _salesSpots = const [
-    FlSpot(0, 4000), FlSpot(1, 3000), FlSpot(2, 5100),
-    FlSpot(3, 2700), FlSpot(4, 6900), FlSpot(5, 7700), FlSpot(6, 5600),
-  ];
+
 
   @override
   void initState() {
@@ -212,21 +210,136 @@ class _DashboardPageState extends State<DashboardPage> {
       ? _baseLink
       : "$_baseLink?table=$tableId";
 
-  // ── Download QR for given link ───────────────────────────────────────────
+  // ── Download QR for given link (branded: name + instruction) ────────────
   Future<void> _downloadQRForLink(String link, String tableId) async {
     try {
       final ok = QrValidator.validate(data: link);
       if (ok.status == QrValidationStatus.error) throw Exception('Invalid QR data');
-      final painter = QrPainter(
+
+      // --- render branded card onto a canvas ---
+      const double cardW   = 600;
+      const double headerH = 110;
+      const double qrSize  = 300;
+      const double footerH = 70;
+      const double cardH   = headerH + qrSize + 40 + footerH; // 40 = top+bottom qr padding
+
+      final recorder = ui.PictureRecorder();
+      final canvas   = Canvas(recorder);
+
+      final paint = Paint();
+
+      // White background
+      paint.color = Colors.white;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+            Rect.fromLTWH(0, 0, cardW, cardH), const Radius.circular(24)),
+        paint,
+      );
+
+      // Orange header
+      paint.color = _C.orange;
+      canvas.drawRRect(
+        RRect.fromRectXY(
+            Rect.fromLTWH(0, 0, cardW, headerH + 24), 24, 24),
+        paint,
+      );
+      // Cover the rounded bottom corners of header
+      paint.color = _C.orange;
+      canvas.drawRect(Rect.fromLTWH(0, headerH, cardW, 24), paint);
+
+      // Restaurant name text
+      final restaurantName =
+      _restaurant?.name?.isNotEmpty == true ? _restaurant!.name! : 'Our Restaurant';
+      final namePainter = TextPainter(
+        text: TextSpan(
+          text: restaurantName,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 26,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.3,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout(maxWidth: cardW - 40);
+      namePainter.paint(
+        canvas,
+        Offset((cardW - namePainter.width) / 2, 30),
+      );
+
+      // "Menu" subtitle
+      final subPainter = TextPainter(
+        text: const TextSpan(
+          text: 'Scan to view our menu',
+          style: TextStyle(
+            color: Colors.white70,
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout(maxWidth: cardW - 40);
+      subPainter.paint(
+        canvas,
+        Offset((cardW - subPainter.width) / 2, 68),
+      );
+
+      // QR code
+      final qrPainter = QrPainter(
           data: link, version: QrVersions.auto,
-          color: const Color(0xFF000000), emptyColor: const Color(0xFFFFFFFF), gapless: true);
-      final img = await painter.toImageData(300);
-      final bytes = img?.buffer.asUint8List();
-      if (bytes == null) throw Exception('Failed to generate QR');
+          color: const Color(0xFF000000), emptyColor: const Color(0xFFFFFFFF),
+          gapless: true);
+      final qrImg = await qrPainter.toImageData(qrSize);
+      if (qrImg == null) throw Exception('Failed to generate QR');
+      final codec  = await ui.instantiateImageCodec(qrImg.buffer.asUint8List());
+      final frame  = await codec.getNextFrame();
+      final qrTop  = headerH + 20.0;
+      canvas.drawImageRect(
+        frame.image,
+        Rect.fromLTWH(0, 0, frame.image.width.toDouble(), frame.image.height.toDouble()),
+        Rect.fromLTWH((cardW - qrSize) / 2, qrTop, qrSize, qrSize),
+        Paint(),
+      );
+
+      // Orange footer
+      final footerTop = qrTop + qrSize + 20;
+      paint.color = _C.orangeLight;
+      canvas.drawRRect(
+        RRect.fromRectXY(
+            Rect.fromLTWH(0, footerTop - 24, cardW, footerH + 24), 24, 24),
+        paint,
+      );
+      canvas.drawRect(
+          Rect.fromLTWH(0, footerTop - 24, cardW, 24), paint);
+
+      // Instruction text
+      final instrPainter = TextPainter(
+        text: TextSpan(
+          text: '📲  Scan QR & Enjoy Ordering!',
+          style: TextStyle(
+            color: _C.orange,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout(maxWidth: cardW - 40);
+      instrPainter.paint(
+        canvas,
+        Offset((cardW - instrPainter.width) / 2, footerTop + 16),
+      );
+
+      // Produce PNG bytes
+      final picture   = recorder.endRecording();
+      final image     = await picture.toImage(cardW.toInt(), cardH.toInt());
+      final byteData  = await image.toByteData(format: ui.ImageByteFormat.png);
+      final pngBytes  = byteData?.buffer.asUint8List();
+      if (pngBytes == null) throw Exception('Failed to encode PNG');
+
       final fileName = tableId.isEmpty
           ? 'menu_qr_${widget.restaurantId}.png'
           : 'menu_qr_${widget.restaurantId}_$tableId.png';
-      await qr_download.saveQrBytesToPlatform(bytes, fileName);
+      await qr_download.saveQrBytesToPlatform(pngBytes, fileName);
       if (mounted) _snack(AppLocalizations.of(context).copied, Icons.check_circle_rounded, _C.green);
     } catch (e) {
       if (mounted) _snack("${AppLocalizations.of(context).error}: $e", Icons.error_rounded, _C.red);
@@ -271,9 +384,10 @@ class _DashboardPageState extends State<DashboardPage> {
               Icons.check_circle_rounded, _C.orange);
         },
         onClose: () => Navigator.pop(ctx),
-        title: AppLocalizations.of(context).menuQrLink,
+        title: AppLocalizations.of(context).menuItemsLink,
         copyLabel: AppLocalizations.of(context).copyLink,
         downloadLabel: AppLocalizations.of(context).downloadQr,
+        restaurantName: _restaurant?.name ?? '',
       ),
     );
   }
@@ -435,7 +549,7 @@ class _DashboardPageState extends State<DashboardPage> {
           SizedBox(height: isMobile ? 20 : 26),
 
           // Sales chart
-          _SalesChart(spots: _salesSpots, isMobile: isMobile),
+          _SalesChart(restaurantId: widget.restaurantId, isMobile: isMobile),
           const SizedBox(height: 20),
         ],
       ),
@@ -594,41 +708,18 @@ class _ApkDownloadButton extends StatefulWidget {
 class _ApkDownloadButtonState extends State<_ApkDownloadButton> {
   bool _loading = false;
 
+  static const String _apkDownloadUrl = 'https://upload-apk.com/3aYDQn2vKeAivlg';
+
   Future<void> _downloadApk() async {
     setState(() => _loading = true);
     try {
-      // Fetch latest APK info from Firestore: collection "app_releases", doc "latest"
-      // Expected fields: apkUrl (String), version (String, optional)
-      final doc = await FirebaseFirestore.instance
-          .collection('app_releases')
-          .doc('latest')
-          .get();
-
-      if (!doc.exists || doc.data() == null) {
-        _showError('No APK release found. Please upload a release first.');
-        return;
-      }
-
-      final data = doc.data()!;
-      final String? apkUrl = data['apkUrl'] as String?;
-
-      if (apkUrl == null || apkUrl.trim().isEmpty) {
-        _showError('APK URL is missing in the release document.');
-        return;
-      }
-
-      final uri = Uri.parse(apkUrl);
+      final uri = Uri.parse(_apkDownloadUrl);
       if (!await canLaunchUrl(uri)) {
         _showError('Cannot open the download link.');
         return;
       }
-
       await launchUrl(uri, mode: LaunchMode.externalApplication);
-
-      final version = data['version'] as String?;
-      _showSuccess(version != null
-          ? 'Downloading v$version…'
-          : 'Download started!');
+      _showSuccess('Download started! (Restrurant.apk)');
     } catch (e) {
       _showError('Download failed: $e');
     } finally {
@@ -701,7 +792,7 @@ class _ApkDownloadButtonState extends State<_ApkDownloadButton> {
                     style: _p(13, FontWeight.w600, _C.orange),
                   ),
                   Text(
-                    'Latest APK',
+                    'Restrurant.apk · 56 MB',
                     style: _p(10, FontWeight.w400, _C.orange.withOpacity(0.7)),
                   ),
                 ],
@@ -941,106 +1032,215 @@ class _StatCard extends StatelessWidget {
   }
 }
 
+// ─── Sales Chart (real order data – last 7 days) ─────────────────────────────
 class _SalesChart extends StatelessWidget {
-  final List<FlSpot> spots;
+  final String restaurantId;
   final bool isMobile;
-  const _SalesChart({required this.spots, required this.isMobile});
+  const _SalesChart({required this.restaurantId, required this.isMobile});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: _C.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _C.cardBorder),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 4))
-        ],
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(AppLocalizations.of(context).salesDetails,
-            style: _p(15, FontWeight.w600, _C.textDark)),
-        SizedBox(height: isMobile ? 16 : 20),
-        SizedBox(
-          height: isMobile ? 200 : 260,
-          child: LineChart(LineChartData(
-            minY: 0, maxY: 9000,
-            gridData: FlGridData(
-              show: true,
-              drawVerticalLine: false,
-              horizontalInterval: 2000,
-              getDrawingHorizontalLine: (_) =>
-              const FlLine(color: Color(0xFFEEEEEE), strokeWidth: 1),
-            ),
-            borderData: FlBorderData(show: false),
-            titlesData: FlTitlesData(
-              leftTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 44,
-                  interval: 2000,
-                  getTitlesWidget: (v, _) => Text(
-                    v.toInt().toString(),
-                    style: _p(10, FontWeight.w400, _C.textLight),
+    final now = DateTime.now();
+    final sevenDaysAgo = DateTime(now.year, now.month, now.day)
+        .subtract(const Duration(days: 6));
+
+    return StreamBuilder<QuerySnapshot>(
+      // Only filter by restaurantId to avoid the Firestore compound-query /
+      // missing-index INTERNAL ASSERTION error. Date filtering is in Dart.
+      stream: FirebaseFirestore.instance
+          .collection('orders')
+          .where('restaurantId', isEqualTo: restaurantId)
+          .snapshots(),
+      builder: (context, snap) {
+        // Build day-keyed map: index 0 = 6 days ago ... index 6 = today
+        final Map<int, double> dayCounts = {
+          for (int i = 0; i < 7; i++) i: 0,
+        };
+
+        if (snap.hasData) {
+          for (final doc in snap.data!.docs) {
+            final data = doc.data() as Map<String, dynamic>;
+            DateTime? orderDate;
+            final raw = data['createdAt'];
+            if (raw is Timestamp) {
+              orderDate = raw.toDate();
+            } else if (raw is String) {
+              orderDate = DateTime.tryParse(raw);
+            }
+            if (orderDate == null) continue;
+            // Client-side date filter: only last 7 days
+            final diff = orderDate.difference(sevenDaysAgo).inDays;
+            if (diff < 0 || diff > 6) continue;
+            dayCounts[diff] = (dayCounts[diff] ?? 0) + 1;
+          }
+        }
+
+        final spots = dayCounts.entries
+            .map((e) => FlSpot(e.key.toDouble(), e.value))
+            .toList()
+          ..sort((a, b) => a.x.compareTo(b.x));
+
+        final maxY = spots.isEmpty
+            ? 10.0
+            : (spots.map((s) => s.y).reduce((a, b) => a > b ? a : b) * 1.3)
+            .ceilToDouble()
+            .clamp(5.0, double.infinity);
+
+        // Nice interval: aim for ~4-5 grid lines
+        double interval = (maxY / 4).ceilToDouble();
+        if (interval < 1) interval = 1;
+
+        // Day labels: Mon, Tue … relative to sevenDaysAgo
+        const dayAbbr = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        String dayLabel(int index) {
+          final d = sevenDaysAgo.add(Duration(days: index));
+          return dayAbbr[d.weekday - 1];
+        }
+
+        final isLoading = snap.connectionState == ConnectionState.waiting;
+
+        return Container(
+          padding: const EdgeInsets.all(22),
+          decoration: BoxDecoration(
+            color: _C.card,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: _C.cardBorder),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4))
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                Text(AppLocalizations.of(context).salesDetails,
+                    style: _p(15, FontWeight.w600, _C.textDark)),
+                const Spacer(),
+                if (isLoading)
+                  const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: _C.orange),
                   ),
-                ),
-              ),
-              bottomTitles: AxisTitles(
-                  sideTitles: SideTitles(showTitles: false)),
-              rightTitles: AxisTitles(
-                  sideTitles: SideTitles(showTitles: false)),
-              topTitles: AxisTitles(
-                  sideTitles: SideTitles(showTitles: false)),
-            ),
-            lineTouchData: LineTouchData(
-              touchTooltipData: LineTouchTooltipData(
-                getTooltipItems: (ss) => ss
-                    .map((s) => LineTooltipItem(
-                  s.y.toInt().toString(),
-                  GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12),
-                ))
-                    .toList(),
-              ),
-            ),
-            lineBarsData: [
-              LineChartBarData(
-                spots: spots,
-                isCurved: true,
-                curveSmoothness: 0.3,
-                color: _C.orange,
-                barWidth: 2.5,
-                dotData: FlDotData(
-                  show: true,
-                  getDotPainter: (_, __, ___, ____) => FlDotCirclePainter(
-                    radius: 4.5,
-                    color: _C.orange,
-                    strokeWidth: 2.5,
-                    strokeColor: Colors.white,
+                if (!isLoading)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _C.orangeLight,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text('Last 7 days',
+                        style: _p(10, FontWeight.w500, _C.orange)),
                   ),
-                ),
-                belowBarData: BarAreaData(
-                  show: true,
-                  gradient: LinearGradient(
-                    colors: [
-                      _C.orange.withOpacity(0.18),
-                      _C.orange.withOpacity(0.0)
-                    ],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
+              ]),
+              SizedBox(height: isMobile ? 16 : 20),
+              SizedBox(
+                height: isMobile ? 200 : 260,
+                child: isLoading
+                    ? const Center(
+                    child: CircularProgressIndicator(color: _C.orange))
+                    : LineChart(LineChartData(
+                  minY: 0,
+                  maxY: maxY,
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    horizontalInterval: interval,
+                    getDrawingHorizontalLine: (_) => const FlLine(
+                        color: Color(0xFFEEEEEE), strokeWidth: 1),
                   ),
-                ),
+                  borderData: FlBorderData(show: false),
+                  titlesData: FlTitlesData(
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 36,
+                        interval: interval,
+                        getTitlesWidget: (v, _) => Text(
+                          v.toInt().toString(),
+                          style: _p(10, FontWeight.w400, _C.textLight),
+                        ),
+                      ),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 26,
+                        getTitlesWidget: (v, _) {
+                          final idx = v.toInt();
+                          if (idx < 0 || idx > 6) {
+                            return const SizedBox.shrink();
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              dayLabel(idx),
+                              style:
+                              _p(10, FontWeight.w400, _C.textLight),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    rightTitles: AxisTitles(
+                        sideTitles: SideTitles(showTitles: false)),
+                    topTitles: AxisTitles(
+                        sideTitles: SideTitles(showTitles: false)),
+                  ),
+                  lineTouchData: LineTouchData(
+                    touchTooltipData: LineTouchTooltipData(
+                      getTooltipItems: (ss) => ss
+                          .map((s) => LineTooltipItem(
+                        '${s.y.toInt()} orders',
+                        GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12),
+                      ))
+                          .toList(),
+                    ),
+                  ),
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: spots,
+                      isCurved: true,
+                      curveSmoothness: 0.3,
+                      color: _C.orange,
+                      barWidth: 2.5,
+                      dotData: FlDotData(
+                        show: true,
+                        getDotPainter: (_, __, ___, ____) =>
+                            FlDotCirclePainter(
+                              radius: 4.5,
+                              color: _C.orange,
+                              strokeWidth: 2.5,
+                              strokeColor: Colors.white,
+                            ),
+                      ),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        gradient: LinearGradient(
+                          colors: [
+                            _C.orange.withOpacity(0.18),
+                            _C.orange.withOpacity(0.0),
+                          ],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
+                    ),
+                  ],
+                )),
               ),
             ],
-          )),
-        ),
-      ]),
+          ),
+        );
+      },
     );
   }
 }
@@ -1055,6 +1255,7 @@ class _QrDialog extends StatefulWidget {
   final String title;
   final String copyLabel;
   final String downloadLabel;
+  final String restaurantName;
 
   const _QrDialog({
     required this.tables,
@@ -1065,6 +1266,7 @@ class _QrDialog extends StatefulWidget {
     required this.title,
     required this.copyLabel,
     required this.downloadLabel,
+    required this.restaurantName,
   });
 
   @override
@@ -1098,9 +1300,9 @@ class _QrDialogState extends State<_QrDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: Container(
         constraints: const BoxConstraints(maxWidth: 420),
-        padding: const EdgeInsets.all(26),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
@@ -1111,220 +1313,287 @@ class _QrDialogState extends State<_QrDialog> {
                 offset: const Offset(0, 16))
           ],
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Header ──────────────────────────────────────────────────────
-            Row(children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                    color: _C.orangeLight,
-                    borderRadius: BorderRadius.circular(12)),
-                child: const Icon(Icons.qr_code_2_rounded,
-                    color: _C.orange, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                  child: Text(widget.title,
-                      style: _p(17, FontWeight.w700, _C.textDark))),
-              GestureDetector(
-                onTap: widget.onClose,
-                child: const Icon(Icons.close_rounded,
-                    color: _C.textLight, size: 22),
-              ),
-            ]),
-            const SizedBox(height: 20),
-
-            // ── Table selector ───────────────────────────────────────────────
-            if (widget.tables.length > 1) ...[
-              Text('Select Table',
-                  style: _p(12, FontWeight.w600, _C.textDark)),
-              const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: _C.cardBorder),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _selectedTableId,
-                    isExpanded: true,
-                    icon: const Icon(Icons.keyboard_arrow_down_rounded,
-                        color: _C.textMid),
-                    style: _p(13, FontWeight.w500, _C.textDark),
-                    onChanged: (v) {
-                      if (v != null) setState(() => _selectedTableId = v);
-                    },
-                    items: widget.tables
-                        .map((t) => DropdownMenuItem(
-                      value: t['id'],
-                      child: Row(children: [
-                        Icon(
-                          t['id']!.isEmpty
-                              ? Icons.public_rounded
-                              : Icons.table_restaurant_rounded,
-                          size: 16,
-                          color: t['id']!.isEmpty
-                              ? _C.textLight
-                              : _C.orange,
-                        ),
-                        const SizedBox(width: 10),
-                        Text(t['name']!),
-                      ]),
-                    ))
-                        .toList(),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            // ── QR Code ──────────────────────────────────────────────────────
-            Center(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 220),
-                child: Container(
-                  key: ValueKey(_currentLink),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: _C.cardBorder),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10)
-                    ],
-                  ),
-                  child: QrImageView(
-                    data: _currentLink,
-                    version: QrVersions.auto,
-                    size: 170,
-                    eyeStyle: const QrEyeStyle(
-                        eyeShape: QrEyeShape.square,
-                        color: Color(0xFF000000)),
-                    dataModuleStyle: const QrDataModuleStyle(
-                        dataModuleShape: QrDataModuleShape.square,
-                        color: Color(0xFF000000)),
-                  ),
-                ),
-              ),
-            ),
-
-            // ── Table label under QR ─────────────────────────────────────────
-            const SizedBox(height: 10),
-            Center(
-              child: Container(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                decoration: BoxDecoration(
-                  color: _selectedTableId.isEmpty
-                      ? const Color(0xFFF5F5F5)
-                      : _C.orangeLight,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(
-                    _selectedTableId.isEmpty
-                        ? Icons.public_rounded
-                        : Icons.table_restaurant_rounded,
-                    size: 13,
-                    color: _selectedTableId.isEmpty ? _C.textLight : _C.orange,
-                  ),
-                  const SizedBox(width: 5),
-                  Text(
-                    _selectedTableName,
-                    style: _p(
-                        11,
-                        FontWeight.w600,
-                        _selectedTableId.isEmpty ? _C.textMid : _C.orange),
-                  ),
-                ]),
-              ),
-            ),
-            const SizedBox(height: 14),
-
-            // ── Link preview ─────────────────────────────────────────────────
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(11),
-              decoration: BoxDecoration(
-                  color: const Color(0xFFF7F7F7),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: _C.cardBorder)),
-              child: SelectableText(_currentLink,
-                  style: _p(10, FontWeight.w400, _C.textMid)),
-            ),
-            const SizedBox(height: 16),
-
-            // ── Action buttons ───────────────────────────────────────────────
-            Row(children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => widget.onCopy(_currentLink),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(26),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Header ──────────────────────────────────────────────────────
+                Row(children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                         color: _C.orangeLight,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: _C.cardBorder)),
-                    child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.copy_rounded,
-                              color: _C.orange, size: 15),
-                          const SizedBox(width: 7),
-                          Text(widget.copyLabel,
-                              style: _p(13, FontWeight.w600, _C.orange)),
-                        ]),
+                        borderRadius: BorderRadius.circular(12)),
+                    child: const Icon(Icons.qr_code_2_rounded,
+                        color: _C.orange, size: 22),
                   ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: GestureDetector(
-                  onTap: _downloading
-                      ? null
-                      : () async {
-                    setState(() => _downloading = true);
-                    await widget.onDownload(
-                        _currentLink, _selectedTableId);
-                    if (mounted) setState(() => _downloading = false);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  const SizedBox(width: 12),
+                  Expanded(
+                      child: Text(widget.title,
+                          style: _p(17, FontWeight.w700, _C.textDark))),
+                  GestureDetector(
+                    onTap: widget.onClose,
+                    child: const Icon(Icons.close_rounded,
+                        color: _C.textLight, size: 22),
+                  ),
+                ]),
+                const SizedBox(height: 20),
+
+                // ── Table selector ───────────────────────────────────────────────
+                if (widget.tables.length > 1) ...[
+                  Text('Select Table',
+                      style: _p(12, FontWeight.w600, _C.textDark)),
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
                     decoration: BoxDecoration(
-                        color: _downloading
-                            ? _C.orange.withOpacity(0.6)
-                            : _C.orange,
-                        borderRadius: BorderRadius.circular(10)),
-                    child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _downloading
-                              ? const SizedBox(
-                              width: 15,
-                              height: 15,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white))
-                              : const Icon(Icons.download_rounded,
-                              color: Colors.white, size: 15),
-                          const SizedBox(width: 7),
-                          Text(widget.downloadLabel,
-                              style:
-                              _p(13, FontWeight.w600, Colors.white)),
-                        ]),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: _C.cardBorder),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: _selectedTableId,
+                        isExpanded: true,
+                        icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                            color: _C.textMid),
+                        style: _p(13, FontWeight.w500, _C.textDark),
+                        onChanged: (v) {
+                          if (v != null) setState(() => _selectedTableId = v);
+                        },
+                        items: widget.tables
+                            .map((t) => DropdownMenuItem(
+                          value: t['id'],
+                          child: Row(children: [
+                            Icon(
+                              t['id']!.isEmpty
+                                  ? Icons.public_rounded
+                                  : Icons.table_restaurant_rounded,
+                              size: 16,
+                              color: t['id']!.isEmpty
+                                  ? _C.textLight
+                                  : _C.orange,
+                            ),
+                            const SizedBox(width: 10),
+                            Text(t['name']!),
+                          ]),
+                        ))
+                            .toList(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // ── Branded QR card ───────────────────────────────────────────
+                Center(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    child: Container(
+                      key: ValueKey(_currentLink),
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: _C.cardBorder),
+                        boxShadow: [
+                          BoxShadow(
+                              color: Colors.black.withOpacity(0.06),
+                              blurRadius: 14,
+                              offset: const Offset(0, 4))
+                        ],
+                      ),
+                      child: Column(children: [
+                        // Orange header with restaurant name
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
+                          decoration: const BoxDecoration(
+                            color: _C.orange,
+                            borderRadius:
+                            BorderRadius.vertical(top: Radius.circular(15)),
+                          ),
+                          child: Column(children: [
+                            const Icon(Icons.restaurant_rounded,
+                                color: Colors.white, size: 22),
+                            const SizedBox(height: 6),
+                            Text(
+                              widget.restaurantName.isEmpty
+                                  ? 'Our Restaurant'
+                                  : widget.restaurantName,
+                              textAlign: TextAlign.center,
+                              style: _p(15, FontWeight.w700, Colors.white),
+                            ),
+                            if (!_selectedTableId.isEmpty) ...[
+                              const SizedBox(height: 4),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.25),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.table_restaurant_rounded,
+                                          color: Colors.white, size: 11),
+                                      const SizedBox(width: 4),
+                                      Text(_selectedTableName,
+                                          style: _p(
+                                              10, FontWeight.w600, Colors.white)),
+                                    ]),
+                              ),
+                            ],
+                          ]),
+                        ),
+
+                        // QR code
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 16),
+                          child: Center(
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: _C.cardBorder),
+                              ),
+                              child: QrImageView(
+                                data: _currentLink,
+                                version: QrVersions.auto,
+                                size: 180,
+                                backgroundColor: Colors.white,
+                                eyeStyle: const QrEyeStyle(
+                                    eyeShape: QrEyeShape.square,
+                                    color: Color(0xFF1A1A1A)),
+                                dataModuleStyle: const QrDataModuleStyle(
+                                    dataModuleShape: QrDataModuleShape.square,
+                                    color: Color(0xFF1A1A1A)),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // Instruction banner
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: _C.orangeLight,
+                            borderRadius: const BorderRadius.vertical(
+                                bottom: Radius.circular(15)),
+                            border: Border(
+                                top: BorderSide(
+                                    color: _C.orange.withOpacity(0.15))),
+                          ),
+                          child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.qr_code_scanner_rounded,
+                                    color: _C.orange, size: 16),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    'Scan QR & Enjoy Ordering!',
+                                    textAlign: TextAlign.center,
+                                    style: _p(12, FontWeight.w600, _C.orange),
+                                  ),
+                                ),
+                              ]),
+                        ),
+                      ]),
+                    ),
                   ),
                 ),
-              ),
-            ]),
-          ],
+                const SizedBox(height: 14),
+
+                // ── Link preview ─────────────────────────────────────────────────
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(11),
+                  decoration: BoxDecoration(
+                      color: const Color(0xFFF7F7F7),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: _C.cardBorder)),
+                  child: SelectableText(_currentLink,
+                      style: _p(10, FontWeight.w400, _C.textMid)),
+                ),
+                const SizedBox(height: 16),
+
+                // ── Action buttons ───────────────────────────────────────────────
+                Row(children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => widget.onCopy(_currentLink),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                            color: _C.orangeLight,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: _C.cardBorder)),
+                        child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.copy_rounded,
+                                  color: _C.orange, size: 15),
+                              const SizedBox(width: 7),
+                              Text(widget.copyLabel,
+                                  style: _p(13, FontWeight.w600, _C.orange)),
+                            ]),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: _downloading
+                          ? null
+                          : () async {
+                        setState(() => _downloading = true);
+                        await widget.onDownload(
+                            _currentLink, _selectedTableId);
+                        if (mounted) setState(() => _downloading = false);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                            color: _downloading
+                                ? _C.orange.withOpacity(0.6)
+                                : _C.orange,
+                            borderRadius: BorderRadius.circular(10)),
+                        child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _downloading
+                                  ? const SizedBox(
+                                  width: 15,
+                                  height: 15,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Colors.white))
+                                  : const Icon(Icons.download_rounded,
+                                  color: Colors.white, size: 15),
+                              const SizedBox(width: 7),
+                              Text(widget.downloadLabel,
+                                  style:
+                                  _p(13, FontWeight.w600, Colors.white)),
+                            ]),
+                      ),
+                    ),
+                  ),
+                ]),
+              ],
+            ),
+          ),
         ),
       ),
     );

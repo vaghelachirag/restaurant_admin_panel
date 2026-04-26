@@ -192,7 +192,7 @@ class CsvUploadNotifier extends StateNotifier<CsvUploadState> {
         );
       } catch (e) {
         // Non-fatal: log and continue without images.
-        debugPrint('[CsvUpload] Image resolution failed (non-fatal): \$e');
+        debugPrint('[CsvUpload] Image resolution failed (non-fatal): $e');
       }
 
       // Inject resolved image URLs into items
@@ -260,7 +260,7 @@ class CsvUploadNotifier extends StateNotifier<CsvUploadState> {
     } catch (e) {
       state = state.copyWith(
         step: UploadStep.error,
-        errorMessage: 'Auth token refresh failed: \${e.toString()}',
+        errorMessage: 'Auth token refresh failed: ${e.toString()}',
       );
       return;
     }
