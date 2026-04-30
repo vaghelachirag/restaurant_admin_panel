@@ -17,6 +17,7 @@ import 'restaurant_admin/customer_menu.dart';
 import 'super_admin/restaurants_page.dart';
 import 'widgets/splash_screen.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 
 String? _getMenuRestaurantIdFromInitialUrl() {
@@ -34,17 +35,49 @@ String? _getMenuRestaurantIdFromInitialUrl() {
 }
 
 
+/// Sets up the Android notification channel required for the custom
+/// new-order sound (like Swiggy/Zomato).
+/// Channel id must match android_channel_id sent from Cloud Functions.
+Future<void> _createAndroidNotificationChannel() async {
+  const AndroidNotificationChannel channel = AndroidNotificationChannel(
+    'new_order_channel',                                  // id  ← matches index.js
+    'New Orders',                                         // name
+    description: 'Plays sound when a new order arrives',
+    importance: Importance.max,
+    sound: RawResourceAndroidNotificationSound('new_order'), // no extension
+    playSound: true,
+    enableVibration: true,
+  );
+
+  await FlutterLocalNotificationsPlugin()
+      .resolvePlatformSpecificImplementation<
+      AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(channel);
+}
+
+/// Initialises OneSignal once with all listeners.
+/// Called from main() — only on mobile (Android / iOS).
 Future<void> setupNotificationChannel() async {
+  // ── 1. Create the Android channel FIRST so the OS knows about
+  //       the custom sound before any notification arrives ────────────────────
+  await _createAndroidNotificationChannel();
+
+  // ── 2. Init OneSignal ────────────────────────────────────────────────────
   OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
   OneSignal.initialize(AppConfig.oneSignalAppId);
   await OneSignal.Notifications.requestPermission(true);
 
+  // ── 3. Display notifications while the app is in the foreground ──────────
+  OneSignal.Notifications.addForegroundWillDisplayListener((event) {
+    event.notification.display();
+  });
 
+  // ── 4. Handle notification tap ───────────────────────────────────────────
   OneSignal.Notifications.addClickListener((OSNotificationClickEvent event) {
     final data = event.notification.additionalData;
-    if (data != null && data['type'] == 'new_order') {
-
-    }
+    if (data == null) return;
+    // TODO: navigate to the relevant order/screen based on data['type']
+    // e.g. if (data['type'] == 'new_order') { ... }
   });
 }
 
@@ -55,21 +88,16 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+/*  // Add this:
+  await FirebaseAppCheck.instance.activate(
+    androidProvider: AndroidProvider.debug,
+  );*/
 
-  OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
-
-  OneSignal.initialize(AppConfig.oneSignalAppId);
-
-  OneSignal.Notifications.requestPermission(true);
-
-
-  if (kIsWeb) {
-  } else {
+  // OneSignal is fully initialised inside setupNotificationChannel().
+  // Web does not support push notifications via OneSignal SDK.
+  if (!kIsWeb) {
     await setupNotificationChannel();
   }
-  OneSignal.Notifications.addForegroundWillDisplayListener((event) {
-    event.notification.display();
-  });
 
 
   final menuRestaurantId = _getMenuRestaurantIdFromInitialUrl();
@@ -85,14 +113,15 @@ void main() async {
     restaurantId = await SessionManager.getRestaurantId();
   }
 
+
   runApp(
-    ProviderScope(
-      child:MyApp(
-        loggedIn: loggedIn,
-        role: role,
-        restaurantId: restaurantId,
-        menuRestaurantId: menuRestaurantId,
-      )));
+      ProviderScope(
+          child:MyApp(
+            loggedIn: loggedIn,
+            role: role,
+            restaurantId: restaurantId,
+            menuRestaurantId: menuRestaurantId,
+          )));
 }
 
 class MyApp extends StatefulWidget {
@@ -146,13 +175,13 @@ class _MyAppState extends State<MyApp> {
     if (widget.role == AppConfig.manager) {
       if (widget.restaurantId == null) return const LoginPage();
       return WaiterShell(
-          restaurantId: widget.restaurantId!, waiterId: '1SS',
+        restaurantId: widget.restaurantId!, waiterId: '1SS',
       );
     }
 
     if (widget.restaurantId == null) return const LoginPage();
     return DashboardPage(
-      restaurantId: widget.restaurantId!);
+        restaurantId: widget.restaurantId!);
   }
 
   Widget _buildApp({required Widget home}) {
@@ -190,7 +219,6 @@ class _MyAppState extends State<MyApp> {
         ),
       );
     }
-
 
     return ScreenUtilInit(
       designSize: const Size(1440, 900),

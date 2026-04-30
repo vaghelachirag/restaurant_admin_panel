@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/localization_service.dart';
@@ -525,72 +524,91 @@ class _TableManagementPageState extends State<TableManagementPage> {
         color: _C.card,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: _C.cardBorder, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ── Top row: icon + edit/delete actions (mirrors Categories card)
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Table icon in orange-tinted square (same as folder icon in Categories)
-              Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  color: _C.orangeLight,
-                  borderRadius: BorderRadius.circular(14),
+          // ── Top section: icon + actions ────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 14, 10, 0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Table icon
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: _C.orangeLight,
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                  child: const Icon(
+                    Icons.table_restaurant_rounded,
+                    color: _C.orange,
+                    size: 26,
+                  ),
                 ),
-                child: const Icon(
-                  Icons.table_restaurant_rounded,
-                  color: _C.orange,
-                  size: 34,
+                const Spacer(),
+                // Edit button
+                _CardActionBtn(
+                  icon: Icons.edit_outlined,
+                  color: const Color(0xFF888888),
+                  bgColor: const Color(0xFFF5F5F5),
+                  onTap: () => _showTableDialog(existing: t),
                 ),
-              ),
-              const Spacer(),
-              // Edit icon button
-              IconButton(
-                onPressed: () => _showTableDialog(existing: t),
-                icon: const Icon(Icons.edit_outlined,
-                    size: 20, color: Color(0xFF888888)),
-                padding: const EdgeInsets.all(4),
-                constraints: const BoxConstraints(),
-                splashRadius: 20,
-              ),
-              const SizedBox(width: 4),
-              // Delete icon button
-              IconButton(
-                onPressed: () => _confirmDelete(t),
-                icon: const Icon(Icons.delete_outline_rounded,
-                    size: 20, color: _C.red),
-                padding: const EdgeInsets.all(4),
-                constraints: const BoxConstraints(),
-                splashRadius: 20,
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          // Table name
-          Text(
-            t.name,
-            style: _p(16, FontWeight.w700, _C.textDark),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 4),
-
-          // Capacity row (mirrors "0 menu.items" in Categories)
-          Row(children: [
-            const Icon(Icons.people_outline_rounded,
-                size: 13, color: _C.textLight),
-            const SizedBox(width: 4),
-            Text(
-              '${t.capacity} ${AppLocalizations.of(context).seats}',
-              style: _p(13, FontWeight.w400, _C.textMid),
+                const SizedBox(width: 6),
+                // Delete button
+                _CardActionBtn(
+                  icon: Icons.delete_outline_rounded,
+                  color: _C.red,
+                  bgColor: _C.redBg,
+                  onTap: () => _confirmDelete(t),
+                ),
+              ],
             ),
-          ]),
+          ),
+
+          // ── Bottom section: name + capacity ───────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  t.name,
+                  style: _p(15, FontWeight.w700, _C.textDark),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 5),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0F4FF),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    const Icon(Icons.people_outline_rounded,
+                        size: 12, color: Color(0xFF3B5BDB)),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${t.capacity} ${AppLocalizations.of(context).seats}',
+                      style: _p(11, FontWeight.w600, const Color(0xFF3B5BDB)),
+                    ),
+                  ]),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -599,147 +617,232 @@ class _TableManagementPageState extends State<TableManagementPage> {
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 650;
+    final sidePad  = isMobile ? 14.0 : 24.0;
 
     return StreamBuilder<List<TableModel>>(
       stream: _service.watchTables(widget.restaurantId),
       builder: (context, snapshot) {
         final tables = snapshot.data ?? [];
 
-        return SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(
-              isMobile ? 16 : 24, 24, isMobile ? 16 : 24, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ── Header row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Compact header bar ─────────────────────────────────────────
+            Container(
+              padding: EdgeInsets.fromLTRB(sidePad, 10, sidePad, 10),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                border: Border(bottom: BorderSide(color: Color(0xFFF0F0F0))),
+              ),
+              child: Row(
                 children: [
-                  Column(
+                  Expanded(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           AppLocalizations.of(context).tablesTitle,
-                          style: GoogleFonts.poppins(
-                            fontSize: kIsWeb ? 24 : 16,
-                            fontWeight: FontWeight.w200,
-                            color: const Color(0xFF0E1A2F),
+                          style: _p(18, FontWeight.w700, const Color(0xFF0E1A2F)),
+                        ),
+                        const SizedBox(height: 2),
+                        Row(children: [
+                          Container(
+                            width: 7, height: 7,
+                            decoration: const BoxDecoration(
+                                color: _C.orange, shape: BoxShape.circle),
                           ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          '${tables.length} ${AppLocalizations.of(context).totalTables}',
-                          style: _p(13, FontWeight.w400, _C.textMid),
-                        ),
-                      ]),
-                  ElevatedButton(
-                    onPressed: () => _showTableDialog(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF070B2D),
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 18, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${tables.length} ${AppLocalizations.of(context).totalTables}',
+                            style: _p(12, FontWeight.w400, _C.textMid),
+                          ),
+                        ]),
+                      ],
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.add_rounded, size: 16),
-                        const SizedBox(width: 8),
+                  ),
+                  // ── Add Table button ───────────────────────────────────
+                  GestureDetector(
+                    onTap: () => _showTableDialog(),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF070B2D),
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF070B2D).withOpacity(0.18),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          )
+                        ],
+                      ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        const Icon(Icons.add_rounded,
+                            size: 16, color: Colors.white),
+                        const SizedBox(width: 7),
                         Text(
                           AppLocalizations.of(context).addTable,
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: _p(13, FontWeight.w600, Colors.white),
                         ),
-                      ],
+                      ]),
                     ),
                   ),
                 ],
               ),
+            ),
 
-              const SizedBox(height: 20),
+            // ── Body ───────────────────────────────────────────────────────
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(sidePad, 16, sidePad, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Loading skeleton
+                    if (snapshot.connectionState == ConnectionState.waiting)
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final cols    = isMobile ? 2 : 3;
+                          const spacing = 12.0;
+                          final cardW   = (constraints.maxWidth - spacing * (cols - 1)) / cols;
+                          return Wrap(
+                            spacing: spacing,
+                            runSpacing: spacing,
+                            children: List.generate(
+                              6,
+                                  (_) => SizedBox(
+                                  width: cardW,
+                                  child: const _TableCardSkeleton()),
+                            ),
+                          );
+                        },
+                      )
 
-              // ── Content
-              if (snapshot.connectionState == ConnectionState.waiting)
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final cols    = isMobile ? 2 : 3;
-                    const spacing = 12.0;
-                    final cardW   = (constraints.maxWidth - spacing * (cols - 1)) / cols;
-                    return Wrap(
-                      spacing: spacing,
-                      runSpacing: spacing,
-                      children: List.generate(
-                        6,
-                            (_) => SizedBox(width: cardW, child: const _TableCardSkeleton()),
-                      ),
-                    );
-                  },
-                )
-              else if (snapshot.hasError)
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 60),
-                    child: Text('Error: ${snapshot.error}',
-                        style: _p(13, FontWeight.w400, _C.red)),
-                  ),
-                )
-              else if (tables.isEmpty)
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 60),
-                      child: Column(children: [
-                        Container(
-                          padding: const EdgeInsets.all(22),
-                          decoration: const BoxDecoration(
-                              color: _C.orangeLight, shape: BoxShape.circle),
-                          child: const Icon(Icons.table_restaurant_rounded,
-                              color: _C.orange, size: 38),
+                    // Error
+                    else if (snapshot.hasError)
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 60),
+                          child: Text('Error: ${snapshot.error}',
+                              style: _p(13, FontWeight.w400, _C.red)),
                         ),
-                        const SizedBox(height: 18),
-                        Text(
-                          AppLocalizations.of(context).noTablesYet,
-                          style: _p(16, FontWeight.w600, _C.textDark),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          AppLocalizations.of(context).tapAddTable,
-                          style: _p(12, FontWeight.w400, _C.textLight),
-                        ),
-                      ]),
-                    ),
-                  )
-                else
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final cols    = isMobile ? 2 : 3;
-                      const spacing = 12.0;
-                      final cardW   =
-                          (constraints.maxWidth - spacing * (cols - 1)) / cols;
-                      return Wrap(
-                        spacing: spacing,
-                        runSpacing: spacing,
-                        children: tables
-                            .map((t) => SizedBox(
-                          width: cardW,
-                          child: _tableCard(t, isMobile),
-                        ))
-                            .toList(),
-                      );
-                    },
-                  ),
+                      )
 
-              const SizedBox(height: 10),
-            ],
-          ),
+                    // Empty state
+                    else if (tables.isEmpty)
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 60),
+                            child: Column(children: [
+                              Container(
+                                padding: const EdgeInsets.all(22),
+                                decoration: const BoxDecoration(
+                                    color: _C.orangeLight,
+                                    shape: BoxShape.circle),
+                                child: const Icon(
+                                    Icons.table_restaurant_rounded,
+                                    color: _C.orange,
+                                    size: 38),
+                              ),
+                              const SizedBox(height: 18),
+                              Text(
+                                AppLocalizations.of(context).noTablesYet,
+                                style: _p(16, FontWeight.w600, _C.textDark),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                AppLocalizations.of(context).tapAddTable,
+                                style: _p(12, FontWeight.w400, _C.textLight),
+                              ),
+                              const SizedBox(height: 24),
+                              GestureDetector(
+                                onTap: () => _showTableDialog(),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 20, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: _C.orange,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.add_rounded,
+                                            size: 16, color: Colors.white),
+                                        const SizedBox(width: 7),
+                                        Text(
+                                          AppLocalizations.of(context).addTable,
+                                          style: _p(13, FontWeight.w600, Colors.white),
+                                        ),
+                                      ]),
+                                ),
+                              ),
+                            ]),
+                          ),
+                        )
+
+                      // Table grid
+                      else
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final cols    = isMobile ? 2 : 3;
+                            const spacing = 12.0;
+                            final cardW   = (constraints.maxWidth -
+                                spacing * (cols - 1)) /
+                                cols;
+                            return Wrap(
+                              spacing: spacing,
+                              runSpacing: spacing,
+                              children: tables
+                                  .map((t) => SizedBox(
+                                width: cardW,
+                                child: _tableCard(t, isMobile),
+                              ))
+                                  .toList(),
+                            );
+                          },
+                        ),
+
+                    const SizedBox(height: 10),
+                  ],
+                ),
+              ),
+            ),
+          ],
         );
       },
+    );
+  }
+}
+
+// ─── Card action button ───────────────────────────────────────────────────────
+class _CardActionBtn extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final Color bgColor;
+  final VoidCallback onTap;
+
+  const _CardActionBtn({
+    required this.icon,
+    required this.color,
+    required this.bgColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, size: 16, color: color),
+      ),
     );
   }
 }

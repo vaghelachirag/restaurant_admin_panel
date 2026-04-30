@@ -37,7 +37,7 @@ class _C {
 }
 
 // ─────────────────────────────────────────────
-// UNCHANGED UTILITIES
+// UTILITIES
 // ─────────────────────────────────────────────
 Color hexToColor(String hex) {
   hex = hex.replaceAll("#", "");
@@ -84,10 +84,10 @@ class _SessionStorage {
 }
 
 // ─────────────────────────────────────────────
-// WIDGET  — same public signature as original
+// MAIN WIDGET
 // ─────────────────────────────────────────────
 class CustomerMenuPage extends StatefulWidget {
-  final String restaurantId; // ← preserved exactly as original
+  final String restaurantId;
   const CustomerMenuPage({super.key, required this.restaurantId});
 
   @override
@@ -97,21 +97,26 @@ class CustomerMenuPage extends StatefulWidget {
 class _CustomerMenuPageState extends State<CustomerMenuPage>
     with AutomaticKeepAliveClientMixin {
 
-  // ── All state vars identical to original ─────────────────────────────────
-  final ValueNotifier<String?> _selectedCategoryIdNotifier = ValueNotifier(null);
-  String? get _selectedCategoryId => _selectedCategoryIdNotifier.value;
+  // ── ValueNotifier-based state — NO full-page setState on variant/view change
+  final ValueNotifier<String?>           _selectedCategoryIdNotifier = ValueNotifier(null);
+  final ValueNotifier<Map<String, int>>  _variantIndexNotifier       = ValueNotifier({});
+  final ValueNotifier<bool>              _listViewNotifier           = ValueNotifier(true);
+  final ValueNotifier<List<CartItem>>    _cartNotifier               = ValueNotifier([]);
+  final ValueNotifier<String?>           _lastAddedItemId            = ValueNotifier(null);
+  final ValueNotifier<int>               _cartBounce                 = ValueNotifier(0);
+  final ValueNotifier<String?>           _tableIdNotifier            = ValueNotifier(null);
+  final ValueNotifier<String?>           _tableNameNotifier          = ValueNotifier(null);
+
+  // Getters for convenience
+  String? get _selectedCategoryId   => _selectedCategoryIdNotifier.value;
   set _selectedCategoryId(String? v) => _selectedCategoryIdNotifier.value = v;
+  bool    get _unifiedCategoryListView => _listViewNotifier.value;
+  List<CartItem> get cart              => _cartNotifier.value;
+  String? get _preselectedTableId      => _tableIdNotifier.value;
+  String? get _preselectedTableName    => _tableNameNotifier.value;
 
-  final Map<String, int> _selectedVariantIndexByItemId = {};
-  bool _unifiedCategoryListView = true;
+  // Plain state (changes here DO need a rebuild of a higher-level widget)
   final Set<String> _collapsedCategoryIds = {};
-
-  final ValueNotifier<List<CartItem>> _cartNotifier = ValueNotifier([]);
-  List<CartItem> get cart => _cartNotifier.value;
-
-  final ValueNotifier<String?> _lastAddedItemId = ValueNotifier(null);
-  final ValueNotifier<int>     _cartBounce      = ValueNotifier(0);
-
   int _selectedTabIndex = 0;
   late PageController _pageController;
 
@@ -125,23 +130,15 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
   bool _isFirebaseReady      = false;
   bool _hasRestaurantIdError = false;
 
-  final ValueNotifier<String?> _tableIdNotifier   = ValueNotifier(null);
-  final ValueNotifier<String?> _tableNameNotifier = ValueNotifier(null);
-
-  String? get _preselectedTableId   => _tableIdNotifier.value;
-  String? get _preselectedTableName => _tableNameNotifier.value;
-
   String? _sessionId;
   String? _activeOrderId;
   bool    _orderLookupInProgress = false;
 
-  // Accent matches the new design token but keeps the same primary reference
   static const Color _primaryColor = Color(0xFFE8420E);
 
   @override
   bool get wantKeepAlive => true;
 
-  // ── initState / dispose (unchanged) ─────────────────────────────────────
   @override
   void initState() {
     super.initState();
@@ -163,12 +160,14 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     _lastAddedItemId.dispose();
     _cartBounce.dispose();
     _selectedCategoryIdNotifier.dispose();
+    _variantIndexNotifier.dispose();
+    _listViewNotifier.dispose();
     _tableIdNotifier.dispose();
     _tableNameNotifier.dispose();
     super.dispose();
   }
 
-  // ── Auth / session / order (all unchanged — restaurantId wired) ──────────
+  // ── Auth / session ────────────────────────────────────────────────────────
   Future<void> _ensureSignedIn() async {
     if (FirebaseAuth.instance.currentUser == null) {
       try {
@@ -190,10 +189,9 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
       final tableId = params['table'] ?? '';
       if (tableId.isEmpty) return;
       _tableIdNotifier.value = tableId;
-      if (mounted) setState(() {});
       FirebaseFirestore.instance
           .collection('restaurants')
-          .doc(widget.restaurantId)   // ← restaurantId
+          .doc(widget.restaurantId)
           .collection('tables')
           .doc(tableId)
           .get()
@@ -203,10 +201,9 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
               ? ((doc.data()?['name'] as String?) ?? tableId)
               : tableId;
           _tableNameNotifier.value = name;
-          setState(() {});
         }
       }).catchError((_) {
-        if (mounted) { _tableNameNotifier.value = tableId; setState(() {}); }
+        if (mounted) _tableNameNotifier.value = tableId;
       });
     } catch (_) {}
   }
@@ -228,7 +225,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     try {
       final ordersRef = FirebaseFirestore.instance
           .collection('restaurants')
-          .doc(widget.restaurantId)   // ← restaurantId
+          .doc(widget.restaurantId)
           .collection('orders');
 
       final existing = await ordersRef
@@ -252,7 +249,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
       final newOrderId = newRef.id;
       await newRef.set({
         'orderId':      newOrderId,
-        'restaurantId': widget.restaurantId,   // ← restaurantId
+        'restaurantId': widget.restaurantId,
         'tableId':      tableId,
         'tableName':    _preselectedTableName ?? tableId,
         'userId':       uid,
@@ -274,7 +271,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     }
   }
 
-  // ── Cart helpers (unchanged) ─────────────────────────────────────────────
+  // ── Cart helpers ──────────────────────────────────────────────────────────
   int getTotalCartQuantity() => cart.fold(0, (s, i) => s + i.qty);
 
   int getItemQuantity(String itemId, String variant) {
@@ -290,11 +287,16 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     try { return List<dynamic>.from(raw as List); } catch (_) { return []; }
   }
 
+  // Reads from _variantIndexNotifier — no setState
   int _safeIndex(String itemId, List<dynamic> variants) {
     if (variants.isEmpty) return 0;
-    final stored  = _selectedVariantIndexByItemId[itemId] ?? 0;
+    final stored  = _variantIndexNotifier.value[itemId] ?? 0;
     final clamped = stored.clamp(0, variants.length - 1);
-    if (stored != clamped) _selectedVariantIndexByItemId[itemId] = clamped;
+    if (stored != clamped) {
+      final updated = Map<String, int>.from(_variantIndexNotifier.value);
+      updated[itemId] = clamped;
+      _variantIndexNotifier.value = updated;
+    }
     return clamped;
   }
 
@@ -398,7 +400,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     Navigator.push(context, MaterialPageRoute(
       builder: (_) => CartPage(
         cart:                 mutableCart,
-        restaurantId:         widget.restaurantId,   // ← restaurantId
+        restaurantId:         widget.restaurantId,
         preselectedTableId:   _preselectedTableId,
         preselectedTableName: _preselectedTableName,
         sessionId:            _sessionId,
@@ -413,7 +415,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     });
   }
 
-  // ── Image helpers (unchanged) ────────────────────────────────────────────
+  // ── Image helpers ─────────────────────────────────────────────────────────
   Widget _imagePlaceholder() => Container(
     color: _C.chipBg,
     child: Center(child: Icon(Icons.fastfood_rounded,
@@ -464,7 +466,8 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
   );
 
   // ─────────────────────────────────────────────────────────────────────────
-  // VARIANT DROPDOWN (unchanged logic)
+  // VARIANT SELECTOR — inline chips, zero page rebuild on selection
+  // Uses _variantIndexNotifier so only the chip row rebuilds, not the page.
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildVariantDropdown({
     required String itemId,
@@ -472,142 +475,114 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     required int selectedIndex,
   }) {
     if (variants.isEmpty) return const SizedBox.shrink();
-    final selected     = variants[selectedIndex] as Map<String, dynamic>;
-    final selectedName = (selected['name'] ?? '') as String;
+
+    // Single variant with no name → hide
     if (variants.length == 1) {
-      if (selectedName.isEmpty) return const SizedBox.shrink();
-      return _variantPill(selectedName, showArrow: false);
+      final name = (variants[0] as Map<String, dynamic>)['name'] as String? ?? '';
+      if (name.isEmpty) return const SizedBox.shrink();
+      // Single named variant: show as static pill
+      return _staticVariantPill(name);
     }
-    return GestureDetector(
-      onTap: () => _showVariantDropdownSheet(
-          itemId: itemId, variants: variants, selectedIndex: selectedIndex),
-      child: _variantPill(selectedName, showArrow: true),
-    );
-  }
 
-  Widget _variantPill(String name, {required bool showArrow}) => Container(
-    padding: EdgeInsets.symmetric(
-        horizontal: kIsWeb ? 10 : 10.w, vertical: kIsWeb ? 5 : 5.h),
-    decoration: BoxDecoration(
-      color: _C.chipBg,
-      borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
-      border: Border.all(color: _C.divider),
-    ),
-    child: Row(mainAxisSize: MainAxisSize.min, children: [
-      Container(width: kIsWeb ? 6 : 6.sp, height: kIsWeb ? 6 : 6.sp,
-          decoration: const BoxDecoration(color: _C.textMuted, shape: BoxShape.circle)),
-      SizedBox(width: kIsWeb ? 6 : 6.w),
-      Text(name, style: GoogleFonts.poppins(
-          fontSize: kIsWeb ? 11 : 11.sp, color: _C.textSecondary,
-          fontWeight: FontWeight.w500)),
-      if (showArrow) ...[
-        SizedBox(width: kIsWeb ? 4 : 4.w),
-        Icon(Icons.keyboard_arrow_down_rounded,
-            size: kIsWeb ? 14 : 14.sp, color: _C.textMuted),
-      ],
-    ]),
-  );
+    // Multiple variants: inline animated chip row
+    return ValueListenableBuilder<Map<String, int>>(
+      valueListenable: _variantIndexNotifier,
+      builder: (_, map, __) {
+        final current = (map[itemId] ?? selectedIndex).clamp(0, variants.length - 1);
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: kIsWeb ? 34 : 32.h),
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            itemCount: variants.length,
+            itemBuilder: (_, i) {
+              final v     = variants[i] as Map<String, dynamic>;
+              final name  = (v['name'] ?? '') as String;
+              final isSel = i == current;
 
-  void _showVariantDropdownSheet({
-    required String itemId,
-    required List<dynamic> variants,
-    required int selectedIndex,
-  }) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (ctx) {
-        int localIndex = selectedIndex;
-        return StatefulBuilder(builder: (ctx, setSheet) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(margin: const EdgeInsets.only(top: 12), width: 40, height: 4,
-                decoration: BoxDecoration(color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2))),
-            Padding(
-              padding: EdgeInsets.fromLTRB(kIsWeb ? 20 : 20.w, kIsWeb ? 20 : 20.h,
-                  kIsWeb ? 20 : 20.w, kIsWeb ? 4 : 4.h),
-              child: Row(children: [
-                Container(
-                    padding: EdgeInsets.all(kIsWeb ? 6 : 6.sp),
-                    decoration: BoxDecoration(color: _C.accentLight,
-                        borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp)),
-                    child: Icon(Icons.tune_rounded,
-                        color: _C.accent, size: kIsWeb ? 18 : 18.sp)),
-                SizedBox(width: kIsWeb ? 10 : 10.w),
-                Text("Select Variant", style: GoogleFonts.poppins(
-                    fontSize: kIsWeb ? 18 : 18.sp,
-                    fontWeight: FontWeight.w700, color: _C.textPrimary)),
-              ]),
-            ),
-            Padding(padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 20 : 20.w),
-                child: Divider(color: Colors.grey[100], height: 1)),
-            SizedBox(height: kIsWeb ? 8 : 8.h),
-            ...variants.asMap().entries.map((entry) {
-              final index   = entry.key;
-              final variant = entry.value as Map<String, dynamic>;
-              final name    = (variant['name'] ?? '') as String;
-              final price   = _toInt(variant['price']);
-              final isSel   = index == localIndex;
               return GestureDetector(
                 onTap: () {
-                  setSheet(() => localIndex = index);
-                  setState(() => _selectedVariantIndexByItemId[itemId] = index);
-                  Navigator.pop(ctx);
+                  // ← Pure ValueNotifier update — zero setState on parent
+                  final updated = Map<String, int>.from(_variantIndexNotifier.value);
+                  updated[itemId] = i;
+                  _variantIndexNotifier.value = updated;
                 },
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 160),
-                  margin: EdgeInsets.symmetric(
-                      horizontal: kIsWeb ? 16 : 16.w, vertical: kIsWeb ? 4 : 4.h),
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
+                  margin: EdgeInsets.only(right: kIsWeb ? 6 : 5.w),
                   padding: EdgeInsets.symmetric(
-                      horizontal: kIsWeb ? 16 : 16.w, vertical: kIsWeb ? 12 : 12.h),
+                      horizontal: kIsWeb ? 10 : 8.w,
+                      vertical:   kIsWeb ? 5 : 4.h),
                   decoration: BoxDecoration(
-                    color: isSel ? _C.accentLight : Colors.grey[50],
-                    borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
+                    color: isSel ? _C.accent : Colors.white,
+                    borderRadius: BorderRadius.circular(kIsWeb ? 20 : 16.sp),
                     border: Border.all(
-                        color: isSel ? _C.accent.withOpacity(0.4) : Colors.transparent,
-                        width: 1.5),
-                  ),
-                  child: Row(children: [
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 160),
-                      width: kIsWeb ? 20 : 20.sp, height: kIsWeb ? 20 : 20.sp,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                            color: isSel ? _C.accent : Colors.grey[400]!,
-                            width: isSel ? 0 : 1.5),
-                        color: isSel ? _C.accent : Colors.white,
-                      ),
-                      child: isSel
-                          ? Icon(Icons.check_rounded,
-                          size: kIsWeb ? 13 : 13.sp, color: Colors.white)
-                          : null,
+                      color: isSel ? _C.accent : _C.divider,
+                      width: isSel ? 1.5 : 1,
                     ),
-                    SizedBox(width: kIsWeb ? 12 : 12.w),
-                    Expanded(child: Text(name, style: GoogleFonts.poppins(
-                        fontSize: kIsWeb ? 14 : 14.sp,
-                        fontWeight: isSel ? FontWeight.w600 : FontWeight.w400,
-                        color: isSel ? _C.accent : _C.textPrimary))),
-                    Text("₹$price", style: GoogleFonts.poppins(
-                        fontSize: kIsWeb ? 13 : 13.sp, fontWeight: FontWeight.w600,
-                        color: isSel ? _C.accent : _C.textSecondary)),
+                    boxShadow: isSel
+                        ? [BoxShadow(
+                        color: _C.accent.withOpacity(0.28),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3))]
+                        : [BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1))],
+                  ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 150),
+                      child: isSel
+                          ? Padding(
+                        key: const ValueKey('check'),
+                        padding: EdgeInsets.only(right: kIsWeb ? 4 : 3.w),
+                        child: Icon(Icons.check_rounded,
+                            size: kIsWeb ? 11 : 10.sp,
+                            color: Colors.white),
+                      )
+                          : const SizedBox.shrink(key: ValueKey('empty')),
+                    ),
+                    Text(
+                      name,
+                      style: GoogleFonts.poppins(
+                          fontSize: kIsWeb ? 11 : 10.sp,
+                          fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
+                          color: isSel ? Colors.white : _C.textSecondary),
+                    ),
                   ]),
                 ),
               );
-            }),
-            SizedBox(height: kIsWeb ? 24 : 24.h),
-          ]),
-        ));
+            },
+          ),
+        );
       },
     );
   }
 
-  // ── Add / counter (unchanged logic) ─────────────────────────────────────
+  Widget _staticVariantPill(String name) => Container(
+    padding: EdgeInsets.symmetric(
+        horizontal: kIsWeb ? 10 : 10.w, vertical: kIsWeb ? 5 : 5.h),
+    decoration: BoxDecoration(
+      color: _C.chipBg,
+      borderRadius: BorderRadius.circular(kIsWeb ? 20 : 20.sp),
+      border: Border.all(color: _C.divider),
+    ),
+    child: Row(mainAxisSize: MainAxisSize.min, children: [
+      Container(
+        width: kIsWeb ? 6 : 6.sp, height: kIsWeb ? 6 : 6.sp,
+        decoration: const BoxDecoration(color: _C.textMuted, shape: BoxShape.circle),
+      ),
+      SizedBox(width: kIsWeb ? 5 : 5.w),
+      Text(name, style: GoogleFonts.poppins(
+          fontSize: kIsWeb ? 11 : 11.sp,
+          color: _C.textSecondary,
+          fontWeight: FontWeight.w500)),
+    ]),
+  );
+
+  // ── Add / counter ─────────────────────────────────────────────────────────
   Widget _buildAddOrCounterWidget(BuildContext context,
       QueryDocumentSnapshot item, String itemId, String variant, int price) {
     final isOpen = _isRestaurantOpen();
@@ -706,92 +681,115 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // REDESIGNED MENU CARDS (same parameters as original)
+  // MENU CARDS
+  // Price/variant driven by _variantIndexNotifier via ValueListenableBuilder
+  // so only the card rebuilds on variant change, not the whole list.
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildMenuCard({
     required BuildContext context,
     required QueryDocumentSnapshot item,
     required String itemId,
     required List variants,
-    required int selectedIndex,
-    required dynamic selectedVariant,
-    required dynamic price,
-    required Color cardColor,
-    required Color textColor,
-    required Color cardInfoColor,
     required Color primaryColor,
   }) {
     final data = item.data() as Map<String, dynamic>;
     final bool isVeg  = data['isVeg'] == true;
     final String? desc = data['description'] as String?;
     final v = _safeList(data['variants']);
-    final si = _safeIndex(itemId, v);
-    final sv = v.isNotEmpty ? v[si] : null;
-    final int safePrice = _toInt(sv?['price'] ?? data['price']);
-    final String varName = (sv?['name'] ?? '') as String;
 
-    return Container(
-      margin: EdgeInsets.symmetric(
-          horizontal: kIsWeb ? 16 : 16.w, vertical: kIsWeb ? 5 : 5.h),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(kIsWeb ? 16 : 16.sp),
-        boxShadow: [BoxShadow(color: _C.shadow, blurRadius: 14, offset: const Offset(0, 4))],
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(kIsWeb ? 12 : 12.w),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // Image
-          Stack(clipBehavior: Clip.none, children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
-              child: SizedBox(
-                width: kIsWeb ? 88 : 88.w, height: kIsWeb ? 88 : 88.h,
-                child: item['image'] != null
-                    ? _networkImage(item['image'] as String)
-                    : _imagePlaceholder(),
-              ),
-            ),
-            Positioned(top: -4, left: -4, child: _vegBadge(isVeg)),
-          ]),
-          SizedBox(width: kIsWeb ? 12 : 12.w),
-          // Content
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(item['name'] ?? "Item",
-                      style: GoogleFonts.poppins(
-                          fontSize: kIsWeb ? 13 : 13.sp,
-                          fontWeight: FontWeight.w700,
-                          color: _C.textPrimary, height: 1.3),
-                      maxLines: 2, overflow: TextOverflow.ellipsis),
-                  if (desc != null && desc.isNotEmpty) ...[
-                    SizedBox(height: kIsWeb ? 2 : 2.h),
-                    Text(desc, style: GoogleFonts.poppins(
-                        fontSize: kIsWeb ? 10 : 10.sp, color: _C.textMuted, height: 1.3),
-                        maxLines: 1, overflow: TextOverflow.ellipsis),
-                  ],
-                  SizedBox(height: kIsWeb ? 7 : 7.h),
-                  Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-                    Expanded(child: _buildVariantDropdown(
-                        itemId: itemId, variants: v, selectedIndex: si)),
-                    SizedBox(width: kIsWeb ? 8 : 8.w),
-                    Column(crossAxisAlignment: CrossAxisAlignment.end,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text("₹$safePrice", style: GoogleFonts.poppins(
-                              fontSize: kIsWeb ? 15 : 15.sp,
-                              fontWeight: FontWeight.w800, color: _C.accent)),
-                          SizedBox(height: kIsWeb ? 6 : 6.h),
-                          _buildAddOrCounterWidget(
-                              context, item, itemId, varName, safePrice),
-                        ]),
-                  ]),
-                ]),
+    return ValueListenableBuilder<Map<String, int>>(
+      valueListenable: _variantIndexNotifier,
+      builder: (_, map, __) {
+        final si       = (map[itemId] ?? 0).clamp(0, v.isEmpty ? 0 : v.length - 1);
+        final sv       = v.isNotEmpty ? v[si] : null;
+        final int safePrice = _toInt(sv?['price'] ?? data['price']);
+        final String varName = (sv?['name'] ?? '') as String;
+
+        return Container(
+          margin: EdgeInsets.symmetric(
+              horizontal: kIsWeb ? 16 : 16.w, vertical: kIsWeb ? 5 : 5.h),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(kIsWeb ? 16 : 16.sp),
+            boxShadow: [BoxShadow(color: _C.shadow, blurRadius: 14, offset: const Offset(0, 4))],
           ),
-        ]),
-      ),
+          child: Padding(
+            padding: EdgeInsets.all(kIsWeb ? 12 : 12.w),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              // Image
+              Stack(clipBehavior: Clip.none, children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
+                  child: SizedBox(
+                    width: kIsWeb ? 88 : 82.w, height: kIsWeb ? 88 : 82.h,
+                    child: item['image'] != null
+                        ? _networkImage(item['image'] as String)
+                        : _imagePlaceholder(),
+                  ),
+                ),
+                Positioned(top: -4, left: -4, child: _vegBadge(isVeg)),
+              ]),
+              SizedBox(width: kIsWeb ? 12 : 10.w),
+              // Content — vertical stack: name → desc → variants → price+ADD
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(item['name'] ?? "Item",
+                        style: GoogleFonts.poppins(
+                            fontSize: kIsWeb ? 13 : 13.sp,
+                            fontWeight: FontWeight.w700,
+                            color: _C.textPrimary, height: 1.3),
+                        maxLines: 2, overflow: TextOverflow.ellipsis),
+                    if (desc != null && desc.isNotEmpty) ...[
+                      SizedBox(height: kIsWeb ? 2 : 2.h),
+                      Text(desc,
+                          style: GoogleFonts.poppins(
+                              fontSize: kIsWeb ? 10 : 10.sp,
+                              color: _C.textMuted, height: 1.3),
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ],
+                    // ── Variant chips — full width, scrollable ──────────────
+                    if (v.isNotEmpty) ...[
+                      SizedBox(height: kIsWeb ? 7 : 6.h),
+                      _buildVariantDropdown(
+                          itemId: itemId, variants: v, selectedIndex: si),
+                    ],
+                    SizedBox(height: kIsWeb ? 8 : 7.h),
+                    // ── Price (left) + ADD/counter (right) ──────────────────
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 200),
+                          transitionBuilder: (child, anim) => FadeTransition(
+                              opacity: anim,
+                              child: SlideTransition(
+                                position: Tween<Offset>(
+                                    begin: const Offset(0, 0.3),
+                                    end: Offset.zero).animate(anim),
+                                child: child,
+                              )),
+                          child: Text("₹$safePrice",
+                              key: ValueKey(safePrice),
+                              style: GoogleFonts.poppins(
+                                  fontSize: kIsWeb ? 15 : 15.sp,
+                                  fontWeight: FontWeight.w800,
+                                  color: _C.accent)),
+                        ),
+                        _buildAddOrCounterWidget(
+                            context, item, itemId, varName, safePrice),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ]),
+          ),
+        );
+      },
     );
   }
 
@@ -800,88 +798,102 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     required QueryDocumentSnapshot item,
     required String itemId,
     required List variants,
-    required int selectedIndex,
-    required dynamic selectedVariant,
-    required dynamic price,
-    required Color cardColor,
-    required Color textColor,
-    required Color cardInfoColor,
     required Color primaryColor,
   }) {
     final data = item.data() as Map<String, dynamic>;
     final bool isVeg  = data['isVeg'] == true;
     final String? desc = data['description'] as String?;
     final v = _safeList(data['variants']);
-    final si = _safeIndex(itemId, v);
-    final sv = v.isNotEmpty ? v[si] : null;
-    final int safePrice = _toInt(sv?['price'] ?? data['price']);
-    final String varName = (sv?['name'] ?? '') as String;
 
-    return Container(
-      margin: EdgeInsets.symmetric(
-          horizontal: kIsWeb ? 16 : 16.w, vertical: kIsWeb ? 5 : 5.h),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(kIsWeb ? 16 : 16.sp),
-        boxShadow: [BoxShadow(color: _C.shadow, blurRadius: 16, offset: const Offset(0, 4))],
-      ),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        ClipRRect(
-          borderRadius: BorderRadius.only(
-            topLeft:    Radius.circular(kIsWeb ? 16 : 16.sp),
-            bottomLeft: Radius.circular(kIsWeb ? 16 : 16.sp),
+    return ValueListenableBuilder<Map<String, int>>(
+      valueListenable: _variantIndexNotifier,
+      builder: (_, map, __) {
+        final si       = (map[itemId] ?? 0).clamp(0, v.isEmpty ? 0 : v.length - 1);
+        final sv       = v.isNotEmpty ? v[si] : null;
+        final int safePrice = _toInt(sv?['price'] ?? data['price']);
+        final String varName = (sv?['name'] ?? '') as String;
+
+        return Container(
+          margin: EdgeInsets.symmetric(
+              horizontal: kIsWeb ? 16 : 16.w, vertical: kIsWeb ? 5 : 5.h),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(kIsWeb ? 16 : 16.sp),
+            boxShadow: [BoxShadow(color: _C.shadow, blurRadius: 16, offset: const Offset(0, 4))],
           ),
-          child: SizedBox(
-            width: kIsWeb ? 110 : 110.w, height: kIsWeb ? 110 : 110.h,
-            child: Stack(fit: StackFit.expand, children: [
-              item['image'] != null
-                  ? _networkImage(item['image'] as String)
-                  : _imagePlaceholder(),
-              Positioned(top: 8, left: 8, child: _vegBadge(isVeg)),
-            ]),
-          ),
-        ),
-        Expanded(
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-                horizontal: kIsWeb ? 14 : 14.w, vertical: kIsWeb ? 12 : 12.h),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(item['name'] ?? "Item",
-                      style: GoogleFonts.poppins(
-                          fontSize: kIsWeb ? 14 : 14.sp,
-                          fontWeight: FontWeight.w700,
-                          color: _C.textPrimary, height: 1.3),
-                      maxLines: 1, overflow: TextOverflow.ellipsis),
-                  if (desc != null && desc.isNotEmpty) ...[
-                    SizedBox(height: kIsWeb ? 2 : 2.h),
-                    Text(desc, style: GoogleFonts.poppins(
-                        fontSize: kIsWeb ? 11 : 11.sp, color: _C.textMuted, height: 1.3),
-                        maxLines: 1, overflow: TextOverflow.ellipsis),
-                  ],
-                  SizedBox(height: kIsWeb ? 8 : 8.h),
-                  _buildVariantDropdown(
-                      itemId: itemId, variants: v, selectedIndex: si),
-                  SizedBox(height: kIsWeb ? 8 : 8.h),
-                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text("₹$safePrice", style: GoogleFonts.poppins(
-                            fontSize: kIsWeb ? 15 : 15.sp,
-                            fontWeight: FontWeight.w800, color: _C.accent)),
-                        _buildAddOrCounterWidget(
-                            context, item, itemId, varName, safePrice),
-                      ]),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            ClipRRect(
+              borderRadius: BorderRadius.only(
+                topLeft:    Radius.circular(kIsWeb ? 16 : 16.sp),
+                bottomLeft: Radius.circular(kIsWeb ? 16 : 16.sp),
+              ),
+              child: SizedBox(
+                width: kIsWeb ? 110 : 100.w, height: kIsWeb ? 110 : 100.h,
+                child: Stack(fit: StackFit.expand, children: [
+                  item['image'] != null
+                      ? _networkImage(item['image'] as String)
+                      : _imagePlaceholder(),
+                  Positioned(top: 8, left: 8, child: _vegBadge(isVeg)),
                 ]),
-          ),
-        ),
-      ]),
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                    horizontal: kIsWeb ? 14 : 14.w, vertical: kIsWeb ? 12 : 12.h),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(item['name'] ?? "Item",
+                          style: GoogleFonts.poppins(
+                              fontSize: kIsWeb ? 14 : 14.sp,
+                              fontWeight: FontWeight.w700,
+                              color: _C.textPrimary, height: 1.3),
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                      if (desc != null && desc.isNotEmpty) ...[
+                        SizedBox(height: kIsWeb ? 2 : 2.h),
+                        Text(desc, style: GoogleFonts.poppins(
+                            fontSize: kIsWeb ? 11 : 11.sp, color: _C.textMuted, height: 1.3),
+                            maxLines: 1, overflow: TextOverflow.ellipsis),
+                      ],
+                      SizedBox(height: kIsWeb ? 8 : 8.h),
+                      _buildVariantDropdown(
+                          itemId: itemId, variants: v, selectedIndex: si),
+                      SizedBox(height: kIsWeb ? 8 : 8.h),
+                      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 200),
+                              transitionBuilder: (child, anim) =>
+                                  FadeTransition(opacity: anim,
+                                      child: SlideTransition(
+                                        position: Tween<Offset>(
+                                            begin: const Offset(0, 0.3),
+                                            end: Offset.zero).animate(anim),
+                                        child: child,
+                                      )),
+                              child: Text("₹$safePrice",
+                                  key: ValueKey(safePrice),
+                                  style: GoogleFonts.poppins(
+                                      fontSize: kIsWeb ? 15 : 15.sp,
+                                      fontWeight: FontWeight.w800,
+                                      color: _C.accent)),
+                            ),
+                            _buildAddOrCounterWidget(
+                                context, item, itemId, varName, safePrice),
+                          ]),
+                    ]),
+              ),
+            ),
+          ]),
+        );
+      },
     );
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // TAB BUILDERS — all pass widget.restaurantId unchanged
+  // TAB BUILDERS
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildHomeTab() => HomeTab(
     restaurantId:                widget.restaurantId,
@@ -896,7 +908,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
         _collapsedCategoryIds.add(id);
       }
     }),
-    selectedVariantIndexByItemId: _selectedVariantIndexByItemId,
+    selectedVariantIndexByItemId: _variantIndexNotifier.value,
     updateItemQuantity:           _updateItemQuantity,
     getItemQuantity:              getItemQuantity,
     primaryColor:                 _primaryColor,
@@ -958,7 +970,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
       child: StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance
             .collection('restaurants')
-            .doc(widget.restaurantId)   // ← restaurantId
+            .doc(widget.restaurantId)
             .snapshots(),
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
@@ -1015,42 +1027,74 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
               _buildHeader(),
 
               // ── Table banner ──────────────────────────────────────────────
-              if (_preselectedTableId != null && _preselectedTableId!.isNotEmpty)
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.symmetric(
-                      horizontal: kIsWeb ? 16 : 16.w,
-                      vertical:   kIsWeb ? 9 : 9.h),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF4ED),
-                    border: Border(bottom: BorderSide(
-                        color: _C.accent.withOpacity(0.2))),
-                  ),
-                  child: Row(children: [
-                    const Icon(Icons.table_restaurant_rounded,
-                        color: _C.accent, size: 15),
-                    SizedBox(width: kIsWeb ? 8 : 8.w),
-                    Expanded(child: Text(
-                      'Ordering for: ${_preselectedTableName ?? _preselectedTableId}',
-                      style: GoogleFonts.poppins(
-                          fontSize: kIsWeb ? 12 : 12.sp,
-                          fontWeight: FontWeight.w600, color: _C.accent),
-                    )),
-                    const Icon(Icons.check_circle_rounded,
-                        color: Color(0xFF2ECC71), size: 14),
-                    SizedBox(width: kIsWeb ? 4 : 4.w),
-                    Text('Auto-selected', style: GoogleFonts.poppins(
-                        fontSize: kIsWeb ? 10 : 10.sp,
-                        color: const Color(0xFF2ECC71),
-                        fontWeight: FontWeight.w500)),
-                  ]),
-                ),
+              ValueListenableBuilder<String?>(
+                valueListenable: _tableIdNotifier,
+                builder: (_, tableId, __) {
+                  if (tableId == null || tableId.isEmpty) return const SizedBox.shrink();
+                  return ValueListenableBuilder<String?>(
+                    valueListenable: _tableNameNotifier,
+                    builder: (_, tableName, __) => Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.symmetric(
+                          horizontal: kIsWeb ? 16 : 16.w,
+                          vertical:   kIsWeb ? 9 : 9.h),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF4ED),
+                        border: Border(bottom: BorderSide(
+                            color: _C.accent.withOpacity(0.2))),
+                      ),
+                      child: Row(children: [
+                        const Icon(Icons.table_restaurant_rounded,
+                            color: _C.accent, size: 15),
+                        SizedBox(width: kIsWeb ? 8 : 8.w),
+                        Expanded(child: Text(
+                          'Ordering for: ${tableName ?? tableId}',
+                          style: GoogleFonts.poppins(
+                              fontSize: kIsWeb ? 12 : 12.sp,
+                              fontWeight: FontWeight.w600, color: _C.accent),
+                        )),
+                        const Icon(Icons.check_circle_rounded,
+                            color: Color(0xFF2ECC71), size: 14),
+                        SizedBox(width: kIsWeb ? 4 : 4.w),
+                        Text('Auto-selected', style: GoogleFonts.poppins(
+                            fontSize: kIsWeb ? 10 : 10.sp,
+                            color: const Color(0xFF2ECC71),
+                            fontWeight: FontWeight.w500)),
+                      ]),
+                    ),
+                  );
+                },
+              ),
 
               Expanded(
                 child: IndexedStack(index: _selectedTabIndex, children: [
-                  _unifiedCategoryListView
-                      ? _buildUnifiedListView()
-                      : _buildSeparateView(),
+                  // ── Home tab: smooth toggle between list and grid ──────────
+                  ValueListenableBuilder<bool>(
+                    valueListenable: _listViewNotifier,
+                    builder: (_, isListView, __) => AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 280),
+                      switchInCurve:  Curves.easeOut,
+                      switchOutCurve: Curves.easeIn,
+                      transitionBuilder: (child, anim) => FadeTransition(
+                        opacity: anim,
+                        child: SlideTransition(
+                          position: Tween<Offset>(
+                            begin: const Offset(0.04, 0),
+                            end: Offset.zero,
+                          ).animate(CurvedAnimation(
+                              parent: anim, curve: Curves.easeOut)),
+                          child: child,
+                        ),
+                      ),
+                      child: isListView
+                          ? KeyedSubtree(
+                          key: const ValueKey('list'),
+                          child: _buildUnifiedListView())
+                          : KeyedSubtree(
+                          key: const ValueKey('grid'),
+                          child: _buildSeparateView()),
+                    ),
+                  ),
                   KeepAliveWrapper(child: _buildOrdersTab()),
                   KeepAliveWrapper(child: _buildOffersTab()),
                   _buildAssistTab(),
@@ -1066,7 +1110,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // REDESIGNED HEADER
+  // HEADER — grid toggle uses ValueListenableBuilder, no setState
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildHeader() => Container(
     decoration: const BoxDecoration(
@@ -1111,18 +1155,29 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                       color: Colors.white.withOpacity(0.8)),
                   maxLines: 1, overflow: TextOverflow.ellipsis),
           ])),
-          // Grid toggle (home tab only)
+
+          // Grid/List toggle — ValueListenableBuilder only rebuilds this button
           if (_selectedTabIndex == 0) ...[
-            GestureDetector(
-              onTap: () => setState(
-                      () => _unifiedCategoryListView = !_unifiedCategoryListView),
-              child: _headerIconButton(
-                  _unifiedCategoryListView
-                      ? Icons.grid_view_rounded
-                      : Icons.view_agenda_rounded),
+            ValueListenableBuilder<bool>(
+              valueListenable: _listViewNotifier,
+              builder: (_, isListView, __) => GestureDetector(
+                onTap: () => _listViewNotifier.value = !_listViewNotifier.value,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 220),
+                  transitionBuilder: (child, anim) => ScaleTransition(
+                      scale: anim, child: FadeTransition(opacity: anim, child: child)),
+                  child: _headerIconButton(
+                    isListView
+                        ? Icons.grid_view_rounded
+                        : Icons.view_agenda_rounded,
+                    key: ValueKey(isListView),
+                  ),
+                ),
+              ),
             ),
             SizedBox(width: kIsWeb ? 8 : 8.sp),
           ],
+
           // Animated cart
           ValueListenableBuilder<int>(
             valueListenable: _cartBounce,
@@ -1148,7 +1203,8 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     ),
   );
 
-  Widget _headerIconButton(IconData icon) => Container(
+  Widget _headerIconButton(IconData icon, {Key? key}) => Container(
+    key: key,
     width: kIsWeb ? 40 : 40.sp, height: kIsWeb ? 40 : 40.sp,
     decoration: BoxDecoration(
       color: Colors.white.withOpacity(0.18),
@@ -1158,7 +1214,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
   );
 
   // ─────────────────────────────────────────────────────────────────────────
-  // REDESIGNED BOTTOM NAV
+  // BOTTOM NAV
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildBottomNavigationBar() => Container(
     decoration: BoxDecoration(
@@ -1216,14 +1272,13 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // REDESIGNED UNIFIED LIST VIEW
-  // Firestore path: restaurants/{widget.restaurantId}/... — unchanged
+  // UNIFIED LIST VIEW
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildUnifiedListView() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('restaurants')
-          .doc(widget.restaurantId)   // ← restaurantId
+          .doc(widget.restaurantId)
           .collection('categories')
           .orderBy('position')
           .snapshots(),
@@ -1318,7 +1373,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                     firstChild: StreamBuilder<QuerySnapshot>(
                       stream: FirebaseFirestore.instance
                           .collection('restaurants')
-                          .doc(widget.restaurantId)   // ← restaurantId
+                          .doc(widget.restaurantId)
                           .collection('menu_items')
                           .where('categoryId', isEqualTo: cat.id)
                           .where('isAvailable', isEqualTo: true)
@@ -1336,17 +1391,11 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
                             final itemId = item.id;
                             final raw    = (item.data() as Map<String, dynamic>)['variants'];
                             final v      = _safeList(raw);
-                            final si     = _safeIndex(itemId, v);
-                            final sv     = v.isNotEmpty ? v[si] : null;
-                            final price  = sv != null ? sv['price'] : item['price'];
                             final isLast = entry.key == items.length - 1;
                             return Column(children: [
                               _buildMenuCard(
                                 context: context, item: item, itemId: itemId,
-                                variants: v, selectedIndex: si,
-                                selectedVariant: sv, price: price,
-                                cardColor: Colors.white, textColor: Colors.black87,
-                                cardInfoColor: Colors.grey, primaryColor: _primaryColor,
+                                variants: v, primaryColor: _primaryColor,
                               ),
                               if (!isLast)
                                 Padding(
@@ -1370,13 +1419,13 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // SEPARATE / GRID VIEW (unchanged logic, restyled chips)
+  // SEPARATE / GRID VIEW
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildSeparateView() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('restaurants')
-          .doc(widget.restaurantId)   // ← restaurantId
+          .doc(widget.restaurantId)
           .collection('categories')
           .orderBy('position')
           .snapshots(),
@@ -1461,7 +1510,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
       key: ValueKey(_selectedCategoryId),
       stream: FirebaseFirestore.instance
           .collection('restaurants')
-          .doc(widget.restaurantId)   // ← restaurantId
+          .doc(widget.restaurantId)
           .collection('menu_items')
           .where('categoryId', isEqualTo: _selectedCategoryId)
           .where('isAvailable', isEqualTo: true)
@@ -1488,16 +1537,9 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
             final itemId = item.id;
             final raw    = (item.data() as Map<String, dynamic>)['variants'];
             final v      = _safeList(raw);
-            final si     = _safeIndex(itemId, v);
-            final sv     = v.isNotEmpty ? v[si] : null;
-            final price  = sv != null
-                ? sv['price']
-                : (item.data() as Map<String, dynamic>)['price'];
             return _buildMenuGridCard(
               context: context, item: item, itemId: itemId,
-              variants: v, selectedIndex: si, selectedVariant: sv, price: price,
-              cardColor: Colors.white, textColor: Colors.black87,
-              cardInfoColor: Colors.grey, primaryColor: _primaryColor,
+              variants: v, primaryColor: _primaryColor,
             );
           },
         );
@@ -1505,7 +1547,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
     );
   }
 
-  // ── Inline state helpers (unchanged) ────────────────────────────────────
+  // ── Inline state helpers ──────────────────────────────────────────────────
   Widget _loadingWidget(String msg) => Center(child: ProfessionalLoader(
     type: LoaderType.waveBounce, message: msg,
     primaryColor: _primaryColor, secondaryColor: const Color(0xFFEC4899),
@@ -1568,7 +1610,7 @@ class _CustomerMenuPageState extends State<CustomerMenuPage>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ANIMATED CART BADGE (unchanged from original)
+// ANIMATED CART BADGE
 // ─────────────────────────────────────────────────────────────────────────────
 class _AnimatedCartBadge extends StatefulWidget {
   final int     bounceCount;
@@ -1636,7 +1678,7 @@ class _AnimatedCartBadgeState extends State<_AnimatedCartBadge>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ADD BUTTON WIDGET (unchanged logic, polished style)
+// ADD BUTTON WIDGET
 // ─────────────────────────────────────────────────────────────────────────────
 class _AddButtonWidget extends StatefulWidget {
   final String                 itemId;
@@ -1714,7 +1756,7 @@ class _AddButtonWidgetState extends State<_AddButtonWidget>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// COUNTER WIDGET (unchanged logic, restyled)
+// COUNTER WIDGET
 // ─────────────────────────────────────────────────────────────────────────────
 class _CounterWidget extends StatefulWidget {
   final int          qty;

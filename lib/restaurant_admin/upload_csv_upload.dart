@@ -12,6 +12,7 @@ import 'package:http/http.dart' as http;
 import '../data/models/category_model.dart';
 import '../data/models/menu_item_model.dart';
 import '../provider/csv_menu_upload_provider.dart';
+import '../uttils/api_keys.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -117,7 +118,7 @@ Future<String?> _uploadToImgBB(Uint8List bytes, String filename) async {
 // ─────────────────────────────────────────────────────────────────────────────
 const _kGeminiKey = String.fromEnvironment(
   'GEMINI_KEY',
-  defaultValue: 'AIzaSyD-rA0qSkqm9u9zPP2ebsebOgi5wOH5DqU', // ← paste key here for local dev
+  defaultValue: kGeminiKey, // ← paste key here for local dev
 );
 
 // ─────────────────────────────────────────────────────────────────────────────

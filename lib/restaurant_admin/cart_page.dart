@@ -9,19 +9,38 @@ import 'package:restaurant_admin_panel/restaurant_admin/table_management.dart';
 
 import 'order_status_page.dart';
 
+// ─────────────────────────────────────────────
+// DESIGN TOKENS — mirrors customer_menu.dart _C
+// ─────────────────────────────────────────────
+class _C {
+  static const bg            = Color(0xFFF8F5F0);
+  static const accent        = Color(0xFFE8420E);
+  static const accentLight   = Color(0xFFFFF0EB);
+  static const textPrimary   = Color(0xFF1A1A2E);
+  static const textSecondary = Color(0xFF6B7280);
+  static const textMuted     = Color(0xFF9CA3AF);
+  static const vegGreen      = Color(0xFF16A34A);
+  static const divider       = Color(0xFFE5E7EB);
+  static const cardWhite     = Color(0xFFFFFFFF);
+  static const shadow        = Color(0x0D000000);
+  static const shadowMd      = Color(0x18000000);
+  // Header gradient — same as customer_menu.dart
+  static const gradientStart = Color(0xFF7C3AED);
+  static const gradientMid   = Color(0xFF9333EA);
+  static const gradientEnd   = Color(0xFFA855F7);
+}
+
 Color _hexToColor(String hex) {
   hex = hex.replaceAll("#", "");
-  if (hex.length == 6) {
-    hex = "FF$hex";
-  }
+  if (hex.length == 6) hex = "FF$hex";
   return Color(int.parse(hex, radix: 16));
 }
 
 class CartPage extends StatefulWidget {
   final List<CartItem> cart;
   final String restaurantId;
-  final String? preselectedTableId;    // ← from QR URL
-  final String? preselectedTableName;  // ← fetched from Firestore
+  final String? preselectedTableId;
+  final String? preselectedTableName;
   final String? sessionId;
   final String? activeOrderId;
 
@@ -40,11 +59,11 @@ class CartPage extends StatefulWidget {
 }
 
 class _CartPageState extends State<CartPage> {
-  final TextEditingController nameController = TextEditingController();
-  final TextEditingController mobileController = TextEditingController();
+  final TextEditingController nameController        = TextEditingController();
+  final TextEditingController mobileController      = TextEditingController();
   final TextEditingController instructionController = TextEditingController();
 
-  String orderType = "Dine In";
+  String  orderType       = "Dine In";
   String? selectedTableId;
   String? selectedTableName;
 
@@ -54,7 +73,6 @@ class _CartPageState extends State<CartPage> {
   @override
   void initState() {
     super.initState();
-    // Auto-set table from QR URL — customer doesn't need to pick manually
     if (widget.preselectedTableId != null &&
         widget.preselectedTableId!.isNotEmpty) {
       selectedTableId   = widget.preselectedTableId;
@@ -62,13 +80,16 @@ class _CartPageState extends State<CartPage> {
     }
   }
 
-  int getTotal() {
-    int total = 0;
-    for (var item in widget.cart) {
-      total += item.price * item.qty;
-    }
-    return total;
+  @override
+  void dispose() {
+    nameController.dispose();
+    mobileController.dispose();
+    instructionController.dispose();
+    super.dispose();
   }
+
+  // ── Totals ────────────────────────────────────────────────────────────────
+  int getTotal() => widget.cart.fold(0, (s, i) => s + i.price * i.qty);
 
   double _parseDouble(dynamic raw) {
     if (raw == null) return 0.0;
@@ -76,97 +97,70 @@ class _CartPageState extends State<CartPage> {
     return double.tryParse(raw.toString().trim()) ?? 0.0;
   }
 
-  double getGSTAmount(double gstPct) => getTotal() * gstPct / 100;
-
-  double getSGSTAmount(double sgstPct) => getTotal() * sgstPct / 100;
+  double getGSTAmount(double pct)  => getTotal() * pct / 100;
+  double getSGSTAmount(double pct) => getTotal() * pct / 100;
 
   double getFinalTotal({
-    required bool enableGst,
+    required bool   enableGst,
     required double gstPct,
     required double sgstPct,
-    required bool enablePackaging,
+    required bool   enablePackaging,
     required double packagingCharge,
   }) {
     double total = getTotal().toDouble();
-    if (enableGst) {
-      total += getGSTAmount(gstPct) + getSGSTAmount(sgstPct);
-    }
-    if (enablePackaging) {
-      total += packagingCharge;
-    }
+    if (enableGst) total += getGSTAmount(gstPct) + getSGSTAmount(sgstPct);
+    if (enablePackaging) total += packagingCharge;
     return total;
   }
 
+  // ── Place order ───────────────────────────────────────────────────────────
   Future<void> placeOrder({
-    required bool enableGst,
+    required bool   enableGst,
     required double gstPct,
     required double sgstPct,
-    required bool enablePackaging,
+    required bool   enablePackaging,
     required double packagingCharge,
   }) async {
-    // ── Validation ──────────────────────────────────────────────────────────
     if (orderType == "Parcel" &&
         (nameController.text.isEmpty || mobileController.text.isEmpty)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text("Please enter customer name and mobile for parcel order")),
-      );
+      _snack("Please enter customer name and mobile for parcel order");
       return;
     }
     if (orderType == "Dine In" && selectedTableId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select a table for dine in order")),
-      );
+      _snack("Please select a table for dine in order");
       return;
     }
 
-    // ── Show loading ─────────────────────────────────────────────────────────
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) => const Center(
-        child: CircularProgressIndicator(color: Color(0xFF7C3AED)),
+        child: CircularProgressIndicator(color: _C.accent),
       ),
     );
 
     try {
-      // ── Ensure signed in & token is fresh ───────────────────────────────
       if (FirebaseAuth.instance.currentUser == null) {
         await FirebaseAuth.instance.signInAnonymously();
       }
-      // Force-refresh the ID token so Firestore receives request.auth
-      // on the very next write — anonymous sign-in alone is not enough.
       await FirebaseAuth.instance.currentUser!.getIdToken(true);
       final uid = FirebaseAuth.instance.currentUser!.uid;
 
       final double grandTotal = getFinalTotal(
-        enableGst: enableGst,
-        gstPct: gstPct,
-        sgstPct: sgstPct,
-        enablePackaging: enablePackaging,
-        packagingCharge: packagingCharge,
+        enableGst: enableGst, gstPct: gstPct, sgstPct: sgstPct,
+        enablePackaging: enablePackaging, packagingCharge: packagingCharge,
       );
 
       final int tokenNumber = DateTime.now().millisecondsSinceEpoch % 10000;
       final db = FirebaseFirestore.instance;
-      String orderId;
 
-      final itemsList = widget.cart.map((e) => {
-        "itemId"  : e.itemId,
-        "name"    : e.name,
-        "variant" : e.variant,
-        "price"   : e.price,
-        "qty"     : e.qty,
-      }).toList();
-
-      // Orders are stored as a subcollection under the restaurant:
-      // restaurants/{restaurantId}/orders/{orderId}
       final orderRef = db
           .collection('restaurants')
           .doc(widget.restaurantId)
           .collection('orders')
           .doc();
-      orderId = orderRef.id;
+      final orderId = orderRef.id;
+
       await orderRef.set({
         "userId"                : uid,
         "restaurantId"          : widget.restaurantId,
@@ -189,7 +183,13 @@ class _CartPageState extends State<CartPage> {
         "totalAmount"           : grandTotal.round(),
         "createdAt"             : FieldValue.serverTimestamp(),
         "updatedAt"             : FieldValue.serverTimestamp(),
-        "items"                 : itemsList,
+        "items"                 : widget.cart.map((e) => {
+          "itemId"  : e.itemId,
+          "name"    : e.name,
+          "variant" : e.variant,
+          "price"   : e.price,
+          "qty"     : e.qty,
+        }).toList(),
       });
 
       widget.cart.clear();
@@ -208,23 +208,21 @@ class _CartPageState extends State<CartPage> {
       }
     } on FirebaseException catch (e) {
       if (mounted) Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Order failed: ${e.message}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _snack('Order failed: ${e.message}', isError: true);
     } catch (e) {
       if (mounted) Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Something went wrong: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _snack('Something went wrong: $e', isError: true);
     }
   }
 
+  void _snack(String msg, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg, style: GoogleFonts.poppins()),
+      backgroundColor: isError ? Colors.red : _C.accent,
+    ));
+  }
+
+  // ── BUILD ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<DocumentSnapshot>(
@@ -232,65 +230,60 @@ class _CartPageState extends State<CartPage> {
           .collection('restaurants')
           .doc(widget.restaurantId)
           .snapshots(),
-      builder: (context, restaurantSnapshot) {
-        if (restaurantSnapshot.hasError) {
+      builder: (context, snap) {
+        if (snap.hasError) {
           return Scaffold(
-            body: Center(
-              child: Text(
-                'Error loading restaurant: ${restaurantSnapshot.error}',
-                style: GoogleFonts.poppins(),
-              ),
-            ),
+            body: Center(child: Text(
+              'Error loading restaurant: ${snap.error}',
+              style: GoogleFonts.poppins(),
+            )),
           );
         }
 
-        if (restaurantSnapshot.hasData) {
-          final rawData = restaurantSnapshot.data!.data();
-          if (rawData != null) {
-            _cachedRestaurantData = rawData as Map<String, dynamic>;
-          }
+        if (snap.hasData) {
+          final rawData = snap.data!.data();
+          if (rawData != null) _cachedRestaurantData = rawData as Map<String, dynamic>;
         }
 
-        // Show loader only on the very first load (no cached data yet).
         if (_cachedRestaurantData == null) {
           return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+            backgroundColor: _C.bg,
+            body: Center(child: CircularProgressIndicator(color: _C.accent)),
           );
         }
 
         final data = _cachedRestaurantData!;
 
-
-        final theme = data['theme'] ?? {};
-        final bgColor = _hexToColor(theme['backgroundColor'] ?? "#F8F9FA");
-        final textColor = _hexToColor(theme['textColor'] ?? "#111827");
-        final cardColor = _hexToColor(theme['cardColor'] ?? "#FFFFFF");
-        final cardInfoColor =
-        _hexToColor(theme['cardInfoColor'] ?? "#6B7280");
-
-
-        final bool   enableGst      = data['enableGst']      == true;
-        final double gstPct         = _parseDouble(data['gstPercentage']);   // e.g. "9" → 9.0
-        final double sgstPct        = _parseDouble(data['cessPercentage']);  // e.g. "9" → 9.0
+        // GST / packaging settings
+        final bool   enableGst      = data['enableGst']            == true;
+        final double gstPct         = _parseDouble(data['gstPercentage']);
+        final double sgstPct        = _parseDouble(data['cessPercentage']);
         final bool   enablePackaging = data['enablePackagingCharge'] == true;
-        final double pkgCharge      = _parseDouble(data['packagingCharge']); // flat amount
-
-        const Color primaryColor = Color(0xFF7C3AED);
+        final double pkgCharge      = _parseDouble(data['packagingCharge']);
 
         return Scaffold(
-          backgroundColor: bgColor,
+          backgroundColor: _C.bg,
+          // ── AppBar — same purple gradient as customer_menu header ──────────
           appBar: AppBar(
             elevation: 0,
             backgroundColor: Colors.transparent,
             foregroundColor: Colors.white,
+            leading: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                margin: EdgeInsets.all(kIsWeb ? 8 : 8.sp),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
+                ),
+                child: Icon(Icons.arrow_back_rounded,
+                    color: Colors.white, size: kIsWeb ? 20 : 20.sp),
+              ),
+            ),
             flexibleSpace: Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [
-                    Color(0xFF7C3AED),
-                    Color(0xFFA855F7),
-                    Color(0xFFC084FC),
-                  ],
+                  colors: [_C.gradientStart, _C.gradientMid, _C.gradientEnd],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -299,933 +292,780 @@ class _CartPageState extends State<CartPage> {
             title: Text(
               "Your Cart",
               style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w700,
                 color: Colors.white,
                 fontSize: kIsWeb ? 18 : 18.sp,
               ),
             ),
             centerTitle: false,
-          ),
-          body: widget.cart.isEmpty
-              ? Center(
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                  horizontal: kIsWeb ? 40.0 : 40.w),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: kIsWeb ? 96 : 96.w,
-                    height: kIsWeb ? 96 : 96.w,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3F4F6),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.shopping_cart_outlined,
-                      size: kIsWeb ? 44 : 44.sp,
-                      color: const Color(0xFF374151),
-                    ),
-                  ),
-                  SizedBox(height: kIsWeb ? 20 : 20.h),
-                  Text(
-                    "Your cart is empty",
-                    style: GoogleFonts.poppins(
-                      fontSize: kIsWeb ? 18 : 18.sp,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF111827),
-                    ),
-                  ),
-                  SizedBox(height: kIsWeb ? 6 : 6.h),
-                  Text(
-                    "Add some delicious items to get started",
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(
-                      fontSize: kIsWeb ? 13 : 13.sp,
-                      fontWeight: FontWeight.w400,
-                      color: const Color(0xFF6B7280),
-                    ),
-                  ),
-                  SizedBox(height: kIsWeb ? 28 : 28.h),
-                  SizedBox(
-                    height: kIsWeb ? 48 : 48.h,
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF7C3AED),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: EdgeInsets.symmetric(
-                            horizontal: kIsWeb ? 36 : 36.w),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                              kIsWeb ? 12 : 12.r),
-                        ),
+            // Item count badge
+            actions: [
+              if (widget.cart.isNotEmpty)
+                Padding(
+                  padding: EdgeInsets.only(right: kIsWeb ? 16 : 16.w),
+                  child: Center(
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: kIsWeb ? 10 : 10.w,
+                          vertical:   kIsWeb ? 4 : 4.h),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                       ),
                       child: Text(
-                        "Browse Menu",
+                        '${widget.cart.length} item${widget.cart.length > 1 ? 's' : ''}',
                         style: GoogleFonts.poppins(
-                          fontSize: kIsWeb ? 15 : 15.sp,
-                          fontWeight: FontWeight.w600,
-                        ),
+                            fontSize: kIsWeb ? 12 : 12.sp,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600),
                       ),
                     ),
                   ),
-                ],
-              ),
-            ),
-          )
+                ),
+            ],
+          ),
+
+          // ── Empty cart ─────────────────────────────────────────────────────
+          body: widget.cart.isEmpty
+              ? _buildEmptyCart()
               : SingleChildScrollView(
-            padding: EdgeInsets.only(bottom: kIsWeb ? 100 : 100.h),
+            padding: EdgeInsets.only(bottom: kIsWeb ? 120 : 120.h),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── Cart Items ────────────────────────────────────────
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  padding: EdgeInsets.fromLTRB(
-                    kIsWeb ? 16 : 16.w,
-                    kIsWeb ? 16 : 16.h,
-                    kIsWeb ? 16 : 16.w,
-                    kIsWeb ? 4 : 4.h,
-                  ),
-                  itemCount: widget.cart.length,
-                  itemBuilder: (context, index) {
-                    final item = widget.cart[index];
-                    return Container(
-                      margin: EdgeInsets.only(bottom: kIsWeb ? 10 : 10.h),
-                      decoration: BoxDecoration(
-                        color: cardColor,
-                        borderRadius:
-                        BorderRadius.circular(kIsWeb ? 14 : 14.r),
-                        border: Border.all(
-                          color: const Color(0xFFE5E7EB),
-                          width: 1,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: kIsWeb ? 8 : 8.r,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      padding: EdgeInsets.all(kIsWeb ? 12 : 12.w),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          // Product image
-                          ClipRRect(
-                            borderRadius:
-                            BorderRadius.circular(kIsWeb ? 10 : 10.r),
-                            child: Container(
-                              width: kIsWeb ? 64 : 64.w,
-                              height: kIsWeb ? 64 : 64.w,
-                              color: const Color(0xFFF3F4F6),
-                              child: item.image != null
-                                  ? Image.network(
-                                item.image!,
-                                fit: BoxFit.cover,
-                                errorBuilder:
-                                    (context, error, stackTrace) =>
-                                    Icon(Icons.restaurant,
-                                        color: Colors.grey[400],
-                                        size: kIsWeb ? 28 : 28.sp),
-                              )
-                                  : Icon(Icons.restaurant,
-                                  color: Colors.grey[400],
-                                  size: kIsWeb ? 28 : 28.sp),
-                            ),
-                          ),
-                          SizedBox(width: kIsWeb ? 12 : 12.w),
+                // Cart items list
+                _sectionPadding(child: _buildCartItemsList()),
 
-                          // Item name / variant / price
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment:
-                              CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  item.name,
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: kIsWeb ? 14 : 14.sp,
-                                    color: textColor,
-                                  ),
-                                ),
-                                SizedBox(height: kIsWeb ? 2 : 2.h),
-                                Text(
-                                  item.variant ?? "",
-                                  style: GoogleFonts.poppins(
-                                    fontSize: kIsWeb ? 12 : 12.sp,
-                                    color: cardInfoColor,
-                                  ),
-                                ),
-                                SizedBox(height: kIsWeb ? 4 : 4.h),
-                                Text(
-                                  "₹${item.price}",
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: kIsWeb ? 14 : 14.sp,
-                                    color: textColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                // Order type toggle
+                _sectionPadding(child: _buildOrderTypeSection()),
 
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              // Delete icon
-                              GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    widget.cart.removeAt(index);
-                                  });
-                                },
-                                child: Icon(
-                                  Icons.delete_outline,
-                                  color: Colors.red.shade400,
-                                  size: kIsWeb ? 20 : 20.sp,
-                                ),
-                              ),
-                              SizedBox(height: kIsWeb ? 10 : 10.h),
-
-                              // Qty stepper
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  GestureDetector(
-                                    onTap: () {
-                                      if (item.qty > 1) {
-                                        setState(() => item.qty--);
-                                      }
-                                    },
-                                    child: Container(
-                                      width: kIsWeb ? 30 : 30.w,
-                                      height: kIsWeb ? 30 : 30.w,
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFF3F4F6),
-                                        borderRadius:
-                                        BorderRadius.circular(
-                                            kIsWeb ? 6 : 6.r),
-                                        border: Border.all(
-                                            color: const Color(
-                                                0xFFE5E7EB)),
-                                      ),
-                                      child: Icon(Icons.remove,
-                                          color: cardInfoColor,
-                                          size: kIsWeb ? 16 : 16.sp),
-                                    ),
-                                  ),
-                                  Container(
-                                    width: kIsWeb ? 32 : 32.w,
-                                    alignment: Alignment.center,
-                                    child: Text(
-                                      item.qty.toString(),
-                                      style: GoogleFonts.poppins(
-                                        fontSize: kIsWeb ? 14 : 14.sp,
-                                        fontWeight: FontWeight.w600,
-                                        color: textColor,
-                                      ),
-                                    ),
-                                  ),
-                                  GestureDetector(
-                                    onTap: () {
-                                      setState(() => item.qty++);
-                                    },
-                                    child: Container(
-                                      width: kIsWeb ? 30 : 30.w,
-                                      height: kIsWeb ? 30 : 30.w,
-                                      decoration: BoxDecoration(
-                                        color: primaryColor,
-                                        borderRadius:
-                                        BorderRadius.circular(
-                                            kIsWeb ? 6 : 6.r),
-                                      ),
-                                      child: Icon(Icons.add,
-                                          color: Colors.white,
-                                          size: kIsWeb ? 16 : 16.sp),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-
-                Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    kIsWeb ? 16 : 16.w,
-                    kIsWeb ? 4 : 4.h,
-                    kIsWeb ? 16 : 16.w,
-                    kIsWeb ? 8 : 8.h,
-                  ),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: cardColor,
-                      borderRadius:
-                      BorderRadius.circular(kIsWeb ? 14 : 14.r),
-                      border: Border.all(
-                          color: const Color(0xFFE5E7EB), width: 1),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: kIsWeb ? 8 : 8.r,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    padding: EdgeInsets.all(kIsWeb ? 16 : 16.w),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Order Type",
-                          style: GoogleFonts.poppins(
-                            fontSize: kIsWeb ? 15 : 15.sp,
-                            fontWeight: FontWeight.w600,
-                            color: textColor,
-                          ),
-                        ),
-                        SizedBox(height: kIsWeb ? 12 : 12.h),
-                        Row(
-                          children: [
-                            _OrderTypeButton(
-                              label: "Dine In",
-                              selected: orderType == "Dine In",
-                              primaryColor: primaryColor,
-                              textColor: textColor,
-                              cardInfoColor: cardInfoColor,
-                              onTap: () =>
-                                  setState(() => orderType = "Dine In"),
-                            ),
-                            SizedBox(width: kIsWeb ? 12 : 12.w),
-                            _OrderTypeButton(
-                              label: "Parcel",
-                              selected: orderType == "Parcel",
-                              primaryColor: primaryColor,
-                              textColor: textColor,
-                              cardInfoColor: cardInfoColor,
-                              onTap: () =>
-                                  setState(() => orderType = "Parcel"),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
+                // Table picker / preselected banner
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 220),
-                  transitionBuilder: (child, animation) => SizeTransition(
-                    sizeFactor: animation,
-                    axisAlignment: -1,
-                    child: FadeTransition(opacity: animation, child: child),
+                  transitionBuilder: (child, anim) => SizeTransition(
+                    sizeFactor: anim, axisAlignment: -1,
+                    child: FadeTransition(opacity: anim, child: child),
                   ),
                   child: orderType == "Dine In"
-                      ? Padding(
-                    key: const ValueKey('dine-in-table'),
-                    padding: EdgeInsets.fromLTRB(
-                      kIsWeb ? 16 : 16.w,
-                      kIsWeb ? 4 : 4.h,
-                      kIsWeb ? 16 : 16.w,
-                      kIsWeb ? 8 : 8.h,
-                    ),
-                    // ── If table was preselected from QR URL ──────────────
-                    child: widget.preselectedTableId != null &&
-                        widget.preselectedTableId!.isNotEmpty
-                        ? Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF0FDF4),
-                        borderRadius: BorderRadius.circular(
-                            kIsWeb ? 14 : 14.r),
-                        border: Border.all(
-                            color: const Color(0xFF86EFAC), width: 1.5),
-                      ),
-                      padding: EdgeInsets.all(kIsWeb ? 16 : 16.w),
-                      child: Row(children: [
-                        Container(
-                          padding: EdgeInsets.all(kIsWeb ? 10 : 10.w),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFDCFCE7),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(Icons.table_restaurant_rounded,
-                              color: const Color(0xFF16A34A),
-                              size: kIsWeb ? 22 : 22.sp),
-                        ),
-                        SizedBox(width: kIsWeb ? 14 : 14.w),
-                        Expanded(
-                          child: Column(
-                              crossAxisAlignment:
-                              CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Table Selected',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: kIsWeb ? 13 : 13.sp,
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF15803D),
-                                  ),
-                                ),
-                                SizedBox(height: kIsWeb ? 2 : 2.h),
-                                Text(
-                                  widget.preselectedTableName ??
-                                      widget.preselectedTableId!,
-                                  style: GoogleFonts.poppins(
-                                    fontSize: kIsWeb ? 15 : 15.sp,
-                                    fontWeight: FontWeight.w700,
-                                    color: const Color(0xFF14532D),
-                                  ),
-                                ),
-                              ]),
-                        ),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                              horizontal: kIsWeb ? 10 : 10.w,
-                              vertical: kIsWeb ? 4 : 4.h),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFDCFCE7),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.check_circle_rounded,
-                                    color: Color(0xFF16A34A), size: 12),
-                                SizedBox(width: kIsWeb ? 4 : 4.w),
-                                Text('Auto',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: kIsWeb ? 10 : 10.sp,
-                                      fontWeight: FontWeight.w600,
-                                      color: const Color(0xFF16A34A),
-                                    )),
-                              ]),
-                        ),
-                      ]),
-                    )
-                    // ── No preselection — show full table picker ───────
-                        : Container(
-                      decoration: BoxDecoration(
-                        color: cardColor,
-                        borderRadius:
-                        BorderRadius.circular(kIsWeb ? 14 : 14.r),
-                        border: Border.all(
-                            color: const Color(0xFFE5E7EB), width: 1),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: kIsWeb ? 8 : 8.r,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      padding: EdgeInsets.all(kIsWeb ? 16 : 16.w),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Select Table",
-                            style: GoogleFonts.poppins(
-                              fontSize: kIsWeb ? 15 : 15.sp,
-                              fontWeight: FontWeight.w600,
-                              color: textColor,
-                            ),
-                          ),
-                          SizedBox(height: kIsWeb ? 4 : 4.h),
-                          Text(
-                            "Choose a table for dine in order",
-                            style: GoogleFonts.poppins(
-                              fontSize: kIsWeb ? 12 : 12.sp,
-                              color: cardInfoColor,
-                            ),
-                          ),
-                          SizedBox(height: kIsWeb ? 14 : 14.h),
-                          StreamBuilder<List<TableModel>>(
-                            stream: _tableService
-                                .watchTables(widget.restaurantId),
-                            builder: (context, snapshot) {
-                              if (snapshot.connectionState ==
-                                  ConnectionState.waiting) {
-                                return Center(
-                                  child: Padding(
-                                    padding: EdgeInsets.symmetric(
-                                        vertical: kIsWeb ? 20 : 20.h),
-                                    child: const CircularProgressIndicator(
-                                        color: Color(0xFF7C3AED)),
-                                  ),
-                                );
-                              }
-
-                              if (snapshot.hasError) {
-                                return Center(
-                                  child: Text(
-                                    'Error loading tables: ${snapshot.error}',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: kIsWeb ? 12 : 12.sp,
-                                      color: Colors.red,
-                                    ),
-                                  ),
-                                );
-                              }
-
-                              final tables = snapshot.data ?? [];
-
-                              if (tables.isEmpty) {
-                                return Container(
-                                  padding: EdgeInsets.all(
-                                      kIsWeb ? 16 : 16.w),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFFF3F3),
-                                    borderRadius: BorderRadius.circular(
-                                        kIsWeb ? 10 : 10.r),
-                                    border: Border.all(
-                                        color: const Color(0xFFFFE5E5)),
-                                  ),
-                                  child: Row(children: [
-                                    Icon(Icons.info_outline,
-                                        color: const Color(0xFFE74C3C),
-                                        size: kIsWeb ? 20 : 20.sp),
-                                    SizedBox(width: kIsWeb ? 8 : 8.w),
-                                    Expanded(
-                                      child: Text(
-                                        "No available tables. Please choose Parcel order.",
-                                        style: GoogleFonts.poppins(
-                                          fontSize: kIsWeb ? 12 : 12.sp,
-                                          color: const Color(0xFFE74C3C),
-                                        ),
-                                      ),
-                                    ),
-                                  ]),
-                                );
-                              }
-
-                              return Wrap(
-                                spacing: kIsWeb ? 8 : 8.w,
-                                runSpacing: kIsWeb ? 8 : 8.h,
-                                children: tables.map((table) {
-                                  final isSelected =
-                                      selectedTableId == table.tableId;
-                                  return GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        selectedTableId = table.tableId;
-                                        selectedTableName = table.name;
-                                      });
-                                    },
-                                    child: AnimatedContainer(
-                                      duration: const Duration(
-                                          milliseconds: 180),
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal:
-                                        kIsWeb ? 16 : 16.w,
-                                        vertical: kIsWeb ? 12 : 12.h,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: isSelected
-                                            ? primaryColor
-                                            .withOpacity(0.1)
-                                            : Colors.white,
-                                        borderRadius:
-                                        BorderRadius.circular(
-                                            kIsWeb ? 12 : 12.r),
-                                        border: Border.all(
-                                          color: isSelected
-                                              ? primaryColor
-                                              : const Color(0xFFE5E7EB),
-                                          width: isSelected ? 1.8 : 1,
-                                        ),
-                                      ),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons
-                                                .table_restaurant_rounded,
-                                            color: isSelected
-                                                ? primaryColor
-                                                : cardInfoColor,
-                                            size: kIsWeb ? 24 : 24.sp,
-                                          ),
-                                          SizedBox(
-                                              height:
-                                              kIsWeb ? 4 : 4.h),
-                                          Text(
-                                            table.name,
-                                            style: GoogleFonts.poppins(
-                                              fontSize:
-                                              kIsWeb ? 12 : 12.sp,
-                                              fontWeight: FontWeight.w600,
-                                              color: isSelected
-                                                  ? primaryColor
-                                                  : textColor,
-                                            ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                          SizedBox(
-                                              height:
-                                              kIsWeb ? 2 : 2.h),
-                                          Row(
-                                            mainAxisSize:
-                                            MainAxisSize.min,
-                                            children: [
-                                              Icon(
-                                                Icons
-                                                    .people_outline_rounded,
-                                                color: isSelected
-                                                    ? primaryColor
-                                                    : cardInfoColor,
-                                                size:
-                                                kIsWeb ? 12 : 12.sp,
-                                              ),
-                                              SizedBox(
-                                                  width:
-                                                  kIsWeb ? 2 : 2.w),
-                                              Text(
-                                                '${table.capacity}',
-                                                style:
-                                                GoogleFonts.poppins(
-                                                  fontSize:
-                                                  kIsWeb ? 10 : 10.sp,
-                                                  color: isSelected
-                                                      ? primaryColor
-                                                      : cardInfoColor,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                      : const SizedBox.shrink(key: ValueKey('parcel-table-empty')),
+                      ? _sectionPadding(
+                      key: const ValueKey('dine-in-table'),
+                      child: _buildDineInSection())
+                      : const SizedBox.shrink(
+                      key: ValueKey('parcel-table-empty')),
                 ),
 
+                // Parcel info fields
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 220),
-                  transitionBuilder: (child, animation) => SizeTransition(
-                    sizeFactor: animation,
-                    axisAlignment: -1,
-                    child: FadeTransition(opacity: animation, child: child),
+                  transitionBuilder: (child, anim) => SizeTransition(
+                    sizeFactor: anim, axisAlignment: -1,
+                    child: FadeTransition(opacity: anim, child: child),
                   ),
                   child: orderType == "Parcel"
-                      ? Padding(
-                    key: const ValueKey('parcel-info'),
-                    padding: EdgeInsets.fromLTRB(
-                      kIsWeb ? 16 : 16.w,
-                      kIsWeb ? 4 : 4.h,
-                      kIsWeb ? 16 : 16.w,
-                      kIsWeb ? 8 : 8.h,
-                    ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: cardColor,
-                        borderRadius:
-                        BorderRadius.circular(kIsWeb ? 14 : 14.r),
-                        border: Border.all(
-                            color: const Color(0xFFE5E7EB), width: 1),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: kIsWeb ? 8 : 8.r,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      padding: EdgeInsets.all(kIsWeb ? 16 : 16.w),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Customer Information",
-                            style: GoogleFonts.poppins(
-                              fontSize: kIsWeb ? 15 : 15.sp,
-                              fontWeight: FontWeight.w600,
-                              color: textColor,
-                            ),
-                          ),
-                          SizedBox(height: kIsWeb ? 4 : 4.h),
-                          Text(
-                            "Required for parcel orders",
-                            style: GoogleFonts.poppins(
-                              fontSize: kIsWeb ? 12 : 12.sp,
-                              color: cardInfoColor,
-                            ),
-                          ),
-                          SizedBox(height: kIsWeb ? 14 : 14.h),
-                          _buildTextField(
-                            controller: nameController,
-                            label: "Customer Name",
-                            hint: "Enter customer name",
-                            icon: Icons.person_outline,
-                            primaryColor: primaryColor,
-                            textColor: textColor,
-                            cardInfoColor: cardInfoColor,
-                          ),
-                          SizedBox(height: kIsWeb ? 12 : 12.h),
-                          _buildTextField(
-                            controller: mobileController,
-                            label: "Mobile Number",
-                            hint: "Enter mobile number",
-                            icon: Icons.phone_outlined,
-                            keyboardType: TextInputType.phone,
-                            primaryColor: primaryColor,
-                            textColor: textColor,
-                            cardInfoColor: cardInfoColor,
-                          ),
-                          SizedBox(height: kIsWeb ? 12 : 12.h),
-                          _buildTextField(
-                            controller: instructionController,
-                            label: "Special Instructions (Optional)",
-                            hint: "Example: Less spicy, No onion",
-                            icon: Icons.note_alt_outlined,
-                            maxLines: 2,
-                            primaryColor: primaryColor,
-                            textColor: textColor,
-                            cardInfoColor: cardInfoColor,
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                      : const SizedBox.shrink(key: ValueKey('dine-in-empty')),
+                      ? _sectionPadding(
+                      key: const ValueKey('parcel-info'),
+                      child: _buildParcelInfoSection())
+                      : const SizedBox.shrink(
+                      key: ValueKey('dine-in-empty')),
                 ),
 
-                Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    kIsWeb ? 16 : 16.w,
-                    kIsWeb ? 4 : 4.h,
-                    kIsWeb ? 16 : 16.w,
-                    kIsWeb ? 8 : 8.h,
-                  ),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: cardColor,
-                      borderRadius:
-                      BorderRadius.circular(kIsWeb ? 14 : 14.r),
-                      border: Border.all(
-                          color: const Color(0xFFE5E7EB), width: 1),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: kIsWeb ? 8 : 8.r,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    padding: EdgeInsets.all(kIsWeb ? 16 : 16.w),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Order Summary",
-                          style: GoogleFonts.poppins(
-                            fontSize: kIsWeb ? 15 : 15.sp,
-                            fontWeight: FontWeight.w600,
-                            color: textColor,
-                          ),
-                        ),
-                        SizedBox(height: kIsWeb ? 14 : 14.h),
-
-                        // Subtotal
-                        _SummaryRow(
-                          label: "Subtotal",
-                          value: "₹${getTotal()}",
-                          labelColor: cardInfoColor,
-                          valueColor: textColor,
-                          valueFontWeight: FontWeight.w500,
-                        ),
-                        SizedBox(height: kIsWeb ? 10 : 10.h),
-
-
-                        if (enableGst && gstPct > 0) ...[
-                          _SummaryRow(
-                            label:
-                            "GST (${gstPct % 1 == 0 ? gstPct.toInt() : gstPct}%)",
-                            value:
-                            "₹${getGSTAmount(gstPct).toStringAsFixed(2)}",
-                            labelColor: cardInfoColor,
-                            valueColor: textColor,
-                            valueFontWeight: FontWeight.w500,
-                          ),
-                          SizedBox(height: kIsWeb ? 10 : 10.h),
-                        ],
-
-                        // ── SGST row (cessPercentage, only when GST enabled) ─
-                        if (enableGst && sgstPct > 0) ...[
-                          _SummaryRow(
-                            label:
-                            "SGST (${sgstPct % 1 == 0 ? sgstPct.toInt() : sgstPct}%)",
-                            value:
-                            "₹${getSGSTAmount(sgstPct).toStringAsFixed(2)}",
-                            labelColor: cardInfoColor,
-                            valueColor: textColor,
-                            valueFontWeight: FontWeight.w500,
-                          ),
-                          SizedBox(height: kIsWeb ? 10 : 10.h),
-                        ],
-
-                        // ── Packaging charge (only when enabled) ─────────────
-                        if (enablePackaging && pkgCharge > 0) ...[
-                          _SummaryRow(
-                            label: "Packaging Charge",
-                            value: "₹${pkgCharge.toStringAsFixed(2)}",
-                            labelColor: cardInfoColor,
-                            valueColor: textColor,
-                            valueFontWeight: FontWeight.w500,
-                          ),
-                          SizedBox(height: kIsWeb ? 10 : 10.h),
-                        ],
-
-                        SizedBox(height: kIsWeb ? 4 : 4.h),
-                        const Divider(
-                            color: Color(0xFFE5E7EB), thickness: 1),
-                        SizedBox(height: kIsWeb ? 12 : 12.h),
-
-                        // Grand total
-                        _SummaryRow(
-                          label: "Total",
-                          value: "₹${getFinalTotal(
-                            enableGst: enableGst,
-                            gstPct: gstPct,
-                            sgstPct: sgstPct,
-                            enablePackaging: enablePackaging,
-                            packagingCharge: pkgCharge,
-                          ).toStringAsFixed(2)}",
-                          labelColor: textColor,
-                          valueColor: primaryColor,
-                          fontSize: kIsWeb ? 16.0 : 16.sp,
-                          valueFontWeight: FontWeight.w700,
-                          labelFontWeight: FontWeight.w600,
-                        ),
-                      ],
-                    ),
+                // Order summary
+                _sectionPadding(
+                  child: _buildOrderSummary(
+                    enableGst: enableGst, gstPct: gstPct,
+                    sgstPct: sgstPct, enablePackaging: enablePackaging,
+                    pkgCharge: pkgCharge,
                   ),
                 ),
               ],
             ),
           ),
 
-
+          // ── Bottom bar ─────────────────────────────────────────────────────
           bottomNavigationBar: widget.cart.isEmpty
               ? null
-              : Container(
-            decoration: BoxDecoration(
-              color: cardColor,
-              border: const Border(
-                  top: BorderSide(color: Color(0xFFE5E7EB), width: 1)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
-                  blurRadius: kIsWeb ? 16 : 16.r,
-                  offset: const Offset(0, -4),
-                ),
-              ],
-            ),
-            padding: EdgeInsets.fromLTRB(
-              kIsWeb ? 20 : 20.w,
-              kIsWeb ? 12 : 12.h,
-              kIsWeb ? 20 : 20.w,
-              kIsWeb ? 18 : 18.h,
-            ),
-            child: SafeArea(
-              top: false,
-              child: Row(
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        "Total",
-                        style: GoogleFonts.poppins(
-                          fontSize: kIsWeb ? 12 : 12.sp,
-                          color: const Color(0xFF6B7280),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      SizedBox(height: kIsWeb ? 2 : 2.h),
-                      Text(
-                        "₹${getFinalTotal(
-                          enableGst: enableGst,
-                          gstPct: gstPct,
-                          sgstPct: sgstPct,
-                          enablePackaging: enablePackaging,
-                          packagingCharge: pkgCharge,
-                        ).toStringAsFixed(2)}",
-                        style: GoogleFonts.poppins(
-                          fontSize: kIsWeb ? 18 : 18.sp,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.red,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(width: kIsWeb ? 16 : 16.w),
-
-                  Expanded(
-                    child: SizedBox(
-                      height: kIsWeb ? 50 : 50.h,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF7C3AED),
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                                kIsWeb ? 14 : 14.r),
-                          ),
-                        ),
-                        onPressed: () => placeOrder(
-                          enableGst: enableGst,
-                          gstPct: gstPct,
-                          sgstPct: sgstPct,
-                          enablePackaging: enablePackaging,
-                          packagingCharge: pkgCharge,
-                        ),
-                        child: Text(
-                          "Place Order",
-                          style: GoogleFonts.poppins(
-                            fontSize: kIsWeb ? 15 : 15.sp,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+              : _buildBottomBar(
+              enableGst: enableGst, gstPct: gstPct, sgstPct: sgstPct,
+              enablePackaging: enablePackaging, pkgCharge: pkgCharge),
         );
       },
     );
   }
+
+  // ── Empty cart ─────────────────────────────────────────────────────────────
+  Widget _buildEmptyCart() {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 40.0 : 40.w),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width:  kIsWeb ? 96 : 96.w,
+              height: kIsWeb ? 96 : 96.w,
+              decoration: const BoxDecoration(
+                  color: _C.accentLight, shape: BoxShape.circle),
+              child: Icon(Icons.shopping_cart_outlined,
+                  size: kIsWeb ? 44 : 44.sp, color: _C.accent),
+            ),
+            SizedBox(height: kIsWeb ? 20 : 20.h),
+            Text("Your cart is empty",
+                style: GoogleFonts.poppins(
+                    fontSize: kIsWeb ? 18 : 18.sp,
+                    fontWeight: FontWeight.w700,
+                    color: _C.textPrimary)),
+            SizedBox(height: kIsWeb ? 6 : 6.h),
+            Text("Add some delicious items to get started",
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                    fontSize: kIsWeb ? 13 : 13.sp,
+                    color: _C.textSecondary)),
+            SizedBox(height: kIsWeb ? 28 : 28.h),
+            SizedBox(
+              height: kIsWeb ? 48 : 48.h,
+              child: ElevatedButton.icon(
+                onPressed: () => Navigator.pop(context),
+                icon: Icon(Icons.restaurant_menu_rounded,
+                    size: kIsWeb ? 18 : 18.sp),
+                label: Text("Browse Menu",
+                    style: GoogleFonts.poppins(
+                        fontSize: kIsWeb ? 15 : 15.sp,
+                        fontWeight: FontWeight.w600)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _C.accent,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 28 : 28.w),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(kIsWeb ? 12 : 12.sp)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Cart items list ─────────────────────────────────────────────────────────
+  Widget _buildCartItemsList() {
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section heading
+          Row(children: [
+            Container(
+              width: kIsWeb ? 4 : 4.w, height: kIsWeb ? 18 : 18.h,
+              decoration: BoxDecoration(
+                  color: _C.accent,
+                  borderRadius: BorderRadius.circular(2)),
+            ),
+            SizedBox(width: kIsWeb ? 10 : 10.w),
+            Text("Cart Items",
+                style: GoogleFonts.poppins(
+                    fontSize: kIsWeb ? 15 : 15.sp,
+                    fontWeight: FontWeight.w700,
+                    color: _C.textPrimary)),
+            const Spacer(),
+            Text('${widget.cart.length} item${widget.cart.length > 1 ? 's' : ''}',
+                style: GoogleFonts.poppins(
+                    fontSize: kIsWeb ? 12 : 12.sp,
+                    color: _C.textSecondary,
+                    fontWeight: FontWeight.w500)),
+          ]),
+          SizedBox(height: kIsWeb ? 14 : 14.h),
+
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: widget.cart.length,
+            separatorBuilder: (_, __) => Divider(
+                height: kIsWeb ? 16 : 16.h, color: _C.divider, thickness: 1),
+            itemBuilder: (context, index) {
+              final item = widget.cart[index];
+              return _buildCartRow(item, index);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCartRow(CartItem item, int index) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // Image
+        ClipRRect(
+          borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
+          child: Container(
+            width:  kIsWeb ? 64 : 60.w,
+            height: kIsWeb ? 64 : 60.w,
+            color: _C.accentLight,
+            child: item.image != null
+                ? Image.network(item.image!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Icon(
+                    Icons.restaurant_rounded,
+                    color: _C.accent, size: kIsWeb ? 26 : 26.sp))
+                : Icon(Icons.restaurant_rounded,
+                color: _C.accent, size: kIsWeb ? 26 : 26.sp),
+          ),
+        ),
+        SizedBox(width: kIsWeb ? 12 : 12.w),
+
+        // Name / variant / price
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(item.name,
+                  style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600,
+                      fontSize: kIsWeb ? 13 : 13.sp,
+                      color: _C.textPrimary),
+                  maxLines: 2, overflow: TextOverflow.ellipsis),
+              if (item.variant != null && item.variant!.isNotEmpty) ...[
+                SizedBox(height: kIsWeb ? 2 : 2.h),
+                Container(
+                  padding: EdgeInsets.symmetric(
+                      horizontal: kIsWeb ? 7 : 7.w,
+                      vertical:   kIsWeb ? 2 : 2.h),
+                  decoration: BoxDecoration(
+                    color: _C.accentLight,
+                    borderRadius: BorderRadius.circular(kIsWeb ? 6 : 6.sp),
+                  ),
+                  child: Text(item.variant!,
+                      style: GoogleFonts.poppins(
+                          fontSize: kIsWeb ? 10 : 10.sp,
+                          color: _C.accent,
+                          fontWeight: FontWeight.w500)),
+                ),
+              ],
+              SizedBox(height: kIsWeb ? 4 : 4.h),
+              Text("₹${item.price}",
+                  style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w700,
+                      fontSize: kIsWeb ? 14 : 14.sp,
+                      color: _C.accent)),
+            ],
+          ),
+        ),
+
+        // Controls column
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            // Delete
+            GestureDetector(
+              onTap: () => setState(() => widget.cart.removeAt(index)),
+              child: Container(
+                padding: EdgeInsets.all(kIsWeb ? 4 : 4.sp),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(kIsWeb ? 6 : 6.sp),
+                ),
+                child: Icon(Icons.delete_outline_rounded,
+                    color: Colors.red.shade400,
+                    size: kIsWeb ? 18 : 18.sp),
+              ),
+            ),
+            SizedBox(height: kIsWeb ? 10 : 10.h),
+
+            // Qty stepper
+            Container(
+              decoration: BoxDecoration(
+                color: _C.accentLight,
+                borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
+                border: Border.all(
+                    color: _C.accent.withOpacity(0.25), width: 1),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _stepBtn(
+                    icon: Icons.remove,
+                    onTap: () {
+                      if (item.qty > 1) setState(() => item.qty--);
+                    },
+                  ),
+                  SizedBox(
+                    width: kIsWeb ? 28 : 28.w,
+                    child: Center(
+                      child: Text(item.qty.toString(),
+                          style: GoogleFonts.poppins(
+                              fontSize: kIsWeb ? 13 : 13.sp,
+                              fontWeight: FontWeight.w700,
+                              color: _C.accent)),
+                    ),
+                  ),
+                  _stepBtn(
+                    icon: Icons.add,
+                    onTap: () => setState(() => item.qty++),
+                    filled: true,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _stepBtn({
+    required IconData  icon,
+    required VoidCallback onTap,
+    bool filled = false,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width:  kIsWeb ? 28 : 28.w,
+        height: kIsWeb ? 28 : 28.w,
+        decoration: BoxDecoration(
+          color: filled ? _C.accent : Colors.transparent,
+          borderRadius: BorderRadius.circular(kIsWeb ? 6 : 6.sp),
+        ),
+        child: Icon(icon,
+            color: filled ? Colors.white : _C.accent,
+            size: kIsWeb ? 15 : 15.sp),
+      ),
+    );
+  }
+
+  // ── Order type toggle ───────────────────────────────────────────────────────
+  Widget _buildOrderTypeSection() {
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitle("Order Type"),
+          SizedBox(height: kIsWeb ? 12 : 12.h),
+          Row(
+            children: [
+              _OrderTypeButton(
+                label: "Dine In",
+                icon: Icons.restaurant_rounded,
+                selected: orderType == "Dine In",
+                onTap: () => setState(() => orderType = "Dine In"),
+              ),
+              SizedBox(width: kIsWeb ? 12 : 12.w),
+              _OrderTypeButton(
+                label: "Parcel",
+                icon: Icons.shopping_bag_outlined,
+                selected: orderType == "Parcel",
+                onTap: () => setState(() => orderType = "Parcel"),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Dine-in / table picker ──────────────────────────────────────────────────
+  Widget _buildDineInSection() {
+    // Preselected from QR → show locked banner
+    if (widget.preselectedTableId != null &&
+        widget.preselectedTableId!.isNotEmpty) {
+      return Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0FDF4),
+          borderRadius: BorderRadius.circular(kIsWeb ? 14 : 14.sp),
+          border: Border.all(color: const Color(0xFF86EFAC), width: 1.5),
+        ),
+        padding: EdgeInsets.all(kIsWeb ? 16 : 16.w),
+        child: Row(children: [
+          Container(
+            padding: EdgeInsets.all(kIsWeb ? 10 : 10.w),
+            decoration: const BoxDecoration(
+                color: Color(0xFFDCFCE7), shape: BoxShape.circle),
+            child: Icon(Icons.table_restaurant_rounded,
+                color: _C.vegGreen, size: kIsWeb ? 22 : 22.sp),
+          ),
+          SizedBox(width: kIsWeb ? 14 : 14.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Table Selected',
+                    style: GoogleFonts.poppins(
+                        fontSize: kIsWeb ? 13 : 13.sp,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF15803D))),
+                SizedBox(height: kIsWeb ? 2 : 2.h),
+                Text(
+                    widget.preselectedTableName ?? widget.preselectedTableId!,
+                    style: GoogleFonts.poppins(
+                        fontSize: kIsWeb ? 15 : 15.sp,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF14532D))),
+              ],
+            ),
+          ),
+          Container(
+            padding: EdgeInsets.symmetric(
+                horizontal: kIsWeb ? 10 : 10.w, vertical: kIsWeb ? 4 : 4.h),
+            decoration: BoxDecoration(
+                color: const Color(0xFFDCFCE7),
+                borderRadius: BorderRadius.circular(20)),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.check_circle_rounded,
+                  color: _C.vegGreen, size: 12),
+              SizedBox(width: kIsWeb ? 4 : 4.w),
+              Text('Auto',
+                  style: GoogleFonts.poppins(
+                      fontSize: kIsWeb ? 10 : 10.sp,
+                      fontWeight: FontWeight.w600,
+                      color: _C.vegGreen)),
+            ]),
+          ),
+        ]),
+      );
+    }
+
+    // Manual table picker
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitle("Select Table"),
+          SizedBox(height: kIsWeb ? 2 : 2.h),
+          Text("Choose a table for dine in order",
+              style: GoogleFonts.poppins(
+                  fontSize: kIsWeb ? 12 : 12.sp, color: _C.textSecondary)),
+          SizedBox(height: kIsWeb ? 14 : 14.h),
+          StreamBuilder<List<TableModel>>(
+            stream: _tableService.watchTables(widget.restaurantId),
+            builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: kIsWeb ? 20 : 20.h),
+                    child: const CircularProgressIndicator(color: _C.accent),
+                  ),
+                );
+              }
+              if (snap.hasError) {
+                return Text('Error loading tables: ${snap.error}',
+                    style: GoogleFonts.poppins(
+                        fontSize: kIsWeb ? 12 : 12.sp, color: Colors.red));
+              }
+              final tables = snap.data ?? [];
+              if (tables.isEmpty) {
+                return Container(
+                  padding: EdgeInsets.all(kIsWeb ? 14 : 14.w),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF7ED),
+                    borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
+                    border: Border.all(color: _C.accent.withOpacity(0.3)),
+                  ),
+                  child: Row(children: [
+                    Icon(Icons.info_outline_rounded,
+                        color: _C.accent, size: kIsWeb ? 18 : 18.sp),
+                    SizedBox(width: kIsWeb ? 8 : 8.w),
+                    Expanded(
+                      child: Text(
+                          "No available tables. Please choose Parcel order.",
+                          style: GoogleFonts.poppins(
+                              fontSize: kIsWeb ? 12 : 12.sp,
+                              color: _C.accent)),
+                    ),
+                  ]),
+                );
+              }
+              return Wrap(
+                spacing: kIsWeb ? 8 : 8.w,
+                runSpacing: kIsWeb ? 8 : 8.h,
+                children: tables.map((table) {
+                  final isSel = selectedTableId == table.tableId;
+                  return GestureDetector(
+                    onTap: () => setState(() {
+                      selectedTableId   = table.tableId;
+                      selectedTableName = table.name;
+                    }),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      padding: EdgeInsets.symmetric(
+                          horizontal: kIsWeb ? 16 : 16.w,
+                          vertical:   kIsWeb ? 12 : 12.h),
+                      decoration: BoxDecoration(
+                        color: isSel ? _C.accentLight : Colors.white,
+                        borderRadius:
+                        BorderRadius.circular(kIsWeb ? 12 : 12.sp),
+                        border: Border.all(
+                          color: isSel ? _C.accent : _C.divider,
+                          width: isSel ? 1.8 : 1,
+                        ),
+                        boxShadow: isSel
+                            ? [BoxShadow(
+                            color: _C.accent.withOpacity(0.15),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3))]
+                            : null,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.table_restaurant_rounded,
+                              color: isSel ? _C.accent : _C.textSecondary,
+                              size: kIsWeb ? 24 : 24.sp),
+                          SizedBox(height: kIsWeb ? 4 : 4.h),
+                          Text(table.name,
+                              style: GoogleFonts.poppins(
+                                  fontSize: kIsWeb ? 12 : 12.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: isSel ? _C.accent : _C.textPrimary),
+                              textAlign: TextAlign.center),
+                          SizedBox(height: kIsWeb ? 2 : 2.h),
+                          Row(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(Icons.people_outline_rounded,
+                                color: isSel ? _C.accent : _C.textMuted,
+                                size: kIsWeb ? 11 : 11.sp),
+                            SizedBox(width: kIsWeb ? 2 : 2.w),
+                            Text('${table.capacity}',
+                                style: GoogleFonts.poppins(
+                                    fontSize: kIsWeb ? 10 : 10.sp,
+                                    color: isSel ? _C.accent : _C.textMuted)),
+                          ]),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Parcel info fields ──────────────────────────────────────────────────────
+  Widget _buildParcelInfoSection() {
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitle("Customer Information"),
+          SizedBox(height: kIsWeb ? 2 : 2.h),
+          Text("Required for parcel orders",
+              style: GoogleFonts.poppins(
+                  fontSize: kIsWeb ? 12 : 12.sp, color: _C.textSecondary)),
+          SizedBox(height: kIsWeb ? 14 : 14.h),
+          _buildTextField(
+            controller: nameController,
+            label: "Customer Name",
+            hint: "Enter customer name",
+            icon: Icons.person_outline_rounded,
+          ),
+          SizedBox(height: kIsWeb ? 12 : 12.h),
+          _buildTextField(
+            controller: mobileController,
+            label: "Mobile Number",
+            hint: "Enter mobile number",
+            icon: Icons.phone_outlined,
+            keyboardType: TextInputType.phone,
+          ),
+          SizedBox(height: kIsWeb ? 12 : 12.h),
+          _buildTextField(
+            controller: instructionController,
+            label: "Special Instructions (Optional)",
+            hint: "Example: Less spicy, No onion",
+            icon: Icons.note_alt_outlined,
+            maxLines: 2,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Order summary card ──────────────────────────────────────────────────────
+  Widget _buildOrderSummary({
+    required bool   enableGst,
+    required double gstPct,
+    required double sgstPct,
+    required bool   enablePackaging,
+    required double pkgCharge,
+  }) {
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitle("Order Summary"),
+          SizedBox(height: kIsWeb ? 14 : 14.h),
+
+          _SummaryRow(
+            label: "Subtotal",
+            value: "₹${getTotal()}",
+            labelColor: _C.textSecondary,
+            valueColor: _C.textPrimary,
+          ),
+
+          if (enableGst && gstPct > 0) ...[
+            SizedBox(height: kIsWeb ? 10 : 10.h),
+            _SummaryRow(
+              label: "GST (${gstPct % 1 == 0 ? gstPct.toInt() : gstPct}%)",
+              value: "₹${getGSTAmount(gstPct).toStringAsFixed(2)}",
+              labelColor: _C.textSecondary,
+              valueColor: _C.textPrimary,
+            ),
+          ],
+
+          if (enableGst && sgstPct > 0) ...[
+            SizedBox(height: kIsWeb ? 10 : 10.h),
+            _SummaryRow(
+              label: "SGST (${sgstPct % 1 == 0 ? sgstPct.toInt() : sgstPct}%)",
+              value: "₹${getSGSTAmount(sgstPct).toStringAsFixed(2)}",
+              labelColor: _C.textSecondary,
+              valueColor: _C.textPrimary,
+            ),
+          ],
+
+          if (enablePackaging && pkgCharge > 0) ...[
+            SizedBox(height: kIsWeb ? 10 : 10.h),
+            _SummaryRow(
+              label: "Packaging Charge",
+              value: "₹${pkgCharge.toStringAsFixed(2)}",
+              labelColor: _C.textSecondary,
+              valueColor: _C.textPrimary,
+            ),
+          ],
+
+          SizedBox(height: kIsWeb ? 12 : 12.h),
+          Divider(color: _C.divider, thickness: 1),
+          SizedBox(height: kIsWeb ? 12 : 12.h),
+
+          _SummaryRow(
+            label: "Total",
+            value: "₹${getFinalTotal(
+              enableGst: enableGst, gstPct: gstPct, sgstPct: sgstPct,
+              enablePackaging: enablePackaging, packagingCharge: pkgCharge,
+            ).toStringAsFixed(2)}",
+            labelColor: _C.textPrimary,
+            valueColor: _C.accent,
+            fontSize: kIsWeb ? 16.0 : 16.0,
+            valueFontWeight: FontWeight.w800,
+            labelFontWeight: FontWeight.w600,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Bottom bar ──────────────────────────────────────────────────────────────
+  Widget _buildBottomBar({
+    required bool   enableGst,
+    required double gstPct,
+    required double sgstPct,
+    required bool   enablePackaging,
+    required double pkgCharge,
+  }) {
+    final total = getFinalTotal(
+      enableGst: enableGst, gstPct: gstPct, sgstPct: sgstPct,
+      enablePackaging: enablePackaging, packagingCharge: pkgCharge,
+    );
+    return Container(
+      decoration: BoxDecoration(
+        color: _C.cardWhite,
+        border: const Border(top: BorderSide(color: _C.divider, width: 1)),
+        boxShadow: [BoxShadow(
+            color: _C.shadowMd, blurRadius: 16, offset: const Offset(0, -4))],
+      ),
+      padding: EdgeInsets.fromLTRB(
+          kIsWeb ? 20 : 20.w, kIsWeb ? 12 : 12.h,
+          kIsWeb ? 20 : 20.w, kIsWeb ? 18 : 18.h),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: [
+            // Total display
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text("Total",
+                    style: GoogleFonts.poppins(
+                        fontSize: kIsWeb ? 12 : 12.sp,
+                        color: _C.textSecondary,
+                        fontWeight: FontWeight.w500)),
+                SizedBox(height: kIsWeb ? 2 : 2.h),
+                Text("₹${total.toStringAsFixed(2)}",
+                    style: GoogleFonts.poppins(
+                        fontSize: kIsWeb ? 20 : 20.sp,
+                        fontWeight: FontWeight.w800,
+                        color: _C.accent)),
+              ],
+            ),
+            SizedBox(width: kIsWeb ? 16 : 16.w),
+            // Place Order button
+            Expanded(
+              child: SizedBox(
+                height: kIsWeb ? 52 : 52.h,
+                child: ElevatedButton.icon(
+                  icon: Icon(Icons.check_circle_outline_rounded,
+                      size: kIsWeb ? 18 : 18.sp),
+                  label: Text("Place Order",
+                      style: GoogleFonts.poppins(
+                          fontSize: kIsWeb ? 15 : 15.sp,
+                          fontWeight: FontWeight.w700)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _C.accent,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius:
+                        BorderRadius.circular(kIsWeb ? 14 : 14.sp)),
+                    shadowColor: _C.accent.withOpacity(0.4),
+                  ),
+                  onPressed: () => placeOrder(
+                    enableGst: enableGst, gstPct: gstPct, sgstPct: sgstPct,
+                    enablePackaging: enablePackaging, packagingCharge: pkgCharge,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Shared helpers ─────────────────────────────────────────────────────────
+  Widget _card({required Widget child}) => Container(
+    decoration: BoxDecoration(
+      color: _C.cardWhite,
+      borderRadius: BorderRadius.circular(kIsWeb ? 16 : 16.sp),
+      boxShadow: [BoxShadow(
+          color: _C.shadow, blurRadius: 14, offset: const Offset(0, 4))],
+    ),
+    padding: EdgeInsets.all(kIsWeb ? 16 : 16.w),
+    child: child,
+  );
+
+  Widget _sectionTitle(String text) => Text(
+    text,
+    style: GoogleFonts.poppins(
+        fontSize: kIsWeb ? 15 : 15.sp,
+        fontWeight: FontWeight.w700,
+        color: _C.textPrimary),
+  );
+
+  Widget _sectionPadding({required Widget child, Key? key}) => Padding(
+    key: key,
+    padding: EdgeInsets.fromLTRB(
+        kIsWeb ? 16 : 16.w, kIsWeb ? 12 : 12.h,
+        kIsWeb ? 16 : 16.w, kIsWeb ? 0 : 0.h),
+    child: child,
+  );
 
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
     required String hint,
     required IconData icon,
-    required Color primaryColor,
-    required Color textColor,
-    required Color cardInfoColor,
     TextInputType keyboardType = TextInputType.text,
     int maxLines = 1,
   }) {
@@ -1234,57 +1074,45 @@ class _CartPageState extends State<CartPage> {
       keyboardType: keyboardType,
       maxLines: maxLines,
       style: GoogleFonts.poppins(
-        color: textColor,
-        fontSize: kIsWeb ? 14 : 14.sp,
-      ),
+          color: _C.textPrimary, fontSize: kIsWeb ? 14 : 14.sp),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
         labelStyle: GoogleFonts.poppins(
-          color: cardInfoColor,
-          fontSize: kIsWeb ? 13 : 13.sp,
-        ),
+            color: _C.textSecondary, fontSize: kIsWeb ? 13 : 13.sp),
         hintStyle: GoogleFonts.poppins(
-          color: const Color(0xFF9CA3AF),
-          fontSize: kIsWeb ? 13 : 13.sp,
-        ),
-        prefixIcon: Icon(icon, color: cardInfoColor, size: kIsWeb ? 20 : 20.sp),
+            color: _C.textMuted, fontSize: kIsWeb ? 13 : 13.sp),
+        prefixIcon: Icon(icon, color: _C.textSecondary, size: kIsWeb ? 20 : 20.sp),
         contentPadding: EdgeInsets.symmetric(
-          horizontal: kIsWeb ? 14 : 14.w,
-          vertical: kIsWeb ? 14 : 14.h,
-        ),
+            horizontal: kIsWeb ? 14 : 14.w, vertical: kIsWeb ? 14 : 14.h),
+        filled: true,
+        fillColor: _C.bg,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.r),
-        ),
+            borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp)),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.r),
-          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-        ),
+            borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
+            borderSide: const BorderSide(color: _C.divider)),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.r),
-          borderSide: BorderSide(color: primaryColor, width: 1.8),
-        ),
+            borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
+            borderSide: const BorderSide(color: _C.accent, width: 1.8)),
       ),
     );
   }
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
+// ─────────────────────────────────────────────────────────────────────────────
+// ORDER TYPE BUTTON
+// ─────────────────────────────────────────────────────────────────────────────
 class _OrderTypeButton extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final Color primaryColor;
-  final Color textColor;
-  final Color cardInfoColor;
+  final String    label;
+  final IconData  icon;
+  final bool      selected;
   final VoidCallback onTap;
 
   const _OrderTypeButton({
     required this.label,
+    required this.icon,
     required this.selected,
-    required this.primaryColor,
-    required this.textColor,
-    required this.cardInfoColor,
     required this.onTap,
   });
 
@@ -1295,38 +1123,47 @@ class _OrderTypeButton extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: EdgeInsets.symmetric(
-          horizontal: kIsWeb ? 28 : 28.w,
-          vertical: kIsWeb ? 10 : 10.h,
-        ),
+            horizontal: kIsWeb ? 22 : 22.w,
+            vertical:   kIsWeb ? 10 : 10.h),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.r),
+          color: selected ? _C.accentLight : Colors.white,
+          borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
           border: Border.all(
-            color: selected ? primaryColor : const Color(0xFFE5E7EB),
-            width: selected ? 1.8 : 1,
-          ),
+              color: selected ? _C.accent : _C.divider,
+              width: selected ? 1.8 : 1),
+          boxShadow: selected
+              ? [BoxShadow(
+              color: _C.accent.withOpacity(0.15),
+              blurRadius: 8, offset: const Offset(0, 2))]
+              : null,
         ),
-        child: Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: kIsWeb ? 14 : 14.sp,
-            fontWeight: FontWeight.w500,
-            color: selected ? primaryColor : cardInfoColor,
-          ),
-        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon,
+              size:  kIsWeb ? 16 : 16.sp,
+              color: selected ? _C.accent : _C.textSecondary),
+          SizedBox(width: kIsWeb ? 6 : 6.w),
+          Text(label,
+              style: GoogleFonts.poppins(
+                  fontSize: kIsWeb ? 13 : 13.sp,
+                  fontWeight: FontWeight.w600,
+                  color: selected ? _C.accent : _C.textSecondary)),
+        ]),
       ),
     );
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SUMMARY ROW
+// ─────────────────────────────────────────────────────────────────────────────
 class _SummaryRow extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color labelColor;
-  final Color valueColor;
+  final String      label;
+  final String      value;
+  final Color       labelColor;
+  final Color       valueColor;
   final FontWeight? labelFontWeight;
   final FontWeight? valueFontWeight;
-  final double? fontSize;
+  final double?     fontSize;
 
   const _SummaryRow({
     required this.label,
@@ -1344,22 +1181,16 @@ class _SummaryRow extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: kIsWeb ? fs : fs.sp,
-            color: labelColor,
-            fontWeight: labelFontWeight ?? FontWeight.w400,
-          ),
-        ),
-        Text(
-          value,
-          style: GoogleFonts.poppins(
-            fontSize: kIsWeb ? fs : fs.sp,
-            color: valueColor,
-            fontWeight: valueFontWeight ?? FontWeight.w500,
-          ),
-        ),
+        Text(label,
+            style: GoogleFonts.poppins(
+                fontSize: kIsWeb ? fs : fs.sp,
+                color: labelColor,
+                fontWeight: labelFontWeight ?? FontWeight.w400)),
+        Text(value,
+            style: GoogleFonts.poppins(
+                fontSize: kIsWeb ? fs : fs.sp,
+                color: valueColor,
+                fontWeight: valueFontWeight ?? FontWeight.w500)),
       ],
     );
   }

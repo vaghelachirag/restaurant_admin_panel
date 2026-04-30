@@ -6,6 +6,12 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../auth/models/app_user.dart';
+import '../uttils/session_manager.dart';
+import '../restaurant_admin/dashboard_page.dart';
+import '../restaurant_admin/manager_main_page.dart';
+import '../super_admin/restaurants_page.dart';
+
 // Asset path – make sure this is declared in pubspec.yaml:
 //   assets:
 //     - assets/images/rasora_web.png
@@ -151,7 +157,7 @@ class _SplashScreenState extends State<SplashScreen>
       if (mounted) _downloadController.forward();
     });
 
-    _timer = Timer(widget.duration, _goNext);
+    _timer = Timer(widget.duration, () => _goNext());
   }
 
   @override
@@ -167,10 +173,69 @@ class _SplashScreenState extends State<SplashScreen>
     super.dispose();
   }
 
-  void _goNext() {
+  /// Called when the splash timer fires.
+  /// If a saved session exists the user is sent straight to their dashboard;
+  /// otherwise they land on [widget.nextPage] (the login screen).
+  Future<void> _goNext() async {
     if (!mounted) return;
+
+    final AppUser? savedUser = await SessionManager.restore();
+
+    if (!mounted) return;
+
+    if (savedUser != null) {
+      _navigateByRole(savedUser);
+    } else {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => widget.nextPage),
+      );
+    }
+  }
+
+  void _navigateByRole(AppUser user) {
+    Widget destination;
+
+    switch (user.role) {
+      case UserRole.superAdmin:
+        destination = const RestaurantListPage();
+        break;
+
+      case UserRole.admin:
+        if (user.restaurantId == null) {
+          SessionManager.logout();
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => widget.nextPage),
+          );
+          return;
+        }
+        destination = DashboardPage(restaurantId: user.restaurantId!);
+        break;
+
+      case UserRole.manager:
+        if (user.restaurantId == null || user.managerId == null) {
+          SessionManager.logout();
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => widget.nextPage),
+          );
+          return;
+        }
+        destination = WaiterShell(
+          restaurantId: user.restaurantId!,
+          waiterId: user.managerId!,
+        );
+        break;
+
+      default:
+      // Unknown role – clear bad session and go to login
+        SessionManager.logout();
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => widget.nextPage),
+        );
+        return;
+    }
+
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => widget.nextPage),
+      MaterialPageRoute(builder: (_) => destination),
     );
   }
 

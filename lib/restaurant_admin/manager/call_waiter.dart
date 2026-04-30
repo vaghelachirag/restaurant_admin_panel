@@ -126,25 +126,20 @@ class _CallWaiterPageState extends State<CallWaiterPage>
       .collection('assistance_requests');
 
   /// Restore status-tracker if there is already a live request for this table.
+  /// Customers are unauthenticated — query by tableId only.
   Future<void> _checkActiveRequest() async {
     final tableId = _selectedTableId;
-    final user    = FirebaseAuth.instance.currentUser;
-    if (tableId == null || user == null) return;
+    if (tableId == null || tableId.isEmpty) return;
     try {
       final snap = await _requestsRef
           .where('tableId', isEqualTo: tableId)
-          .where('userId',  isEqualTo: user.uid)
+          .where('status',  whereIn: ['pending', 'acknowledged', 'on_the_way'])
           .orderBy('createdAt', descending: true)
           .limit(1)
           .get();
       if (!mounted) return;
       if (snap.docs.isNotEmpty) {
-        final status =
-        ((snap.docs.first.data() as Map<String, dynamic>)['status'] ?? '')
-        as String;
-        if (status != 'completed') {
-          setState(() => _activeRequestId = snap.docs.first.id);
-        }
+        setState(() => _activeRequestId = snap.docs.first.id);
       }
     } catch (_) {
       // Index may not be ready on first deploy — silent fallback to form
@@ -152,16 +147,12 @@ class _CallWaiterPageState extends State<CallWaiterPage>
   }
 
   /// Write a new assistance_request document.
-  /// Fields satisfy the firestore.rules create guard exactly.
+  /// Customers are unauthenticated — no userId required.
+  /// Firestore rule: allow create: if true
   Future<void> _sendRequest() async {
     final tableId = _selectedTableId;
     if (tableId == null || tableId.isEmpty) {
       _snack('No table detected. Please scan the QR code again.', error: true);
-      return;
-    }
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      _snack('Not signed in. Please try again.', error: true);
       return;
     }
 
@@ -169,16 +160,15 @@ class _CallWaiterPageState extends State<CallWaiterPage>
     try {
       final ref = _requestsRef.doc();
       await ref.set({
-        // ── Required by firestore.rules create guard ─────────────────────
         'type':      _selectedType,
         'tableId':   tableId,
-        'status':    'pending',
-        'createdAt': FieldValue.serverTimestamp(),
-        // ── Extra context ────────────────────────────────────────────────
         'tableName': _selectedTableName ?? tableId,
-        'userId':    user.uid,
+        'status':    'pending',
         'note':      _noteCtrl.text.trim(),
+        'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
+        // userId is optional — only present if customer is signed in
+        'userId':    FirebaseAuth.instance.currentUser?.uid ?? '',
       });
       _noteCtrl.clear();
       setState(() => _activeRequestId = ref.id);

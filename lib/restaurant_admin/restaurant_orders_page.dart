@@ -1,12 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'dart:async';
 import '../uttils/session_manager.dart';
-import '../widgets/WebAudioStub.dart';
 import '../services/localization_service.dart';
 
 class RestaurantOrdersPage extends StatefulWidget {
@@ -36,11 +37,18 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
   Set<String> _knownOrderIds = {};
   bool _isFirstSnapshot = true;
 
-  void _playNewOrderSound() {
-    if (!kIsWeb) return;
+  // ── Scroll controllers ──────────────────────────────────────────────────────
+  final ScrollController _listScrollController  = ScrollController();
+  final ScrollController _filterTabsController  = ScrollController();
+
+  // ── Audio player (works on Android, iOS, Web) ───────────────────────────────
+  final AudioPlayer _audioPlayer = AudioPlayer();
+
+  Future<void> _playNewOrderSound() async {
     try {
-      final audio = AudioElement('assets/sounds/new_order.mp3');
-      audio.play();
+      await _audioPlayer.stop();
+      await _audioPlayer.play(AssetSource('sounds/new_order.mp3'));
+      debugPrint('🔔 New order sound played');
     } catch (e) {
       debugPrint('🔇 Could not play new-order sound: $e');
     }
@@ -58,7 +66,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
     final newIds = incoming.difference(_knownOrderIds);
 
     if (newIds.isNotEmpty) {
-      _playNewOrderSound();
+      _playNewOrderSound(); // fire-and-forget
     }
 
     _knownOrderIds = incoming;
@@ -73,45 +81,75 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
     _refreshTokenThenInit();
   }
 
-  /// Force-refreshes the Firebase ID token to ensure custom claims are loaded,
-  /// then kicks off the OneSignal player-ID fetch.
+  /// Ensures Firebase token claims (role + restaurantId) are present, then
+  /// kicks off the OneSignal player-ID fetch.
+  ///
+  /// Flow:
+  ///   1. Force-refresh the token and check for claims.
+  ///   2. If claims are missing, call the [syncUserClaims] Cloud Function which
+  ///      reads user_access/{uid} and writes the correct claims server-side.
+  ///   3. Force-refresh the token again to pick up the newly written claims.
+  ///   4. Proceed with getPlayerId().
   Future<void> _refreshTokenThenInit() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        // Not signed in — let the stream surface the permission error naturally.
         if (mounted) setState(() => _tokenReady = true);
         return;
       }
 
-      // forceRefresh: true guarantees we get the latest custom claims from the
-      // server (e.g. restaurantId, role) that were set after login.
-      final tokenResult = await user.getIdTokenResult(true);
-      debugPrint('✅ Token claims: ${tokenResult.claims}');
+      // ── Step 1: initial token refresh ──────────────────────────────────────
+      IdTokenResult tokenResult = await user.getIdTokenResult(true);
+      debugPrint('✅ Token claims: \${tokenResult.claims}');
 
-      // Optional: surface a warning if the restaurantId claim is missing.
-      final claimedRestaurantId = tokenResult.claims?['restaurantId'];
-      if (claimedRestaurantId == null) {
-        debugPrint(
-          '⚠️ Token is missing "restaurantId" claim. '
-              'Firestore rules will deny reads/writes. '
-              'Ensure the custom token is minted with restaurantId.',
-        );
-      } else if (claimedRestaurantId != widget.restaurantId) {
-        debugPrint(
-          '⚠️ Token restaurantId "$claimedRestaurantId" does not match '
-              'widget.restaurantId "${widget.restaurantId}".',
-        );
+      // ── Step 2: if claims missing, sync them from user_access ───────────────
+      final bool missingClaims = tokenResult.claims?['restaurantId'] == null ||
+          tokenResult.claims?['role'] == null;
+
+      if (missingClaims) {
+        debugPrint('⚠️ Claims missing — calling syncUserClaims...');
+        try {
+          final callable = FirebaseFunctions.instance
+              .httpsCallable('syncUserClaims');
+          final result = await callable.call();
+          debugPrint('✅ syncUserClaims: \${result.data}');
+        } catch (fnErr) {
+          debugPrint('❌ syncUserClaims failed: \$fnErr');
+          // Continue anyway — Firestore stream will show permission error
+          // if claims truly cannot be set (e.g. no user_access doc).
+        }
+
+        // ── Step 3: re-fetch token to pick up newly written claims ──────────
+        tokenResult = await user.getIdTokenResult(true);
+        debugPrint('✅ Token claims after sync: \${tokenResult.claims}');
       }
 
-      if (mounted) setState(() => _tokenReady = true);
-      await getPlayerId();
-    } catch (e, st) {
-      debugPrint('❌ Token refresh failed: $e\n$st');
+      // Validate restaurantId claim matches the page we navigated to
+      final claimedRestaurantId = tokenResult.claims?['restaurantId'];
+      if (claimedRestaurantId == null) {
+        debugPrint('❌ restaurantId claim still missing after sync. '
+            'Check that a user_access doc exists for this user.');
+      } else if (claimedRestaurantId != widget.restaurantId) {
+        debugPrint('⚠️ Token restaurantId "\$claimedRestaurantId" does not '
+            'match widget.restaurantId "\${widget.restaurantId}".');
+      }
+
+      // ── Step 4: capture role and proceed ───────────────────────────────────
+      final String? claimedRole = tokenResult.claims?['role'] as String?;
       if (mounted) {
         setState(() {
-          _tokenReady = true; // still show the UI; stream will show the error
-          _tokenError = e.toString();
+          _tokenReady      = true;
+          _currentUserRole = claimedRole;
+        });
+      }
+      await getPlayerId();
+
+    } catch (e, st) {
+      debugPrint('❌ Token refresh failed: \$e\n\$st');
+      if (mounted) {
+        setState(() {
+          _tokenReady  = true;
+          _tokenError  = e.toString();
         });
       }
     }
@@ -125,6 +163,9 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
   void dispose() {
     _localizationService.removeListener(_onLanguageChanged);
     _newOrdersSubscription?.cancel();
+    _listScrollController.dispose();
+    _filterTabsController.dispose();
+    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -256,112 +297,100 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
 
     // ── Wait for token refresh before starting the Firestore stream ────────────
     if (!_tokenReady) {
-      return SafeArea(
-        child: Scaffold(
-          backgroundColor: Colors.white,
-          body: _buildSkeletonLoading(isDesktop, isTablet),
-        ),
-      );
+      return _buildSkeletonLoading(isDesktop, isTablet);
     }
 
-    return SafeArea(
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        body: StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection('restaurants')
-              .doc(widget.restaurantId)
-              .collection('orders')
-              .orderBy("createdAt", descending: true)
-              .snapshots(),
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              final err = snapshot.error.toString();
-              final isPermission = err.toLowerCase().contains('permission') ||
-                  err.toLowerCase().contains('denied');
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        isPermission ? Icons.lock_outline : Icons.error_outline,
-                        size: 48,
-                        color: Colors.red[300],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        isPermission
-                            ? 'Permission denied.\nYour account token may be missing the restaurantId claim.\nPlease log out and log in again.'
-                            : 'Error: $err',
-                        textAlign: TextAlign.center,
-                        style: _p(14, FontWeight.w500, const Color(0xFF555555)),
-                      ),
-                      const SizedBox(height: 20),
-                      ElevatedButton.icon(
-                        onPressed: _handleLogout,
-                        icon: const Icon(Icons.logout),
-                        label: const Text('Log out & retry'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF070B2D),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                      ),
-                    ],
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('restaurants')
+          .doc(widget.restaurantId)
+          .collection('orders')
+          .orderBy("createdAt", descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          final err = snapshot.error.toString();
+          final isPermission = err.toLowerCase().contains('permission') ||
+              err.toLowerCase().contains('denied');
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isPermission ? Icons.lock_outline : Icons.error_outline,
+                    size: 48,
+                    color: Colors.red[300],
                   ),
-                ),
-              );
-            }
+                  const SizedBox(height: 16),
+                  Text(
+                    isPermission
+                        ? 'Permission denied.\nYour account token may be missing the restaurantId claim.\nPlease log out and log in again.'
+                        : 'Error: $err',
+                    textAlign: TextAlign.center,
+                    style: _p(14, FontWeight.w500, const Color(0xFF555555)),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton.icon(
+                    onPressed: _handleLogout,
+                    icon: const Icon(Icons.logout),
+                    label: const Text('Log out & retry'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF070B2D),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
 
-            if (!snapshot.hasData) {
-              return _buildSkeletonLoading(isDesktop, isTablet);
-            }
+        if (!snapshot.hasData) {
+          return _buildSkeletonLoading(isDesktop, isTablet);
+        }
 
-            final allOrders = snapshot.data!.docs;
+        final allOrders = snapshot.data!.docs;
 
-            if (kIsWeb) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                _handleNewOrders(allOrders);
-              });
-            }
+        if (kIsWeb) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _handleNewOrders(allOrders);
+          });
+        }
 
-            final filteredOrders =
-            _filterOrders(allOrders, _selectedFilterKey);
-            final counts = _buildStatusCounts(allOrders);
+        final filteredOrders =
+        _filterOrders(allOrders, _selectedFilterKey);
+        final counts = _buildStatusCounts(allOrders);
 
-            // Clamp current page whenever filtered list changes
-            final totalPages = _totalPages(filteredOrders.length);
-            if (_currentPage > totalPages) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) setState(() => _currentPage = 1);
-              });
-            }
+        // Clamp current page whenever filtered list changes
+        final totalPages = _totalPages(filteredOrders.length);
+        if (_currentPage > totalPages) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() => _currentPage = 1);
+          });
+        }
 
-            final pageOrders = _paginateOrders(filteredOrders);
+        final pageOrders = _paginateOrders(filteredOrders);
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(isDesktop, isTablet, counts),
-                const SizedBox(height: 20),
-                _buildFilterTabs(counts, isDesktop, isTablet),
-                const SizedBox(height: 10),
-                Expanded(
-                  child: _buildOrdersGrid(
-                      pageOrders, width, isDesktop, isTablet),
-                ),
-                if (filteredOrders.isNotEmpty)
-                  _buildPaginationBar(
-                      filteredOrders.length, isDesktop, isTablet),
-              ],
-            );
-          },
-        ),
-      ),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHeader(isDesktop, isTablet, counts),
+            _buildFilterTabs(counts, isDesktop, isTablet),
+            Expanded(
+              child: _buildOrdersGrid(
+                  pageOrders, width, isDesktop, isTablet),
+            ),
+            if (filteredOrders.isNotEmpty)
+              _buildPaginationBar(
+                  filteredOrders.length, isDesktop, isTablet),
+          ],
+        );
+      },
     );
   }
 
@@ -398,17 +427,56 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
   }
 
   Future<void> _savePlayerIdToFirestore(String playerId) async {
-    try {
-      await FirebaseFirestore.instance
-          .collection('restaurants')
-          .doc(widget.restaurantId)
-          .set(
-        {'onesignalPlayerId': playerId},
-        SetOptions(merge: true),
-      );
-      debugPrint("✅ Player ID saved to Firestore: $playerId");
-    } catch (e) {
-      debugPrint("❌ Failed to save Player ID to Firestore: $e");
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      debugPrint("⚠️ Cannot save Player ID — no authenticated user");
+      return;
+    }
+
+    // Role is already set from Firebase token claims in _refreshTokenThenInit.
+    // Fallback to SessionManager if somehow still null.
+    final String role = _currentUserRole ??
+        (await SessionManager.getRole()) ?? 'unknown';
+
+    final bool isAdminOrSuperAdmin =
+        role == 'admin' || role == 'super_admin';
+
+    if (isAdminOrSuperAdmin) {
+      // ── Admin / SuperAdmin → write to restaurant root doc ───────────────────
+      try {
+        await FirebaseFirestore.instance
+            .collection('restaurants')
+            .doc(widget.restaurantId)
+            .set(
+          {'onesignalPlayerId': playerId},
+          SetOptions(merge: true),
+        );
+        debugPrint("✅ Player ID saved to restaurant doc: $playerId");
+      } catch (e) {
+        debugPrint("❌ Failed to save Player ID to restaurant doc: $e");
+      }
+    } else {
+      // ── Manager → write ONLY to their own managers/{uid} sub-doc ────────────
+      // We must NEVER attempt the restaurant root write for managers —
+      // even a caught Dart exception still triggers a Firestore WriteStream
+      // PERMISSION_DENIED error at the SDK level.
+      try {
+        await FirebaseFirestore.instance
+            .collection('restaurants')
+            .doc(widget.restaurantId)
+            .collection('managers')
+            .doc(uid)
+            .set(
+          {
+            'onesignalPlayerId': playerId,
+            'updatedAt': FieldValue.serverTimestamp(),
+          },
+          SetOptions(merge: true),
+        );
+        debugPrint("✅ Player ID saved to managers/$uid: $playerId");
+      } catch (e) {
+        debugPrint("❌ Failed to save Player ID to managers doc: $e");
+      }
     }
   }
 
@@ -458,7 +526,8 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
         // Filter tabs skeleton
         Padding(
           padding: EdgeInsets.fromLTRB(sidePadding, 0, sidePadding, 10),
-          child: Row(
+          child:
+          Row(
             children: List.generate(5, (i) => Padding(
               padding: const EdgeInsets.only(right: 8),
               child: _SkeletonBox(width: 80, height: 32, radius: 999),
@@ -503,9 +572,9 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
     return Container(
       padding: EdgeInsets.fromLTRB(
         sidePadding,
-        isDesktop ? 20 : 14,
+        isDesktop ? 12 : 8,
         sidePadding,
-        8,
+        6,
       ),
       color: Colors.white,
       child: Column(
@@ -521,8 +590,8 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
                     Text(
                       loc.ordersTitle,
                       style: _p(
-                        isDesktop ? 24 : (isTablet ? 38 : 30),
-                        FontWeight.w200,
+                        isDesktop ? 22 : (isTablet ? 20 : 18),
+                        FontWeight.w700,
                         const Color(0xFF1C1C1C),
                       ),
                     ),
@@ -573,56 +642,110 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
     ];
     final sidePadding = isDesktop ? 24.0 : (isTablet ? 20.0 : 14.0);
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(sidePadding, 0, sidePadding, 10),
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Color(0xFFF0F0F0))),
+      ),
+      padding: EdgeInsets.fromLTRB(sidePadding, 8, sidePadding, 10),
       child: SingleChildScrollView(
+        controller: _filterTabsController,
         scrollDirection: Axis.horizontal,
         child: Row(
-          children: filterLabels.map((filterData) {
-            final key = filterData['key']!;
+          children: filterLabels.asMap().entries.map((entry) {
+            final idx   = entry.key;
+            final filterData = entry.value;
+            final key   = filterData['key']!;
             final label = filterData['label']!;
             final selected = _selectedFilterKey == key;
-            final text = '$label (${counts[label] ?? 0})';
+            final count = counts[label] ?? 0;
+
             return Padding(
-              padding: const EdgeInsets.only(right: 6),
+              padding: const EdgeInsets.only(right: 8),
               child: InkWell(
                 borderRadius: BorderRadius.circular(999),
-                onTap: () => setState(() {
-                  _selectedFilter = label;
-                  _selectedFilterKey = key;
-                  _currentPage = 1;
-                }),
+                onTap: () {
+                  setState(() {
+                    _selectedFilter    = label;
+                    _selectedFilterKey = key;
+                    _currentPage       = 1;
+                  });
+                  // ── Auto-scroll: bring tapped tab into view ──────────────
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    // Approximate each tab width ~100px + 8px gap
+                    const tabW = 108.0;
+                    final target = (idx * tabW)
+                        .clamp(0.0, _filterTabsController.position.maxScrollExtent);
+                    _filterTabsController.animateTo(
+                      target,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                    );
+                  });
+                  // ── Scroll orders list back to top ───────────────────────
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (_listScrollController.hasClients) {
+                      _listScrollController.animateTo(
+                        0,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOut,
+                      );
+                    }
+                  });
+                },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
                     color: selected
                         ? const Color(0xFFE8622A)
-                        : const Color(0xFFFFFFFF),
+                        : const Color(0xFFF5F5F5),
                     borderRadius: BorderRadius.circular(999),
                     border: Border.all(
                       color: selected
                           ? const Color(0xFFE8622A)
-                          : const Color(0xFFDDDDDD),
+                          : const Color(0xFFE0E0E0),
                     ),
                     boxShadow: selected
                         ? [
                       BoxShadow(
-                        color: const Color(0xFFE8622A).withOpacity(0.2),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
+                        color: const Color(0xFFE8622A).withOpacity(0.25),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
                       )
                     ]
                         : null,
                   ),
-                  child: Text(
-                    text,
-                    style: _p(
-                      13,
-                      selected ? FontWeight.w600 : FontWeight.w500,
-                      selected ? Colors.white : const Color(0xFF555555),
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        label,
+                        style: _p(
+                          13,
+                          selected ? FontWeight.w700 : FontWeight.w500,
+                          selected ? Colors.white : const Color(0xFF555555),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? Colors.white.withOpacity(0.25)
+                              : const Color(0xFFE0E0E0),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          '$count',
+                          style: _p(
+                            11,
+                            FontWeight.w700,
+                            selected ? Colors.white : const Color(0xFF777777),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -666,7 +789,14 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
           _PageBtn(
             icon: Icons.chevron_left_rounded,
             enabled: _currentPage > 1,
-            onTap: () => setState(() => _currentPage--),
+            onTap: () {
+              setState(() => _currentPage--);
+              if (_listScrollController.hasClients) {
+                _listScrollController.animateTo(0,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOut);
+              }
+            },
           ),
           const SizedBox(width: 4),
           ..._buildPageNumbers(totalPages),
@@ -674,7 +804,14 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
           _PageBtn(
             icon: Icons.chevron_right_rounded,
             enabled: _currentPage < totalPages,
-            onTap: () => setState(() => _currentPage++),
+            onTap: () {
+              setState(() => _currentPage++);
+              if (_listScrollController.hasClients) {
+                _listScrollController.animateTo(0,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOut);
+              }
+            },
           ),
         ],
       ),
@@ -760,6 +897,7 @@ class _RestaurantOrdersPageState extends State<RestaurantOrdersPage> {
 
     if (crossAxisCount == 1) {
       return ListView.separated(
+        controller: _listScrollController,
         padding: EdgeInsets.fromLTRB(sidePadding, 4, sidePadding, 24),
         itemCount: pageOrders.length,
         separatorBuilder: (_, __) => const SizedBox(height: 12),

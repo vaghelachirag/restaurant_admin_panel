@@ -8,6 +8,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:restaurant_admin_panel/restaurant_admin/restaurant_orders_page.dart';
 
+import 'manager/call_waiter.dart';
+import 'manager/waiter_assistance.dart';
 import 'table_management.dart';
 
 // ─── Color palette (matches existing files) ──────────────────────────────────
@@ -152,7 +154,7 @@ class _WaiterShellState extends State<WaiterShell>
       case _NavItem.home:
         return RestaurantOrdersPage(restaurantId: widget.restaurantId);
       case _NavItem.tableManagement:
-        return TableManagementPage(restaurantId: widget.restaurantId);
+        return WaiterAssistancePage(restaurantId: widget.restaurantId);
       case _NavItem.settings:
         return _SettingsPage(restaurantId: widget.restaurantId, waiterId: widget.waiterId);
       case _NavItem.profile:

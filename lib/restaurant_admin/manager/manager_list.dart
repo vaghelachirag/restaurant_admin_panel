@@ -306,37 +306,69 @@ class _ManagerListPageState extends State<ManagerListPage> {
     if (adminUser == null) throw Exception('Not signed in as admin.');
     await adminUser.getIdToken(true);
 
+    // Step 1: Create Firebase Auth account in secondary app
+    // This keeps the admin signed in while creating the manager account.
+    String managerUid = '';
     FirebaseApp? secondaryApp;
     try {
+      // Delete if already exists from a previous failed attempt
+      try {
+        await Firebase.app('secondary_manager_creation').delete();
+      } catch (_) {}
+
       secondaryApp = await Firebase.initializeApp(
         name: 'secondary_manager_creation',
         options: Firebase.app().options,
       );
-
       final secondaryAuth = FirebaseAuth.instanceFor(app: secondaryApp);
-      await secondaryAuth.createUserWithEmailAndPassword(
-          email: email, password: password);
-      // Sign out of secondary immediately — we only needed the UID via email
+      final credential = await secondaryAuth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      managerUid = credential.user!.uid;
       await secondaryAuth.signOut();
     } on FirebaseAuthException catch (e) {
       throw _authError(e);
     } finally {
-      // Always delete the secondary app to free resources
       await secondaryApp?.delete();
     }
 
-    await FirebaseFirestore.instance
+    // Step 2: Write manager doc + user_access index atomically in one batch.
+    // If either write fails, both fail — no orphaned documents.
+    final db    = FirebaseFirestore.instance;
+    final batch = db.batch();
+
+    // Manager document — use Auth UID as doc ID so it is always findable
+    final managerRef = db
         .collection('restaurants')
         .doc(widget.restaurantId)
         .collection('managers')
-        .add({
-      'name': name,
-      'email': email,
-      'role': 'manager',
+        .doc(managerUid);
+
+    batch.set(managerRef, {
+      'uid':          managerUid,   // CRITICAL: required for collectionGroup query
+      'name':         name,
+      'email':        email,
+      'role':         'manager',
       'restaurantId': widget.restaurantId,
-      'isActive': isActive,
-      'createdAt': FieldValue.serverTimestamp(),
+      'isActive':     isActive,
+      'createdAt':    FieldValue.serverTimestamp(),
     });
+
+    // user_access flat index — makes manager login O(1)
+    final accessRef = db.collection('user_access').doc(managerUid);
+
+    batch.set(accessRef, {
+      'uid':          managerUid,
+      'role':         'manager',
+      'restaurantId': widget.restaurantId,
+      'managerId':    managerUid,   // doc ID == uid since we used uid as doc ID
+      'email':        email,
+      'name':         name,
+      'updatedAt':    FieldValue.serverTimestamp(),
+    });
+
+    await batch.commit();
 
     if (mounted) {
       _snack(AppLocalizations.of(context).managerAddedSuccess, _C.green,
@@ -351,17 +383,29 @@ class _ManagerListPageState extends State<ManagerListPage> {
     required bool isActive,
     String? newPassword,
   }) async {
-    // Update in restaurants/{restaurantId}/managers/{docId}
-    await FirebaseFirestore.instance
-        .collection('restaurants')
-        .doc(widget.restaurantId)
-        .collection('managers')
-        .doc(docId)
-        .update({
-      'name': name,
-      'isActive': isActive,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+    // Update manager doc + keep user_access name in sync
+    final db    = FirebaseFirestore.instance;
+    final batch = db.batch();
+
+    batch.update(
+      db.collection('restaurants')
+          .doc(widget.restaurantId)
+          .collection('managers')
+          .doc(docId),
+      {
+        'name':      name,
+        'isActive':  isActive,
+        'updatedAt': FieldValue.serverTimestamp(),
+      },
+    );
+
+    // Keep user_access name in sync
+    batch.update(
+      db.collection('user_access').doc(docId),
+      {'name': name, 'updatedAt': FieldValue.serverTimestamp()},
+    );
+
+    await batch.commit();
 
     if (newPassword != null && newPassword.isNotEmpty) {
       final user = FirebaseAuth.instance.currentUser;
@@ -482,12 +526,20 @@ class _ManagerListPageState extends State<ManagerListPage> {
 
     if (ok != true) return;
 
-    await FirebaseFirestore.instance
+    // Delete manager doc + user_access index atomically
+    final db    = FirebaseFirestore.instance;
+    final batch = db.batch();
+
+    batch.delete(db
         .collection('restaurants')
         .doc(widget.restaurantId)
         .collection('managers')
-        .doc(docId)
-        .delete();
+        .doc(docId));
+
+    // Also remove the user_access index so the manager cannot log in
+    batch.delete(db.collection('user_access').doc(docId));
+
+    await batch.commit();
 
     if (mounted) {
       _snack(AppLocalizations.of(context).managerDeleted, _C.red,

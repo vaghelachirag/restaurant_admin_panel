@@ -62,6 +62,8 @@ dependencies:
   pdf: ^3.11.0
   printing: ^5.13.0
   flutter_riverpod: ^2.5.0
+  flutter_local_notifications: ^18.0.0
+  cloud_functions: ^5.0.0
 
 dev_dependencies:
   flutter_test:
@@ -90,7 +92,8 @@ flutter:
     - assets/sounds/new_order.mp3
     - assets/languages/
     - assets/icons/
-
+    - assets/images/rasora_web.png
+    - assets/images/rasora_android.png
 flutter_icons:
   android: true
   ios: true

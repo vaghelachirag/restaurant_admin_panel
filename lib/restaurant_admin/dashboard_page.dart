@@ -708,7 +708,7 @@ class _ApkDownloadButton extends StatefulWidget {
 class _ApkDownloadButtonState extends State<_ApkDownloadButton> {
   bool _loading = false;
 
-  static const String _apkDownloadUrl = 'https://upload-apk.com/3aYDQn2vKeAivlg';
+  static const String _apkDownloadUrl = 'https://upload.app/download/rasora/com.example.restaurant_admin_panel/ee8d5bb8c26e545a4fa1ae2b0971c03fc6b8d0b264cb9956ce02440cedffdc47';
 
   Future<void> _downloadApk() async {
     setState(() => _loading = true);
