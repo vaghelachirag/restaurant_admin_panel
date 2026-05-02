@@ -34,10 +34,6 @@ String? _getMenuRestaurantIdFromInitialUrl() {
   return null;
 }
 
-
-/// Sets up the Android notification channel required for the custom
-/// new-order sound (like Swiggy/Zomato).
-/// Channel id must match android_channel_id sent from Cloud Functions.
 Future<void> _createAndroidNotificationChannel() async {
   const AndroidNotificationChannel channel = AndroidNotificationChannel(
     'new_order_channel',                                  // id  ← matches index.js
@@ -58,8 +54,6 @@ Future<void> _createAndroidNotificationChannel() async {
 /// Initialises OneSignal once with all listeners.
 /// Called from main() — only on mobile (Android / iOS).
 Future<void> setupNotificationChannel() async {
-  // ── 1. Create the Android channel FIRST so the OS knows about
-  //       the custom sound before any notification arrives ────────────────────
   await _createAndroidNotificationChannel();
 
   // ── 2. Init OneSignal ────────────────────────────────────────────────────
@@ -76,8 +70,6 @@ Future<void> setupNotificationChannel() async {
   OneSignal.Notifications.addClickListener((OSNotificationClickEvent event) {
     final data = event.notification.additionalData;
     if (data == null) return;
-    // TODO: navigate to the relevant order/screen based on data['type']
-    // e.g. if (data['type'] == 'new_order') { ... }
   });
 }
 

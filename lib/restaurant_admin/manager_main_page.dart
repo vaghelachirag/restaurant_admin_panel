@@ -7,32 +7,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:restaurant_admin_panel/restaurant_admin/restaurant_orders_page.dart';
+import '../core/constants/app_colors.dart';
 
 import 'manager/call_waiter.dart';
 import 'manager/waiter_assistance.dart';
 import 'table_management.dart';
-
-// ─── Color palette (matches existing files) ──────────────────────────────────
-class _C {
-  static const bg          = Color(0xFFFFF3EE); // warm peach — matches dashboard
-  static const orange      = Color(0xFFE8622A);
-  static const orangeLight = Color(0xFFFFF0E8);
-  static const orangeMid   = Color(0xFFFFD5C0);
-  static const dark        = Color(0xFF070B2D);
-  static const textDark    = Color(0xFF1A1A1A);
-  static const textMid     = Color(0xFF666666);
-  static const textLight   = Color(0xFF999999);
-  static const cardBorder  = Color(0xFFEEEEEE);
-  static const green       = Color(0xFF27AE60);
-  static const greenBg     = Color(0xFFE8F8EF);
-  static const red         = Color(0xFFE74C3C);
-  static const redBg       = Color(0xFFFEEEEE);
-  static const divider     = Color(0xFFEEEEEE);
-  static const drawerBg    = Color(0xFFFFFFFF);       // white sidebar — matches dashboard
-  static const drawerItem  = Color(0xFF374151);       // dark grey nav labels
-  static const drawerSub   = Color(0xFF6B7280);       // muted grey sub-labels
-  static const drawerActive = Color(0xFFE8622A);      // orange active
-}
 
 TextStyle _p(double size, FontWeight w, Color c) =>
     GoogleFonts.poppins(fontSize: size, fontWeight: w, color: c);
@@ -123,12 +102,12 @@ class _WaiterShellState extends State<WaiterShell>
       barrierDismissible: false,
       builder: (ctx) => _ConfirmDialog(
         icon: Icons.logout_rounded,
-        iconColor: _C.red,
-        iconBg: _C.redBg,
+        iconColor: AppColors.managerRed,
+        iconBg: AppColors.managerRedBg,
         title: 'Log Out',
         message: 'Are you sure you want to log out?',
         confirmLabel: 'Log Out',
-        confirmColor: _C.red,
+        confirmColor: AppColors.managerRed,
       ),
     );
     if (ok != true) return;
@@ -265,8 +244,8 @@ class _AppBar extends StatelessWidget {
         right: 20,
       ),
       decoration: const BoxDecoration(
-        color: Color(0xFFFFF3EE), // warm peach — matches dashboard bg
-        border: Border(bottom: BorderSide(color: _C.cardBorder)),
+        color: AppColors.managerBackground, // warm peach — matches dashboard bg
+        border: Border(bottom: BorderSide(color: AppColors.managerCardBorder)),
         boxShadow: [BoxShadow(color: Color(0x06000000), blurRadius: 8, offset: Offset(0, 2))],
       ),
       child: Row(children: [
@@ -276,18 +255,18 @@ class _AppBar extends StatelessWidget {
           child: Container(
             width: 40, height: 40,
             decoration: BoxDecoration(
-              color: _C.orangeLight,
+              color: AppColors.managerOrangeLight,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.menu_rounded, color: _C.orange, size: 22),
+            child: const Icon(Icons.menu_rounded, color: AppColors.managerOrange, size: 22),
           ),
         ),
         const SizedBox(width: 14),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title, style: _p(17, FontWeight.w700, _C.textDark)),
+            Text(title, style: _p(17, FontWeight.w700, AppColors.managerTextDark)),
             Text('Welcome back, $firstName 👋',
-                style: _p(11, FontWeight.w400, _C.textLight)),
+                style: _p(11, FontWeight.w400, AppColors.managerTextLight)),
           ]),
         ),
         // Avatar
@@ -325,8 +304,8 @@ class _DrawerPanel extends StatelessWidget {
       color: Colors.transparent,
       child: Container(
         decoration: const BoxDecoration(
-          color: _C.drawerBg,
-          border: Border(right: BorderSide(color: _C.cardBorder, width: 1)),
+          color: AppColors.managerDrawerBg,
+          border: Border(right: BorderSide(color: AppColors.managerCardBorder, width: 1)),
           boxShadow: [BoxShadow(color: Color(0x18000000), blurRadius: 24, offset: Offset(4, 0))],
         ),
         child: SafeArea(
@@ -341,7 +320,7 @@ class _DrawerPanel extends StatelessWidget {
                 photoUrl: photoUrl,
               ),
 
-              const Divider(color: _C.cardBorder, height: 1, thickness: 1),
+              const Divider(color: AppColors.managerCardBorder, height: 1, thickness: 1),
               const SizedBox(height: 10),
 
               // ── Nav items ──────────────────────────────────────────────
@@ -391,7 +370,7 @@ class _DrawerPanel extends StatelessWidget {
               ),
 
               // ── Divider ────────────────────────────────────────────────
-              const Divider(color: _C.cardBorder, height: 1, thickness: 1),
+              const Divider(color: AppColors.managerCardBorder, height: 1, thickness: 1),
 
               // ── Logout ─────────────────────────────────────────────────
               InkWell(
@@ -399,9 +378,9 @@ class _DrawerPanel extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 18),
                   child: Row(children: [
-                    const Icon(Icons.logout_outlined, color: _C.drawerSub, size: 20),
+                    const Icon(Icons.logout_outlined, color: AppColors.managerDrawerSub, size: 20),
                     const SizedBox(width: 13),
-                    Text('Logout', style: _p(14, FontWeight.w400, _C.drawerSub)),
+                    Text('Logout', style: _p(14, FontWeight.w400, AppColors.managerDrawerSub)),
                   ]),
                 ),
               ),
@@ -415,7 +394,7 @@ class _DrawerPanel extends StatelessWidget {
   Widget _sectionLabel(String label) => Padding(
     padding: const EdgeInsets.only(left: 2, bottom: 2),
     child: Text(label,
-        style: _p(10, FontWeight.w600, _C.textLight)
+        style: _p(10, FontWeight.w600, AppColors.managerTextLight)
             .copyWith(letterSpacing: 1.2)),
   );
 }
@@ -439,26 +418,26 @@ class _DrawerHeader extends StatelessWidget {
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('$firstName $lastName'.trim(),
-                style: _p(14, FontWeight.w700, _C.textDark),
+                style: _p(14, FontWeight.w700, AppColors.managerTextDark),
                 overflow: TextOverflow.ellipsis),
             const SizedBox(height: 2),
             Text(email,
-                style: _p(11, FontWeight.w400, _C.textLight),
+                style: _p(11, FontWeight.w400, AppColors.managerTextLight),
                 overflow: TextOverflow.ellipsis),
             const SizedBox(height: 5),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: _C.green.withOpacity(0.12),
+                color: AppColors.managerGreen.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 Container(
                   width: 6, height: 6,
-                  decoration: const BoxDecoration(color: _C.green, shape: BoxShape.circle),
+                  decoration: const BoxDecoration(color: AppColors.managerGreen, shape: BoxShape.circle),
                 ),
                 const SizedBox(width: 5),
-                Text('Available', style: _p(10, FontWeight.w600, _C.green)),
+                Text('Available', style: _p(10, FontWeight.w600, AppColors.managerGreen)),
               ]),
             ),
           ]),
@@ -494,13 +473,13 @@ class _DrawerItem extends StatelessWidget {
           duration: const Duration(milliseconds: 180),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: isActive ? _C.orangeLight : Colors.transparent,
+            color: isActive ? AppColors.managerOrangeLight : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(children: [
             Icon(
               icon,
-              color: isActive ? _C.orange : _C.drawerSub,
+              color: isActive ? AppColors.managerOrange : AppColors.managerDrawerSub,
               size: 20,
             ),
             const SizedBox(width: 13),
@@ -510,7 +489,7 @@ class _DrawerItem extends StatelessWidget {
                 style: _p(
                   14,
                   isActive ? FontWeight.w600 : FontWeight.w400,
-                  isActive ? _C.orange : _C.drawerItem,
+                  isActive ? AppColors.managerOrange : AppColors.managerDrawerItem,
                 ),
               ),
             ),
@@ -584,9 +563,9 @@ class _SettingsPageState extends State<_SettingsPage> {
         'language':          _language,
         'updatedAt':         FieldValue.serverTimestamp(),
       });
-      if (mounted) _snack('Settings saved!', _C.green, Icons.check_circle_rounded);
+      if (mounted) _snack('Settings saved!', AppColors.managerGreen, Icons.check_circle_rounded);
     } catch (e) {
-      if (mounted) _snack('Failed to save: $e', _C.red, Icons.error_rounded);
+      if (mounted) _snack('Failed to save: $e', AppColors.managerRed, Icons.error_rounded);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -615,13 +594,13 @@ class _SettingsPageState extends State<_SettingsPage> {
         // ── Availability ──────────────────────────────────────────────────
         _sectionCard(
           icon: Icons.person_pin_circle_rounded,
-          iconColor: _C.green,
-          iconBg: _C.greenBg,
+          iconColor: AppColors.managerGreen,
+          iconBg: AppColors.managerGreenBg,
           title: 'Availability',
           children: [
             _SettingSwitch(
               icon: Icons.check_circle_outline_rounded,
-              iconColor: _C.green,
+              iconColor: AppColors.managerOrange,
               label: 'Available',
               sublabel: 'Mark yourself as available to serve tables',
               value: _isAvailable,
@@ -629,7 +608,7 @@ class _SettingsPageState extends State<_SettingsPage> {
             ),
             _SettingSwitch(
               icon: Icons.free_breakfast_rounded,
-              iconColor: _C.orange,
+              iconColor: AppColors.managerOrange,
               label: 'Break Mode',
               sublabel: 'Temporarily stop receiving new orders',
               value: _breakMode,
@@ -643,13 +622,13 @@ class _SettingsPageState extends State<_SettingsPage> {
         // ── Notifications ─────────────────────────────────────────────────
         _sectionCard(
           icon: Icons.notifications_rounded,
-          iconColor: _C.orange,
-          iconBg: _C.orangeLight,
+          iconColor: AppColors.managerOrange,
+          iconBg: AppColors.managerOrangeLight,
           title: 'Notifications',
           children: [
             _SettingSwitch(
               icon: Icons.volume_up_rounded,
-              iconColor: _C.orange,
+              iconColor: AppColors.managerOrange,
               label: 'Notification Sound',
               sublabel: 'Play sound for incoming alerts',
               value: _notificationSound,
@@ -657,7 +636,7 @@ class _SettingsPageState extends State<_SettingsPage> {
             ),
             _SettingSwitch(
               icon: Icons.vibration_rounded,
-              iconColor: _C.textMid,
+              iconColor: AppColors.managerTextMid,
               label: 'Vibration',
               sublabel: 'Vibrate on new notifications',
               value: _vibration,
@@ -665,7 +644,7 @@ class _SettingsPageState extends State<_SettingsPage> {
             ),
             _SettingSwitch(
               icon: Icons.receipt_long_rounded,
-              iconColor: _C.dark,
+              iconColor: AppColors.managerDark,
               label: 'Order Alerts',
               sublabel: 'Get notified when an order is placed',
               value: _orderAlerts,
@@ -673,7 +652,7 @@ class _SettingsPageState extends State<_SettingsPage> {
             ),
             _SettingSwitch(
               icon: Icons.table_restaurant_rounded,
-              iconColor: _C.green,
+              iconColor: AppColors.managerGreen,
               label: 'Table Alerts',
               sublabel: 'Get notified when table status changes',
               value: _tableAlerts,
@@ -687,8 +666,8 @@ class _SettingsPageState extends State<_SettingsPage> {
         // ── Language ──────────────────────────────────────────────────────
         _sectionCard(
           icon: Icons.language_rounded,
-          iconColor: _C.dark,
-          iconBg: const Color(0xFFECEDF8),
+          iconColor: AppColors.managerDark,
+          iconBg: AppColors.managerLightBg,
           title: 'Language',
           children: [
             Padding(
@@ -700,20 +679,20 @@ class _SettingsPageState extends State<_SettingsPage> {
                     color: const Color(0xFFECEDF8),
                     borderRadius: BorderRadius.circular(9),
                   ),
-                  child: const Icon(Icons.translate_rounded, color: _C.dark, size: 18),
+                  child: const Icon(Icons.translate_rounded, color: AppColors.managerDark, size: 18),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('App Language', style: _p(13, FontWeight.w600, _C.textDark)),
+                    Text('App Language', style: _p(13, FontWeight.w600, AppColors.managerTextDark)),
                     Text('Select your preferred language',
-                        style: _p(11, FontWeight.w400, _C.textLight)),
+                        style: _p(11, FontWeight.w400, AppColors.managerTextLight)),
                   ]),
                 ),
                 DropdownButton<String>(
                   value: _language,
                   underline: const SizedBox(),
-                  style: _p(13, FontWeight.w500, _C.textDark),
+                  style: _p(13, FontWeight.w500, AppColors.managerTextDark),
                   items: ['English', 'Hindi', 'Gujarati', 'Marathi']
                       .map((l) => DropdownMenuItem(value: l, child: Text(l)))
                       .toList(),
@@ -732,8 +711,7 @@ class _SettingsPageState extends State<_SettingsPage> {
           child: ElevatedButton(
             onPressed: _saving ? null : _saveSettings,
             style: ElevatedButton.styleFrom(
-              backgroundColor: _C.orange,
-              foregroundColor: Colors.white,
+              backgroundColor: AppColors.managerOrange, foregroundColor: Colors.white,
               elevation: 0,
               padding: const EdgeInsets.symmetric(vertical: 15),
               shape: RoundedRectangleBorder(
@@ -763,7 +741,7 @@ class _SettingsPageState extends State<_SettingsPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _C.cardBorder),
+        border: Border.all(color: AppColors.managerCardBorder),
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(0.04),
               blurRadius: 12, offset: const Offset(0, 4)),
@@ -781,10 +759,10 @@ class _SettingsPageState extends State<_SettingsPage> {
               child: Icon(icon, color: iconColor, size: 18),
             ),
             const SizedBox(width: 12),
-            Text(title, style: _p(14, FontWeight.w700, _C.textDark)),
+            Text(title, style: _p(14, FontWeight.w700, AppColors.managerTextDark)),
           ]),
         ),
-        Container(height: 1, color: _C.divider),
+        Container(height: 1, color: AppColors.managerCardBorder),
         ...children,
         const SizedBox(height: 4),
       ]),
@@ -823,14 +801,14 @@ class _SettingSwitch extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(label, style: _p(13, FontWeight.w600, _C.textDark)),
-            Text(sublabel, style: _p(11, FontWeight.w400, _C.textLight)),
+            Text(label, style: _p(13, FontWeight.w600, AppColors.managerTextDark)),
+            Text(sublabel, style: _p(11, FontWeight.w400, AppColors.managerTextLight)),
           ]),
         ),
         CupertinoSwitch(
           value: value,
           onChanged: onChanged,
-          activeColor: _C.orange,
+          activeColor: AppColors.managerOrange,
         ),
       ]),
     );
@@ -931,9 +909,9 @@ class _ProfilePageState extends State<_ProfilePage> {
       });
       if (newUrl != null) setState(() => _photoUrl = newUrl);
       widget.onUpdated();
-      if (mounted) _snack('Profile updated!', _C.green, Icons.check_circle_rounded);
+      if (mounted) _snack('Profile updated!', AppColors.managerGreen, Icons.check_circle_rounded);
     } catch (e) {
-      if (mounted) _snack('Error: $e', _C.red, Icons.error_rounded);
+      if (mounted) _snack('Error: $e', AppColors.managerRed, Icons.error_rounded);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -942,10 +920,10 @@ class _ProfilePageState extends State<_ProfilePage> {
   // ── Change password ───────────────────────────────────────────────────────
   Future<void> _changePassword() async {
     if (_newPassCtrl.text != _confPassCtrl.text) {
-      _snack('Passwords do not match', _C.red, Icons.error_rounded); return;
+      _snack('Passwords do not match', AppColors.managerRed, Icons.error_rounded); return;
     }
     if (_newPassCtrl.text.length < 6) {
-      _snack('Password must be at least 6 characters', _C.red, Icons.error_rounded); return;
+      _snack('Password must be at least 6 characters', AppColors.managerRed, Icons.error_rounded); return;
     }
     setState(() => _changingPass = true);
     try {
@@ -955,9 +933,9 @@ class _ProfilePageState extends State<_ProfilePage> {
       await user.reauthenticateWithCredential(cred);
       await user.updatePassword(_newPassCtrl.text);
       _oldPassCtrl.clear(); _newPassCtrl.clear(); _confPassCtrl.clear();
-      if (mounted) _snack('Password changed successfully!', _C.green, Icons.lock_rounded);
+      if (mounted) _snack('Password changed successfully!', AppColors.managerGreen, Icons.lock_rounded);
     } on FirebaseAuthException catch (e) {
-      if (mounted) _snack(e.message ?? 'Error changing password', _C.red, Icons.error_rounded);
+      if (mounted) _snack(e.message ?? 'Error changing password', AppColors.managerRed, Icons.error_rounded);
     } finally {
       if (mounted) setState(() => _changingPass = false);
     }
@@ -966,10 +944,10 @@ class _ProfilePageState extends State<_ProfilePage> {
   // ── Apply for leave ───────────────────────────────────────────────────────
   Future<void> _applyLeave() async {
     if (_leaveFrom == null || _leaveTo == null) {
-      _snack('Please select leave dates', _C.orange, Icons.warning_rounded); return;
+      _snack('Please select leave dates', AppColors.managerOrange, Icons.warning_rounded); return;
     }
     if (_leaveTo!.isBefore(_leaveFrom!)) {
-      _snack('End date must be after start date', _C.red, Icons.error_rounded); return;
+      _snack('End date must be after start date', AppColors.managerRed, Icons.error_rounded); return;
     }
     setState(() => _applyingLeave = true);
     try {
@@ -983,9 +961,9 @@ class _ProfilePageState extends State<_ProfilePage> {
       });
       setState(() { _leaveFrom = null; _leaveTo = null; });
       _leaveReasonCtrl.clear();
-      if (mounted) _snack('Leave request submitted!', _C.green, Icons.check_circle_rounded);
+      if (mounted) _snack('Leave request submitted!', AppColors.managerGreen, Icons.check_circle_rounded);
     } catch (e) {
-      if (mounted) _snack('Error: $e', _C.red, Icons.error_rounded);
+      if (mounted) _snack('Error: $e', AppColors.managerRed, Icons.error_rounded);
     } finally {
       if (mounted) setState(() => _applyingLeave = false);
     }
@@ -999,7 +977,7 @@ class _ProfilePageState extends State<_ProfilePage> {
       lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.light(primary: _C.orange),
+          colorScheme: const ColorScheme.light(primary: AppColors.managerOrange),
         ),
         child: child!,
       ),
@@ -1042,14 +1020,14 @@ class _ProfilePageState extends State<_ProfilePage> {
                 children: [
                   CircleAvatar(
                     radius: 52,
-                    backgroundColor: _C.orangeLight,
+                    backgroundColor: AppColors.managerOrangeLight,
                     backgroundImage: _newPhoto != null
                         ? FileImage(_newPhoto!) as ImageProvider
                         : (_photoUrl != null && _photoUrl!.isNotEmpty
                         ? NetworkImage(_photoUrl!) as ImageProvider
                         : null),
                     child: !hasPhoto
-                        ? Text(initials, style: _p(28, FontWeight.w700, _C.orange))
+                        ? Text(initials, style: _p(28, FontWeight.w700, AppColors.managerOrange))
                         : null,
                   ),
                   Positioned(
@@ -1059,7 +1037,7 @@ class _ProfilePageState extends State<_ProfilePage> {
                       child: Container(
                         width: 32, height: 32,
                         decoration: BoxDecoration(
-                          color: _C.orange,
+                          color: AppColors.managerOrange,
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 2),
                         ),
@@ -1084,16 +1062,17 @@ class _ProfilePageState extends State<_ProfilePage> {
               child: ElevatedButton(
                 onPressed: _saving ? null : _saveProfile,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _C.orange, foregroundColor: Colors.white,
+                  backgroundColor: AppColors.managerOrange, foregroundColor: Colors.white,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 13),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
                 ),
                 child: _saving
-                    ? const SizedBox(width: 18, height: 18,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white))
+                    ? const SizedBox(
+                width: 18, height: 18,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white))
                     : Text('Save Profile', style: _p(13, FontWeight.w700, Colors.white)),
               ),
             ),
@@ -1121,7 +1100,7 @@ class _ProfilePageState extends State<_ProfilePage> {
               child: ElevatedButton(
                 onPressed: _changingPass ? null : _changePassword,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _C.dark, foregroundColor: Colors.white,
+                  backgroundColor: AppColors.managerDark, foregroundColor: Colors.white,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 13),
                   shape: RoundedRectangleBorder(
@@ -1156,22 +1135,22 @@ class _ProfilePageState extends State<_ProfilePage> {
             TextFormField(
               controller: _leaveReasonCtrl,
               maxLines: 3,
-              style: _p(13, FontWeight.w400, _C.textDark),
+              style: _p(13, FontWeight.w400, AppColors.managerTextDark),
               decoration: InputDecoration(
                 hintText: 'Reason for leave (optional)',
-                hintStyle: _p(13, FontWeight.w400, _C.textLight),
+                hintStyle: _p(13, FontWeight.w400, AppColors.managerTextLight),
                 filled: true,
                 fillColor: const Color(0xFFF9F9F9),
                 contentPadding: const EdgeInsets.all(14),
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: _C.cardBorder)),
+                    borderSide: const BorderSide(color: AppColors.managerCardBorder)),
                 enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: _C.cardBorder)),
+                    borderSide: const BorderSide(color: AppColors.managerCardBorder)),
                 focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: _C.orange, width: 1.5)),
+                    borderSide: const BorderSide(color: AppColors.managerOrange, width: 1.5)),
               ),
             ),
             const SizedBox(height: 20),
@@ -1180,7 +1159,7 @@ class _ProfilePageState extends State<_ProfilePage> {
               child: ElevatedButton(
                 onPressed: _applyingLeave ? null : _applyLeave,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _C.green, foregroundColor: Colors.white,
+                  backgroundColor: AppColors.managerGreen, foregroundColor: Colors.white,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 13),
                   shape: RoundedRectangleBorder(
@@ -1217,7 +1196,7 @@ class _ProfilePageState extends State<_ProfilePage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _C.cardBorder),
+        border: Border.all(color: AppColors.managerCardBorder),
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(0.04),
               blurRadius: 12, offset: const Offset(0, 4)),
@@ -1228,14 +1207,14 @@ class _ProfilePageState extends State<_ProfilePage> {
           Container(
             width: 36, height: 36,
             decoration: BoxDecoration(
-                color: _C.orangeLight, borderRadius: BorderRadius.circular(10)),
-            child: Icon(icon, color: _C.orange, size: 18),
+                color: AppColors.managerOrangeLight, borderRadius: BorderRadius.circular(10)),
+            child: Icon(icon, color: AppColors.managerOrange, size: 18),
           ),
           const SizedBox(width: 12),
-          Text(title, style: _p(14, FontWeight.w700, _C.textDark)),
+          Text(title, style: _p(14, FontWeight.w700, AppColors.managerTextDark)),
         ]),
         const SizedBox(height: 16),
-        Container(height: 1, color: _C.divider),
+        Container(height: 1, color: AppColors.managerCardBorder),
         const SizedBox(height: 16),
         ...children,
       ]),
@@ -1245,25 +1224,25 @@ class _ProfilePageState extends State<_ProfilePage> {
   Widget _profileField(String label, TextEditingController ctrl,
       IconData icon, {bool enabled = true}) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: _p(12, FontWeight.w500, _C.textMid)),
+      Text(label, style: _p(12, FontWeight.w500, AppColors.managerTextMid)),
       const SizedBox(height: 5),
       TextFormField(
         controller: ctrl,
         enabled: enabled,
-        style: _p(13, FontWeight.w500, _C.textDark),
+        style: _p(13, FontWeight.w500, AppColors.managerTextDark),
         decoration: InputDecoration(
-          prefixIcon: Icon(icon, size: 18, color: _C.textLight),
+          prefixIcon: Icon(icon, size: 18, color: AppColors.managerTextLight),
           filled: true,
-          fillColor: enabled ? const Color(0xFFF9F9F9) : const Color(0xFFF2F2F2),
+          fillColor: enabled ? const Color(0xFFF9F9F9) : AppColors.managerDisabledBg,
           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: _C.cardBorder)),
+              borderSide: const BorderSide(color: AppColors.managerCardBorder)),
           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: _C.cardBorder)),
+              borderSide: const BorderSide(color: AppColors.managerCardBorder)),
           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: _C.orange, width: 1.5)),
+              borderSide: const BorderSide(color: AppColors.managerOrange, width: 1.5)),
           disabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: _C.cardBorder)),
+              borderSide: const BorderSide(color: AppColors.managerCardBorder)),
         ),
       ),
     ]);
@@ -1272,31 +1251,30 @@ class _ProfilePageState extends State<_ProfilePage> {
   Widget _passField(String label, TextEditingController ctrl,
       bool obscure, VoidCallback toggle) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: _p(12, FontWeight.w500, _C.textMid)),
+      Text(label, style: _p(12, FontWeight.w500, AppColors.managerTextMid)),
       const SizedBox(height: 5),
       TextFormField(
         controller: ctrl,
         obscureText: obscure,
-        style: _p(13, FontWeight.w500, _C.textDark),
+        style: _p(13, FontWeight.w500, AppColors.managerTextDark),
         decoration: InputDecoration(
           prefixIcon: const Icon(Icons.lock_outline_rounded,
-              size: 18, color: _C.textLight),
+              size: 18, color: AppColors.managerTextLight),
           suffixIcon: GestureDetector(
             onTap: toggle,
             child: Icon(
               obscure ? Icons.visibility_off_rounded : Icons.visibility_rounded,
-              size: 18, color: _C.textLight,
-            ),
+              size: 18, color: AppColors.managerTextLight),
           ),
           filled: true,
           fillColor: const Color(0xFFF9F9F9),
           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: _C.cardBorder)),
+              borderSide: const BorderSide(color: AppColors.managerCardBorder)),
           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: _C.cardBorder)),
+              borderSide: const BorderSide(color: AppColors.managerCardBorder)),
           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: _C.orange, width: 1.5)),
+              borderSide: const BorderSide(color: AppColors.managerOrange, width: 1.5)),
         ),
       ),
     ]);
@@ -1306,25 +1284,25 @@ class _ProfilePageState extends State<_ProfilePage> {
     return GestureDetector(
       onTap: onTap,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: _p(12, FontWeight.w500, _C.textMid)),
+        Text(label, style: _p(12, FontWeight.w500, AppColors.managerTextMid)),
         const SizedBox(height: 5),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
           decoration: BoxDecoration(
             color: const Color(0xFFF9F9F9),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: _C.cardBorder),
+            border: Border.all(color: AppColors.managerCardBorder),
           ),
           child: Row(children: [
             const Icon(Icons.calendar_today_rounded,
-                size: 16, color: _C.textLight),
+                size: 16, color: AppColors.managerTextLight),
             const SizedBox(width: 10),
             Text(
               date != null
                   ? '${date.day.toString().padLeft(2,'0')}/${date.month.toString().padLeft(2,'0')}/${date.year}'
                   : 'Select date',
               style: _p(13, FontWeight.w500,
-                  date != null ? _C.textDark : _C.textLight),
+                  date != null ? AppColors.managerTextDark : AppColors.managerTextLight),
             ),
           ]),
         ),
@@ -1349,12 +1327,12 @@ class _UserAvatar extends StatelessWidget {
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
     return CircleAvatar(
       radius: radius,
-      backgroundColor: _C.orangeLight,
+      backgroundColor: AppColors.managerOrangeLight,
       backgroundImage: (photoUrl != null && photoUrl!.isNotEmpty)
           ? NetworkImage(photoUrl!) as ImageProvider
           : null,
       child: (photoUrl == null || photoUrl!.isEmpty)
-          ? Text(initial, style: _p(radius * 0.75, FontWeight.w700, _C.orange))
+          ? Text(initial, style: _p(radius * 0.75, FontWeight.w700, AppColors.managerOrange))
           : null,
     );
   }
@@ -1393,11 +1371,11 @@ class _ConfirmDialog extends StatelessWidget {
             child: Icon(icon, color: iconColor, size: 28),
           ),
           const SizedBox(height: 14),
-          Text(title, style: _p(17, FontWeight.w700, _C.textDark)),
+          Text(title, style: _p(17, FontWeight.w700, AppColors.managerTextDark)),
           const SizedBox(height: 8),
           Text(message,
               textAlign: TextAlign.center,
-              style: _p(12, FontWeight.w400, _C.textMid)),
+              style: _p(12, FontWeight.w400, AppColors.managerTextMid)),
           const SizedBox(height: 22),
           Row(children: [
             Expanded(
@@ -1409,7 +1387,7 @@ class _ConfirmDialog extends StatelessWidget {
                       color: const Color(0xFFF2F2F2),
                       borderRadius: BorderRadius.circular(10)),
                   child: Center(child: Text('Cancel',
-                      style: _p(13, FontWeight.w600, _C.textMid))),
+                      style: _p(13, FontWeight.w600, AppColors.managerTextMid))),
                 ),
               ),
             ),

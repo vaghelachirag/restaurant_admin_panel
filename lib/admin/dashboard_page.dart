@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../restaurant_admin/restaurant_orders_page.dart';
+import '../restaurant_admin/category_page.dart';
+import '../restaurant_admin/menu_page.dart';
+import '../restaurant_admin/customer_menu.dart';
 import '../services/restaurant_service.dart';
 import '../data/models/restaurant_model.dart';
 
@@ -19,7 +22,12 @@ class _DashboardPageState extends State<DashboardPage> {
 
   final List<Widget> _pages = [
     const DashboardContent(),
-    // Orders page will be handled separately
+    // Orders page handled separately in build method
+    const PlaceholderWidget(title: 'Categories'),
+    const PlaceholderWidget(title: 'Menu Items'),
+    const PlaceholderWidget(title: 'Customer Menu'),
+    const PlaceholderWidget(title: 'Menu Link'),
+    const PlaceholderWidget(title: 'Settings'),
   ];
 
   @override
@@ -169,8 +177,7 @@ class _DashboardPageState extends State<DashboardPage> {
           borderRadius: BorderRadius.circular(8),
           onTap: () {
             if (index == 7) {
-              // Logout functionality
-              // TODO: Implement logout
+              _handleLogout();
             } else {
               setState(() {
                 _selectedIndex = index;
@@ -201,6 +208,30 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _handleLogout() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // Navigate to login screen
+              Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+            },
+            child: const Text('Logout'),
+          ),
+        ],
       ),
     );
   }
@@ -374,6 +405,48 @@ class DashboardContent extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class PlaceholderWidget extends StatelessWidget {
+  final String title;
+  
+  const PlaceholderWidget({super.key, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.construction,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              '$title - Under Construction',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'This page is currently being developed.',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[500],
               ),
             ),
           ],

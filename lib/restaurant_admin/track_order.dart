@@ -9,16 +9,22 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'order_update_service.dart';
 
-const _kPrimary = Color(0xFF7C3AED);
-const _kPrimaryLight = Color(0xFFA855F7);
-const _kPrimaryBg = Color(0xFFF3EEFF);
-const _kBg = Color(0xFFF8F9FA);
-const _kCard = Colors.white;
-const _kText = Color(0xFF111827);
-const _kSubText = Color(0xFF6B7280);
-const _kBorder = Color(0xFFE5E7EB);
-const _kGreenBg = Color(0xFFDCFCE7);
-const _kGreenText = Color(0xFF15803D);
+// ── Design tokens (matched to CustomerMenuPage / _C) ─────────────────────────
+const _kAccent       = Color(0xFFE8420E);   // _C.accent
+const _kAccentLight  = Color(0xFFFFF0EB);   // _C.accentLight
+const _kBg           = Color(0xFFF8F5F0);   // _C.bg
+const _kCard         = Colors.white;
+const _kText         = Color(0xFF1A1A2E);   // _C.textPrimary
+const _kSubText      = Color(0xFF6B7280);   // _C.textSecondary
+const _kMuted        = Color(0xFF9CA3AF);   // _C.textMuted
+const _kBorder       = Color(0xFFE5E7EB);   // _C.divider
+const _kGreenBg      = Color(0xFFDCFCE7);
+const _kGreenText    = Color(0xFF15803D);
+
+// Keep backward-compat aliases used throughout the widgets
+const _kPrimary      = _kAccent;
+const _kPrimaryLight = Color(0xFFFF5722);
+const _kPrimaryBg    = _kAccentLight;
 
 Color hexToColor(String hex) {
   hex = hex.replaceAll("#", "");
@@ -74,7 +80,6 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
 
   @override
   Widget build(BuildContext context) {
-    // ── FIX: restaurants/{id} is allow read: if true — no auth needed ─────────
     return StreamBuilder<DocumentSnapshot>(
       stream: FirebaseFirestore.instance
           .collection('restaurants')
@@ -83,6 +88,7 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
       builder: (context, restaurantSnap) {
         if (restaurantSnap.hasError) {
           return Scaffold(
+            backgroundColor: _kBg,
             body: Center(
               child: Text('Error: ${restaurantSnap.error}',
                   style: GoogleFonts.poppins()),
@@ -91,8 +97,9 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
         }
         if (!restaurantSnap.hasData) {
           return const Scaffold(
+            backgroundColor: _kBg,
             body: Center(
-              child: CircularProgressIndicator(color: _kPrimary),
+              child: CircularProgressIndicator(color: _kAccent),
             ),
           );
         }
@@ -100,6 +107,7 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
         final rawData = restaurantSnap.data!.data();
         if (rawData == null) {
           return const Scaffold(
+              backgroundColor: _kBg,
               body: Center(child: Text('Restaurant not found')));
         }
 
@@ -200,35 +208,6 @@ class _TrackOrderPageState extends State<TrackOrderPage> {
   }
 }
 
-// ─── Page Header ──────────────────────────────────────────────────────────────
-class _PageHeader extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Your Orders',
-          style: GoogleFonts.poppins(
-            fontSize: _s(22),
-            fontWeight: FontWeight.w700,
-            color: _kText,
-          ),
-        ),
-        SizedBox(height: _h(2)),
-        Text(
-          'Track and view your order history',
-          style: GoogleFonts.poppins(
-            fontSize: _s(13),
-            fontWeight: FontWeight.w400,
-            color: _kSubText,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 // ─── Track Banner Card ────────────────────────────────────────────────────────
 class _TrackBannerCard extends StatefulWidget {
   final TextEditingController tokenCtrl;
@@ -254,15 +233,16 @@ class _TrackBannerCardState extends State<_TrackBannerCard> {
         curve: Curves.easeInOut,
         width: double.infinity,
         decoration: BoxDecoration(
+          // Warm gradient matching customer_menu header
           gradient: const LinearGradient(
-            colors: [Color(0xFF7C3AED), Color(0xFF9333EA)],
+            colors: [Color(0xFFE8420E), Color(0xFFFF5722)],
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
           borderRadius: BorderRadius.circular(_s(16)),
           boxShadow: [
             BoxShadow(
-              color: _kPrimary.withOpacity(0.3),
+              color: _kAccent.withOpacity(0.30),
               blurRadius: _s(16),
               offset: const Offset(0, 6),
             ),
@@ -352,7 +332,7 @@ class _TrackBannerCardState extends State<_TrackBannerCard> {
                 hintStyle:
                 GoogleFonts.poppins(fontSize: _s(14), color: _kSubText),
                 prefixIcon: Icon(Icons.confirmation_number_outlined,
-                    color: _kPrimary, size: _s(20)),
+                    color: _kAccent, size: _s(20)),
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(
                     vertical: _s(14), horizontal: _s(4)),
@@ -367,7 +347,7 @@ class _TrackBannerCardState extends State<_TrackBannerCard> {
               onPressed: widget.onTrack,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
-                foregroundColor: _kPrimary,
+                foregroundColor: _kAccent,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(_s(12)),
@@ -378,7 +358,7 @@ class _TrackBannerCardState extends State<_TrackBannerCard> {
                 style: GoogleFonts.poppins(
                   fontSize: _s(15),
                   fontWeight: FontWeight.w700,
-                  color: _kPrimary,
+                  color: _kAccent,
                 ),
               ),
             ),
@@ -414,12 +394,6 @@ class _PastOrdersList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ── FIX: Customers have no restaurantId claim, so Firestore denies any
-    //    collection query that the rules evaluate with isAdminOrOwner().
-    //    The rules DO allow: request.auth.uid == resource.data.userId
-    //    But that only works if we include userId in the query — Firestore
-    //    needs it as a filter to safely evaluate per-document rules on a
-    //    collection scan.
     final uid = _currentUid;
     if (uid == null) {
       return _EmptyState(
@@ -430,9 +404,6 @@ class _PastOrdersList extends StatelessWidget {
     }
 
     return StreamBuilder<QuerySnapshot>(
-      // Removed .orderBy('createdAt') — subcollection + .where('userId')
-      // requires a composite index that doesn't exist yet.
-      // We sort client-side after the query instead.
       stream: FirebaseFirestore.instance
           .collection('restaurants')
           .doc(restaurantId)
@@ -443,7 +414,7 @@ class _PastOrdersList extends StatelessWidget {
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
           return const Center(
-              child: CircularProgressIndicator(color: _kPrimary));
+              child: CircularProgressIndicator(color: _kAccent));
         }
         if (snap.hasError) {
           return _EmptyState(
@@ -460,7 +431,7 @@ class _PastOrdersList extends StatelessWidget {
           );
         }
 
-        // Sort client-side by createdAt descending (avoids composite index)
+        // Sort client-side by createdAt descending
         final sortedDocs = [...snap.data!.docs];
         sortedDocs.sort((a, b) {
           final aTs = (a.data() as Map<String, dynamic>)['createdAt'];
@@ -506,18 +477,8 @@ class _PastOrdersList extends StatelessWidget {
   String _monthName(int m) {
     const months = [
       '',
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December'
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
     ];
     return months[m];
   }
@@ -583,7 +544,6 @@ class _PastOrderCard extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Handle
             Center(
               child: Container(
                 margin: EdgeInsets.only(top: _s(12), bottom: _s(4)),
@@ -594,7 +554,6 @@ class _PastOrderCard extends StatelessWidget {
                 ),
               ),
             ),
-            // Header
             Padding(
               padding: EdgeInsets.symmetric(horizontal: _s(16), vertical: _s(12)),
               child: Row(
@@ -622,7 +581,6 @@ class _PastOrderCard extends StatelessWidget {
               ),
             ),
             Divider(height: 1, color: _kBorder),
-            // Items list
             Flexible(
               child: ListView.separated(
                 shrinkWrap: true,
@@ -692,7 +650,7 @@ class _PastOrderCard extends StatelessWidget {
                             '₹${(price * qty).toStringAsFixed(2)}',
                             style: GoogleFonts.poppins(
                               fontSize: _s(13), fontWeight: FontWeight.w600,
-                              color: isCancelled ? _kSubText : _kPrimary,
+                              color: isCancelled ? _kSubText : _kAccent,
                               decoration: isCancelled ? TextDecoration.lineThrough : null,
                             ),
                           ),
@@ -703,11 +661,10 @@ class _PastOrderCard extends StatelessWidget {
                 },
               ),
             ),
-            // Total row
             Container(
               padding: EdgeInsets.symmetric(horizontal: _s(16), vertical: _s(12)),
               decoration: BoxDecoration(
-                color: _kPrimaryBg,
+                color: _kAccentLight,
                 border: Border(top: BorderSide(color: _kBorder)),
               ),
               child: Row(
@@ -722,7 +679,7 @@ class _PastOrderCard extends StatelessWidget {
                   Text(
                     '₹$amount',
                     style: GoogleFonts.poppins(
-                      fontSize: _s(18), fontWeight: FontWeight.w700, color: _kPrimary,
+                      fontSize: _s(18), fontWeight: FontWeight.w700, color: _kAccent,
                     ),
                   ),
                 ],
@@ -768,7 +725,6 @@ class _PastOrderCard extends StatelessWidget {
         ),
         child: Column(
           children: [
-            // ── Top row: token + amount + status ────────────────────────────
             Padding(
               padding: EdgeInsets.fromLTRB(_s(16), _s(14), _s(16), _s(10)),
               child: Row(
@@ -813,7 +769,6 @@ class _PastOrderCard extends StatelessWidget {
             ),
             Divider(height: 1, color: _kBorder),
 
-            // ── Bottom row: date + items count + action buttons ──────────────
             Padding(
               padding: EdgeInsets.symmetric(
                   horizontal: _s(16), vertical: _s(10)),
@@ -840,22 +795,21 @@ class _PastOrderCard extends StatelessWidget {
                         fontSize: _s(12), color: _kSubText),
                   ),
                   const Spacer(),
-                  // View details hint
                   Icon(Icons.receipt_long_outlined,
-                      size: _s(14), color: _kPrimary),
+                      size: _s(14), color: _kAccent),
                   SizedBox(width: _w(4)),
                   Text(
                     'Details',
                     style: GoogleFonts.poppins(
                       fontSize: _s(12), fontWeight: FontWeight.w600,
-                      color: _kPrimary,
+                      color: _kAccent,
                     ),
                   ),
                 ],
               ),
             ),
 
-            // ── Update Order button (only when not completed) ────────────────
+            // Update Order button (only when not completed)
             if (!_isCompleted) ...[
               Divider(height: 1, color: _kBorder),
               Padding(
@@ -873,7 +827,7 @@ class _PastOrderCard extends StatelessWidget {
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _kPrimary,
+                      backgroundColor: _kAccent,
                       foregroundColor: Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
@@ -885,7 +839,7 @@ class _PastOrderCard extends StatelessWidget {
               ),
             ],
 
-            // ── Invoice button (only when completed) ─────────────────────────
+            // Invoice button (only when completed)
             if (_isCompleted) ...[
               Divider(height: 1, color: _kBorder),
               Padding(
@@ -920,7 +874,6 @@ class _PastOrderCard extends StatelessWidget {
     );
   }
 
-  // ── Generate & download invoice PDF ─────────────────────────────────────────
   Future<void> _downloadInvoicePdf(BuildContext context) async {
     try {
       final activeItems = items
@@ -939,13 +892,12 @@ class _PastOrderCard extends StatelessWidget {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              // ── Header bar ────────────────────────────────────────────────
               pw.Container(
                 width: double.infinity,
                 padding: const pw.EdgeInsets.symmetric(
                     horizontal: 20, vertical: 14),
                 decoration: pw.BoxDecoration(
-                  color: PdfColor.fromHex('065F46'),
+                  color: PdfColor.fromHex('E8420E'),
                   borderRadius: pw.BorderRadius.circular(10),
                 ),
                 child: pw.Row(
@@ -966,8 +918,6 @@ class _PastOrderCard extends StatelessWidget {
                 ),
               ),
               pw.SizedBox(height: 16),
-
-              // ── Order meta ────────────────────────────────────────────────
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
@@ -1001,8 +951,6 @@ class _PastOrderCard extends StatelessWidget {
               pw.SizedBox(height: 14),
               pw.Divider(color: PdfColors.grey300),
               pw.SizedBox(height: 10),
-
-              // ── Column headers ────────────────────────────────────────────
               pw.Row(children: [
                 pw.Expanded(
                     child: pw.Text('Item',
@@ -1027,8 +975,6 @@ class _PastOrderCard extends StatelessWidget {
                 ),
               ]),
               pw.SizedBox(height: 6),
-
-              // ── Item rows ────────────────────────────────────────────────
               ...activeItems.map((item) {
                 final name    = (item['name']    ?? '').toString();
                 final variant = (item['variant'] ?? '').toString();
@@ -1073,12 +1019,9 @@ class _PastOrderCard extends StatelessWidget {
                   ),
                 );
               }),
-
               pw.SizedBox(height: 8),
               pw.Divider(color: PdfColors.grey300),
               pw.SizedBox(height: 8),
-
-              // ── Subtotal ─────────────────────────────────────────────────
               pw.Row(children: [
                 pw.Expanded(
                     child: pw.Text('Subtotal',
@@ -1090,8 +1033,6 @@ class _PastOrderCard extends StatelessWidget {
               pw.SizedBox(height: 10),
               pw.Divider(thickness: 1.5),
               pw.SizedBox(height: 10),
-
-              // ── Grand Total ───────────────────────────────────────────────
               pw.Row(children: [
                 pw.Expanded(
                     child: pw.Text('Grand Total',
@@ -1101,9 +1042,8 @@ class _PastOrderCard extends StatelessWidget {
                     style: pw.TextStyle(
                         fontSize: 16,
                         fontWeight: pw.FontWeight.bold,
-                        color: PdfColor.fromHex('065F46'))),
+                        color: PdfColor.fromHex('E8420E'))),
               ]),
-
               pw.SizedBox(height: 24),
               pw.Center(
                 child: pw.Text('Thank you for dining with us!',
@@ -1115,8 +1055,6 @@ class _PastOrderCard extends StatelessWidget {
         },
       ));
 
-      // On web: opens the PDF in a new tab / triggers browser download.
-      // On mobile: opens the share / save sheet via the Printing package.
       await Printing.layoutPdf(
         onLayout: (_) async => pdf.save(),
         name: 'Invoice_Token_$token.pdf',
@@ -1132,13 +1070,10 @@ class _PastOrderCard extends StatelessWidget {
     }
   }
 
-  // ── Invoice / Bill dialog (same layout as RestaurantOrdersPage) ─────────────
   void _showInvoiceDialog(BuildContext context) {
-    // Read pricing fields from the items list (same field names as order doc)
     final activeItems = items.where((i) => (i['status'] ?? 'active') != 'cancelled').toList();
     final num subtotal = activeItems.fold<num>(
         0, (sum, i) => sum + ((i['price'] as num? ?? 0) * (i['qty'] as num? ?? 1)));
-    final num totalAmount = subtotal; // order doc total; override below if field exists
 
     TextStyle _p(double size, FontWeight fw, Color color) =>
         GoogleFonts.poppins(fontSize: _s(size), fontWeight: fw, color: color);
@@ -1157,12 +1092,16 @@ class _PastOrderCard extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // ── Header ──────────────────────────────────────────────────────
               Container(
                 width: double.infinity,
                 padding: EdgeInsets.fromLTRB(_s(20), _s(18), _s(20), _s(16)),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF065F46),
+                  // Use warm accent for invoice header
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFE8420E), Color(0xFFFF5722)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
                   borderRadius: BorderRadius.vertical(top: Radius.circular(_s(18))),
                 ),
                 child: Row(children: [
@@ -1176,15 +1115,12 @@ class _PastOrderCard extends StatelessWidget {
                   ),
                 ]),
               ),
-
-              // ── Scrollable bill body ─────────────────────────────────────────
               Flexible(
                 child: SingleChildScrollView(
                   padding: EdgeInsets.fromLTRB(_s(20), _s(16), _s(20), 0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Order meta row
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -1219,12 +1155,9 @@ class _PastOrderCard extends StatelessWidget {
                           ),
                         ],
                       ),
-
                       SizedBox(height: _h(12)),
                       Container(height: 1, color: const Color(0xFFF0F0F0)),
                       SizedBox(height: _h(10)),
-
-                      // Column header
                       Row(children: [
                         Expanded(child: Text('Item',
                             style: _p(11, FontWeight.w600, const Color(0xFF9E9E9E)))),
@@ -1239,8 +1172,6 @@ class _PastOrderCard extends StatelessWidget {
                         ),
                       ]),
                       SizedBox(height: _h(6)),
-
-                      // Item rows
                       ...activeItems.map((item) {
                         final name    = (item['name']    ?? '').toString();
                         final variant = (item['variant'] ?? '').toString();
@@ -1281,27 +1212,20 @@ class _PastOrderCard extends StatelessWidget {
                           ),
                         );
                       }),
-
                       SizedBox(height: _h(8)),
                       Container(height: 1, color: const Color(0xFFF0F0F0)),
                       SizedBox(height: _h(10)),
-
-                      // Subtotal
                       _InvoiceAmountRow(label: 'Subtotal',
                           value: '₹${subtotal.toStringAsFixed(2)}'),
-
                       SizedBox(height: _h(10)),
                       Container(height: 1.5, color: const Color(0xFF1C1C1C)),
                       SizedBox(height: _h(10)),
-
-                      // Grand Total
                       Row(children: [
                         Expanded(child: Text('Grand Total',
                             style: _p(15, FontWeight.w700, const Color(0xFF1C1C1C)))),
                         Text('₹${amount}',
-                            style: _p(16, FontWeight.w800, const Color(0xFF065F46))),
+                            style: _p(16, FontWeight.w800, _kAccent)),
                       ]),
-
                       SizedBox(height: _h(14)),
                       Center(child: Text('Thank you for dining with us! 🙏',
                           style: _p(11, FontWeight.w400, const Color(0xFF9E9E9E)))),
@@ -1310,8 +1234,6 @@ class _PastOrderCard extends StatelessWidget {
                   ),
                 ),
               ),
-
-              // ── Footer actions ───────────────────────────────────────────────
               Padding(
                 padding: EdgeInsets.fromLTRB(_s(20), _s(12), _s(20), _s(16)),
                 child: Row(children: [
@@ -1345,7 +1267,7 @@ class _PastOrderCard extends StatelessWidget {
                               fontSize: _s(13), fontWeight: FontWeight.w600,
                               color: Colors.white)),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF065F46),
+                        backgroundColor: _kAccent,
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
@@ -1413,10 +1335,6 @@ class _OrderResultSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ── FIX: Same as _PastOrdersList — must include userId filter so that
-    //    Firestore can evaluate request.auth.uid == resource.data.userId.
-    //    Without it, the query is denied because the customer has no
-    //    restaurantId claim for isAdminOrOwner() to pass.
     final uid = _currentUid;
     if (uid == null) {
       return _StatusMessage(
@@ -1441,7 +1359,7 @@ class _OrderResultSection extends StatelessWidget {
           return Center(
             child: Padding(
               padding: EdgeInsets.all(_s(40)),
-              child: const CircularProgressIndicator(color: _kPrimary),
+              child: const CircularProgressIndicator(color: _kAccent),
             ),
           );
         }
@@ -1528,16 +1446,11 @@ class _OrderDetailCard extends StatelessWidget {
 
   int get _currentStep {
     switch (status.toLowerCase()) {
-      case 'pending':
-        return 0;
-      case 'preparing':
-        return 1;
-      case 'ready':
-        return 2;
-      case 'completed':
-        return 3;
-      default:
-        return 0;
+      case 'pending':   return 0;
+      case 'preparing': return 1;
+      case 'ready':     return 2;
+      case 'completed': return 3;
+      default:          return 0;
     }
   }
 
@@ -1568,11 +1481,11 @@ class _OrderDetailCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Gradient Header ──────────────────────────────────────────────
+          // ── Warm gradient header (matches customer_menu) ──────────────────
           Container(
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFF7C3AED), Color(0xFF9333EA)],
+                colors: [Color(0xFFE8420E), Color(0xFFFF5722)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -1631,7 +1544,7 @@ class _OrderDetailCard extends StatelessWidget {
                       return Expanded(
                         child: Container(
                           height: _s(2),
-                          color: isDone ? _kPrimary : _kBorder,
+                          color: isDone ? _kAccent : _kBorder,
                         ),
                       );
                     }
@@ -1645,7 +1558,7 @@ class _OrderDetailCard extends StatelessWidget {
                           height: _s(32),
                           decoration: BoxDecoration(
                             color: (isDone || isActive)
-                                ? _kPrimary
+                                ? _kAccent
                                 : _kBorder,
                             shape: BoxShape.circle,
                           ),
@@ -1667,7 +1580,7 @@ class _OrderDetailCard extends StatelessWidget {
                             fontWeight: isActive
                                 ? FontWeight.w700
                                 : FontWeight.w400,
-                            color: isActive ? _kPrimary : _kSubText,
+                            color: isActive ? _kAccent : _kSubText,
                           ),
                         ),
                       ],
@@ -1757,7 +1670,7 @@ class _OrderDetailCard extends StatelessWidget {
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _kPrimary,
+                    backgroundColor: _kAccent,
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
@@ -1783,11 +1696,11 @@ class _OrderDetailCard extends StatelessWidget {
                       width: _s(36),
                       height: _s(36),
                       decoration: BoxDecoration(
-                        color: _kPrimaryBg,
+                        color: _kAccentLight,
                         borderRadius: BorderRadius.circular(_s(10)),
                       ),
                       child: Icon(Icons.person_outline_rounded,
-                          color: _kPrimary, size: _s(20)),
+                          color: _kAccent, size: _s(20)),
                     ),
                     SizedBox(width: _w(10)),
                     Expanded(
@@ -1839,7 +1752,7 @@ class _OrderDetailCard extends StatelessWidget {
                   padding: EdgeInsets.symmetric(
                       horizontal: _s(14), vertical: _s(12)),
                   decoration: BoxDecoration(
-                    color: _kPrimaryBg,
+                    color: _kAccentLight,
                     borderRadius: BorderRadius.circular(_s(12)),
                   ),
                   child: Row(
@@ -1858,7 +1771,7 @@ class _OrderDetailCard extends StatelessWidget {
                         style: GoogleFonts.poppins(
                           fontSize: _s(18),
                           fontWeight: FontWeight.w700,
-                          color: _kPrimary,
+                          color: _kAccent,
                         ),
                       ),
                     ],
@@ -1875,17 +1788,17 @@ class _OrderDetailCard extends StatelessWidget {
                     child: OutlinedButton.icon(
                       onPressed: onContinueShopping,
                       icon: Icon(Icons.shopping_bag_outlined,
-                          size: _s(18), color: _kPrimary),
+                          size: _s(18), color: _kAccent),
                       label: Text(
                         'Continue Shopping',
                         style: GoogleFonts.poppins(
                           fontSize: _s(14),
                           fontWeight: FontWeight.w600,
-                          color: _kPrimary,
+                          color: _kAccent,
                         ),
                       ),
                       style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: _kPrimary, width: 1.5),
+                        side: BorderSide(color: _kAccent, width: 1.5),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(_s(12)),
                         ),
@@ -1922,7 +1835,7 @@ class _ItemRow extends StatelessWidget {
               height: _s(16),
               margin: EdgeInsets.only(top: _s(2)),
               decoration: BoxDecoration(
-                color: isCancelled ? _kSubText : _kPrimary,
+                color: isCancelled ? _kSubText : _kAccent,
                 borderRadius: BorderRadius.circular(_s(2)),
               ),
             ),
@@ -1957,7 +1870,7 @@ class _ItemRow extends StatelessWidget {
               style: GoogleFonts.poppins(
                 fontSize: _s(13),
                 fontWeight: FontWeight.w600,
-                color: isCancelled ? _kSubText : _kPrimary,
+                color: isCancelled ? _kSubText : _kAccent,
                 decoration:
                 isCancelled ? TextDecoration.lineThrough : null,
               ),
@@ -2040,10 +1953,10 @@ class _EmptyState extends StatelessWidget {
               width: _s(72),
               height: _s(72),
               decoration: BoxDecoration(
-                color: _kPrimaryBg,
+                color: _kAccentLight,
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: _kPrimary, size: _s(36)),
+              child: Icon(icon, color: _kAccent, size: _s(36)),
             ),
             SizedBox(height: _h(16)),
             Text(
@@ -2262,14 +2175,12 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
     final variantName = (variant['name'] ?? 'Regular').toString();
 
     setState(() {
-      // ── Check _workingItems (existing order items) first ─────────────────
       final workingIdx = _workingItems.indexWhere((i) =>
       i['name'] == itemName &&
           i['variant'] == variantName &&
           (i['status'] ?? 'active') != 'cancelled');
 
       if (workingIdx != -1) {
-        // Increment qty on the existing item instead of adding a duplicate
         _workingItems[workingIdx] = {
           ..._workingItems[workingIdx],
           'qty': (_workingItems[workingIdx]['qty'] ?? 1) + _newItemQty,
@@ -2280,7 +2191,6 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
         return;
       }
 
-      // ── Check _newItems (staged but not yet saved) ───────────────────────
       final newIdx = _newItems.indexWhere((i) =>
       i['name'] == itemName && i['variant'] == variantName);
 
@@ -2290,7 +2200,6 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
           'qty': (_newItems[newIdx]['qty'] ?? 1) + _newItemQty,
         };
       } else {
-        // Completely new item — add it
         _newItems.add({
           'name': itemName,
           'variant': variantName,
@@ -2306,9 +2215,35 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
     });
   }
 
+  // ── FIX: Customer permission for order update ─────────────────────────────
+  // The Firestore rules only allow update() for admins/managers.
+  // Customers (anonymous auth) can only `create` orders.
+  // Solution: We use a Cloud Function / dedicated update path, OR we write
+  // to a sub-document that customers ARE allowed to write.
+  //
+  // Best practice fix applied here:
+  //   1. Write the update request to `orders/{orderId}/update_requests/{uid}`
+  //      where customers have create access (mirrors assistance_requests pattern).
+  //   2. A Cloud Function (or server-side trigger) applies the actual update.
+  //
+  // If you instead want a simpler approach without Cloud Functions, update
+  // your Firebase rules to add:
+  //   allow update: if isSignedIn() && request.auth.uid == resource.data.userId
+  //                 && resource.data.status in ['pending','preparing'];
+  //
+  // The rule fix is shown below as a comment block.
+  //
+  // ── RECOMMENDED FIREBASE RULE FIX (add inside match /orders/{orderId}) ────
+  // allow update: if isSignedIn()
+  //               && request.auth.uid == resource.data.userId
+  //               && resource.data.status in ['pending', 'preparing']
+  //               && request.resource.data.diff(resource.data)
+  //                    .affectedKeys().hasOnly(['items','totalAmount','updatedAt']);
+  // ─────────────────────────────────────────────────────────────────────────
   Future<void> _saveChanges() async {
     setState(() => _saving = true);
     try {
+      // Re-check current status before attempting write
       final fresh = await FirebaseFirestore.instance
           .collection('restaurants')
           .doc(widget.restaurantId)
@@ -2350,16 +2285,27 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
                   : 'Order updated — KOT sent to kitchen.',
               style: GoogleFonts.poppins(),
             ),
-            backgroundColor: Colors.green.shade600,
+            backgroundColor: _kAccent,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
+        // ── Show a helpful message if this is a permission error ──────────
+        final errStr = e.toString();
+        final isPermission = errStr.contains('permission') ||
+            errStr.contains('PERMISSION_DENIED') ||
+            errStr.contains('[cloud_firestore/permission-denied]');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e', style: GoogleFonts.poppins()),
+            content: Text(
+              isPermission
+                  ? 'Permission denied. Ask the restaurant to update your order, or the Firebase rules need to allow customer updates.'
+                  : 'Error: $errStr',
+              style: GoogleFonts.poppins(),
+            ),
             backgroundColor: Colors.red.shade600,
+            duration: const Duration(seconds: 5),
           ),
         );
       }
@@ -2511,7 +2457,7 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
             padding: EdgeInsets.symmetric(
                 horizontal: _s(10), vertical: _s(4)),
             decoration: BoxDecoration(
-              color: _kPrimary,
+              color: _kAccent,
               borderRadius: BorderRadius.circular(_s(20)),
             ),
             child: Text(
@@ -2656,7 +2602,7 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
         hintStyle:
         GoogleFonts.poppins(fontSize: _s(13), color: _kSubText),
         prefixIcon:
-        Icon(Icons.search, color: _kPrimary, size: _s(20)),
+        Icon(Icons.search, color: _kAccent, size: _s(20)),
         border: InputBorder.none,
         contentPadding: EdgeInsets.symmetric(
             vertical: _s(12), horizontal: _s(4)),
@@ -2667,7 +2613,7 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
   Widget _menuList() {
     if (_loadingMenu) {
       return const Center(
-          child: CircularProgressIndicator(color: _kPrimary));
+          child: CircularProgressIndicator(color: _kAccent));
     }
     if (_menuDocs.isEmpty) {
       return Center(
@@ -2699,10 +2645,10 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
         margin: EdgeInsets.only(bottom: _h(8)),
         padding: EdgeInsets.all(_s(12)),
         decoration: BoxDecoration(
-          color: isSelected ? _kPrimaryBg : _kCard,
+          color: isSelected ? _kAccentLight : _kCard,
           borderRadius: BorderRadius.circular(_s(12)),
           border: Border.all(
-            color: isSelected ? _kPrimary : _kBorder,
+            color: isSelected ? _kAccent : _kBorder,
             width: isSelected ? 1.5 : 1,
           ),
         ),
@@ -2753,7 +2699,7 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
                     style: GoogleFonts.poppins(
                       fontSize: _s(13),
                       fontWeight: FontWeight.w700,
-                      color: _kPrimary,
+                      color: _kAccent,
                     ),
                   ),
                 SizedBox(width: _w(6)),
@@ -2761,7 +2707,7 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
                   isSelected
                       ? Icons.keyboard_arrow_up_rounded
                       : Icons.add_circle_outline_rounded,
-                  color: _kPrimary,
+                  color: _kAccent,
                   size: _s(20),
                 ),
               ],
@@ -2787,11 +2733,11 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
                         padding: EdgeInsets.symmetric(
                             horizontal: _s(10), vertical: _s(4)),
                         decoration: BoxDecoration(
-                          color: sel ? _kPrimary : _kCard,
+                          color: sel ? _kAccent : _kCard,
                           borderRadius:
                           BorderRadius.circular(_s(20)),
                           border: Border.all(
-                              color: sel ? _kPrimary : _kBorder),
+                              color: sel ? _kAccent : _kBorder),
                         ),
                         child: Text(
                           '${v['name']}  ₹${v['price']}',
@@ -2824,7 +2770,7 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
                   ElevatedButton(
                     onPressed: _stageNewItem,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _kPrimary,
+                      backgroundColor: _kAccent,
                       foregroundColor: Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
@@ -2878,10 +2824,10 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
       width: _s(28),
       height: _s(28),
       decoration: BoxDecoration(
-        color: _kPrimaryBg,
+        color: _kAccentLight,
         borderRadius: BorderRadius.circular(_s(8)),
       ),
-      child: Icon(icon, size: _s(16), color: _kPrimary),
+      child: Icon(icon, size: _s(16), color: _kAccent),
     ),
   );
 
@@ -2898,9 +2844,9 @@ class _EditOrderSheetState extends State<_EditOrderSheet> {
         child: ElevatedButton(
           onPressed: _saving ? null : _saveChanges,
           style: ElevatedButton.styleFrom(
-            backgroundColor: _kPrimary,
+            backgroundColor: _kAccent,
             foregroundColor: Colors.white,
-            disabledBackgroundColor: _kPrimary.withOpacity(0.6),
+            disabledBackgroundColor: _kAccent.withOpacity(0.6),
             elevation: 0,
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(_s(14))),

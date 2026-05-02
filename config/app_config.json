@@ -1,0 +1,8 @@
+{
+  "api_keys": {
+    "imgbb": "a923bc17d28cd6fe1be417700456eb69"
+  },
+  "base_urls": {
+    "restaurant_menu": "https://restaurant-menu-system-fc074.web.app"
+  }
+}

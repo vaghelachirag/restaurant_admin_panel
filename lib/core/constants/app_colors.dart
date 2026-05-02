@@ -47,4 +47,56 @@ class AppColors {
   static const Color cream      = Color(0xFFFAF3E8);
   static const Color orange     = Color(0xFFE8621A);
   static const Color green      = Color(0xFF2E7D32);
+
+  // Login page specific colors
+  static const Color darkBackground = Color(0xFF1A1A2E);
+  static const Color mediumDark = Color(0xFF16213E);
+  static const Color darkBlue = Color(0xFF0F3460);
+  static const Color webBackground = Color(0xFFF5F4F0);
+  static const Color mobileBackground = Color(0xFFF7F7F5);
+  static const Color lightGrey = Color(0xFFF8F8F8);
+  static const Color shadowOrange = Color(0xFFE8622A);
+
+  // Cart page specific colors
+  static const Color cartBackground = Color(0xFFF8F5F0);
+  static const Color cartAccent = Color(0xFFE8420E);
+  static const Color cartAccentLight = Color(0xFFFFF0EB);
+  static const Color cartTextPrimary = Color(0xFF1A1A2E);
+  static const Color cartTextSecondary = Color(0xFF6B7280);
+  static const Color cartTextMuted = Color(0xFF9CA3AF);
+  static const Color cartVegGreen = Color(0xFF16A34A);
+  static const Color cartDivider = Color(0xFFE5E7EB);
+  static const Color cartCardWhite = Color(0xFFFFFFFF);
+  static const Color cartShadow = Color(0x0D000000);
+  static const Color cartShadowMd = Color(0x18000000);
+  static const Color cartGradientStart = Color(0xFF7C3AED);
+  static const Color cartGradientMid = Color(0xFF9333EA);
+  static const Color cartGradientEnd = Color(0xFFA855F7);
+  static const Color successGreen = Color(0xFFF0FDF4);
+  static const Color successBorder = Color(0xFF86EFAC);
+  static const Color successBg = Color(0xFFDCFCE7);
+  static const Color successText = Color(0xFF15803D);
+  static const Color successTextDark = Color(0xFF14532D);
+  static const Color warningBg = Color(0xFFFFF7ED);
+
+  // Manager main page specific colors
+  static const Color managerBackground = Color(0xFFFFF3EE);
+  static const Color managerOrange = Color(0xFFE8622A);
+  static const Color managerOrangeLight = Color(0xFFFFF0E8);
+  static const Color managerOrangeMid = Color(0xFFFFD5C0);
+  static const Color managerDark = Color(0xFF070B2D);
+  static const Color managerTextDark = Color(0xFF1A1A1A);
+  static const Color managerTextMid = Color(0xFF666666);
+  static const Color managerTextLight = Color(0xFF999999);
+  static const Color managerCardBorder = Color(0xFFEEEEEE);
+  static const Color managerGreen = Color(0xFF27AE60);
+  static const Color managerGreenBg = Color(0xFFE8F8EF);
+  static const Color managerRed = Color(0xFFE74C3C);
+  static const Color managerRedBg = Color(0xFFFEEEEE);
+  static const Color managerDrawerBg = Color(0xFFFFFFFF);
+  static const Color managerDrawerItem = Color(0xFF374151);
+  static const Color managerDrawerSub = Color(0xFF6B7280);
+  static const Color managerDrawerActive = Color(0xFFE8622A);
+  static const Color managerLightBg = Color(0xFFECEDF8);
+  static const Color managerDisabledBg = Color(0xFFF2F2F2);
 }

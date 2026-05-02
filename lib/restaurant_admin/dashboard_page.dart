@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -19,6 +20,7 @@ import '../uttils/session_manager.dart';
 import '../data/models/restaurant_model.dart';
 import '../services/restaurant_service.dart';
 import '../services/localization_service.dart';
+import '../services/config_service.dart';
 import 'category_page.dart';
 import 'customer_menu.dart';
 import 'manager/manager_list.dart';
@@ -26,11 +28,11 @@ import 'menu_page.dart';
 import 'qr_download_io.dart' if (dart.library.html) 'qr_download_web.dart' as qr_download;
 import 'settings_page.dart';
 
-class _C {
+// ─── App colour palette ───────────────────────────────────────────────────────
+class AppColors {
   // Backgrounds
-  static const bg           = Color(0xFFFFF3EE); // warm peach page background
-  static const sidebar      = Color(0xFFFFFFFF); // pure white sidebar
-  static const card         = Color(0xFFFFFFFF); // white cards
+  static const sidebar      = Color(0xFFFFFFFF); // sidebar background
+  static const card         = Color(0xFFFFFFFF); // card background
 
   // Brand orange (logo bg, active nav, buttons)
   static const orange       = Color(0xFFE8622A);
@@ -83,7 +85,7 @@ List<_SItem> _getSidebarItems(BuildContext context) {
     _SItem(Icons.storefront_outlined,        localizations.translate("customer_menu.title")),
     _SItem(Icons.language_outlined,          localizations.translate("menu_link.title")),
     _SItem(Icons.manage_accounts_outlined,   localizations.translate("managers.title")),
-    _SItem(Icons.manage_accounts_outlined,   localizations.translate("managers.title")),
+    _SItem(Icons.room_service_outlined,     localizations.translate("waiter_assistance.title")),
     _SItem(Icons.settings_outlined,          localizations.translate("settings.title")),
   ];
 }
@@ -106,11 +108,20 @@ class _DashboardPageState extends State<DashboardPage> {
 
   final LocalizationService _localizationService = LocalizationService();
 
-
+  Future<void> _initializeConfig() async {
+    try {
+      await ConfigService.getConfig();
+    } catch (e) {
+      if (kDebugMode) {
+        print('Failed to load config: $e');
+      }
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    _initializeConfig();
     _listenOrders();
     _loadRestaurantData();
     _localizationService.addListener(_onLanguageChanged);
@@ -171,7 +182,7 @@ class _DashboardPageState extends State<DashboardPage> {
       _snack(
         "$count ${loc.newOrder}${count > 1 ? 's' : ''} ${loc.received}",
         Icons.notifications_active_rounded,
-        _C.green,
+        AppColors.green,
       );
       _newOrderCount = 0;
     });
@@ -202,8 +213,11 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   // ── Base menu URL (no table) ─────────────────────────────────────────────
-  String get _baseLink =>
-      "https://restaurant-menu-system-fc074.web.app/#/menu/${widget.restaurantId}";
+  String get _baseLink {
+    final baseUrl = ConfigService.getBaseUrl('restaurant_menu') ??
+        "https://restaurant-menu-system-fc074.web.app";
+    return "$baseUrl/#/menu/${widget.restaurantId}";
+  }
 
   // ── Build link for a specific table (or base if tableId is empty) ────────
   String _linkForTable(String tableId) => tableId.isEmpty
@@ -237,14 +251,14 @@ class _DashboardPageState extends State<DashboardPage> {
       );
 
       // Orange header
-      paint.color = _C.orange;
+      paint.color = AppColors.orange;
       canvas.drawRRect(
         RRect.fromRectXY(
             Rect.fromLTWH(0, 0, cardW, headerH + 24), 24, 24),
         paint,
       );
       // Cover the rounded bottom corners of header
-      paint.color = _C.orange;
+      paint.color = AppColors.orange;
       canvas.drawRect(Rect.fromLTWH(0, headerH, cardW, 24), paint);
 
       // Restaurant name text
@@ -303,7 +317,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
       // Orange footer
       final footerTop = qrTop + qrSize + 20;
-      paint.color = _C.orangeLight;
+      paint.color = AppColors.orangeLight;
       canvas.drawRRect(
         RRect.fromRectXY(
             Rect.fromLTWH(0, footerTop - 24, cardW, footerH + 24), 24, 24),
@@ -317,7 +331,7 @@ class _DashboardPageState extends State<DashboardPage> {
         text: TextSpan(
           text: '📲  Scan QR & Enjoy Ordering!',
           style: TextStyle(
-            color: _C.orange,
+            color: AppColors.orange,
             fontSize: 18,
             fontWeight: FontWeight.w600,
           ),
@@ -340,9 +354,9 @@ class _DashboardPageState extends State<DashboardPage> {
           ? 'menu_qr_${widget.restaurantId}.png'
           : 'menu_qr_${widget.restaurantId}_$tableId.png';
       await qr_download.saveQrBytesToPlatform(pngBytes, fileName);
-      if (mounted) _snack(AppLocalizations.of(context).copied, Icons.check_circle_rounded, _C.green);
+      if (mounted) _snack(AppLocalizations.of(context).copied, Icons.check_circle_rounded, AppColors.green);
     } catch (e) {
-      if (mounted) _snack("${AppLocalizations.of(context).error}: $e", Icons.error_rounded, _C.red);
+      if (mounted) _snack("${AppLocalizations.of(context).error}: $e", Icons.error_rounded, AppColors.red);
     }
   }
 
@@ -381,7 +395,7 @@ class _DashboardPageState extends State<DashboardPage> {
         onCopy: (link) {
           Clipboard.setData(ClipboardData(text: link));
           _snack(AppLocalizations.of(context).copied,
-              Icons.check_circle_rounded, _C.orange);
+              Icons.check_circle_rounded, AppColors.orange);
         },
         onClose: () => Navigator.pop(ctx),
         title: AppLocalizations.of(context).menuItemsLink,
@@ -401,8 +415,8 @@ class _DashboardPageState extends State<DashboardPage> {
           decoration: BoxDecoration(
               color: bg,
               borderRadius: BorderRadius.circular(10),
-              border: bg == _C.orangeLight
-                  ? Border.all(color: _C.cardBorder)
+              border: bg == AppColors.orangeLight
+                  ? Border.all(color: AppColors.cardBorder)
                   : null),
           child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
             Icon(icon, color: fg, size: 15),
@@ -431,14 +445,14 @@ class _DashboardPageState extends State<DashboardPage> {
               padding: const EdgeInsets.all(14),
               decoration: const BoxDecoration(
                   color: Color(0xFFFEEEEE), shape: BoxShape.circle),
-              child: const Icon(Icons.logout_rounded, color: _C.red, size: 24),
+              child: const Icon(Icons.logout_rounded, color: AppColors.red, size: 24),
             ),
             const SizedBox(height: 14),
-            Text(AppLocalizations.of(context).signOutQuestion, style: _p(17, FontWeight.w700, _C.textDark)),
+            Text(AppLocalizations.of(context).signOutQuestion, style: _p(17, FontWeight.w700, AppColors.textDark)),
             const SizedBox(height: 8),
             Text(AppLocalizations.of(context).signOutDescription,
                 textAlign: TextAlign.center,
-                style: _p(12, FontWeight.w400, _C.textMid)),
+                style: _p(12, FontWeight.w400, AppColors.textMid)),
             const SizedBox(height: 20),
             Row(children: [
               Expanded(child: GestureDetector(
@@ -449,7 +463,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       color: const Color(0xFFF2F2F2),
                       borderRadius: BorderRadius.circular(10)),
                   child: Center(child: Text(AppLocalizations.of(context).cancel,
-                      style: _p(13, FontWeight.w600, _C.textMid))),
+                      style: _p(13, FontWeight.w600, AppColors.textMid))),
                 ),
               )),
               const SizedBox(width: 10),
@@ -458,7 +472,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 11),
                   decoration: BoxDecoration(
-                      color: _C.red,
+                      color: AppColors.red,
                       borderRadius: BorderRadius.circular(10)),
                   child: Center(child: Text(AppLocalizations.of(context).signOut,
                       style: _p(13, FontWeight.w600, Colors.white))),
@@ -479,7 +493,7 @@ class _DashboardPageState extends State<DashboardPage> {
         Navigator.of(context).pushNamedAndRemoveUntil('/login', (r) => false);
       }
     } catch (e) {
-      if (mounted) _snack("${AppLocalizations.of(context).logoutError}: $e", Icons.error_rounded, _C.red);
+      if (mounted) _snack("${AppLocalizations.of(context).logoutError}: $e", Icons.error_rounded, AppColors.red);
     }
   }
 
@@ -541,7 +555,7 @@ class _DashboardPageState extends State<DashboardPage> {
           // Breadcrumb
           // Page title
           Text(AppLocalizations.of(context).dashboardTitle,
-              style: _p(isMobile ? 26 : 24, FontWeight.w200, _C.textDark)),
+              style: _p(isMobile ? 26 : 24, FontWeight.w200, AppColors.textDark)),
           SizedBox(height: isMobile ? 18 : 24),
 
           // Stat cards
@@ -574,7 +588,7 @@ class _Sidebar extends StatelessWidget {
     return Container(
       width: 230,
       decoration: const BoxDecoration(
-        color: _C.sidebar,
+        color: AppColors.sidebar,
         border: Border(
           right: BorderSide(color: Color(0xFFEEEEEE), width: 1),
         ),
@@ -589,7 +603,7 @@ class _Sidebar extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: _C.orange,
+                  color: AppColors.orange,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: isLoading
@@ -617,10 +631,10 @@ class _Sidebar extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(isLoading ? AppLocalizations.of(context).restaurant : (restaurant?.name ?? AppLocalizations.of(context).restaurant),
-                        style: _p(15, FontWeight.w700, _C.textDark),
+                        style: _p(15, FontWeight.w700, AppColors.textDark),
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis),
-                    Text(AppLocalizations.of(context).adminPanel, style: _p(11, FontWeight.w400, _C.textLight)),
+                    Text(AppLocalizations.of(context).adminPanel, style: _p(11, FontWeight.w400, AppColors.textLight)),
                   ],
                 ),
               ),
@@ -648,13 +662,13 @@ class _Sidebar extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 13),
                       decoration: BoxDecoration(
-                        color: active ? _C.orangeLight : Colors.transparent,
+                        color: active ? AppColors.orangeLight : Colors.transparent,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Row(children: [
                         Icon(
                           items[i].icon,
-                          color: active ? _C.orange : const Color(0xFF4B5563),
+                          color: active ? AppColors.orange : const Color(0xFF4B5563),
                           size: 20,
                         ),
                         const SizedBox(width: 13),
@@ -663,7 +677,7 @@ class _Sidebar extends StatelessWidget {
                           style: _p(
                             14,
                             active ? FontWeight.w600 : FontWeight.w400,
-                            active ? _C.orange : const Color(0xFF374151),
+                            active ? AppColors.orange : const Color(0xFF374151),
                           ),
                         ),
                       ]),
@@ -735,7 +749,7 @@ class _ApkDownloadButtonState extends State<_ApkDownloadButton> {
         const SizedBox(width: 8),
         Expanded(child: Text(msg, style: GoogleFonts.poppins(color: Colors.white, fontSize: 12))),
       ]),
-      backgroundColor: _C.red,
+      backgroundColor: AppColors.red,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       margin: const EdgeInsets.all(14),
@@ -750,7 +764,7 @@ class _ApkDownloadButtonState extends State<_ApkDownloadButton> {
         const SizedBox(width: 8),
         Expanded(child: Text(msg, style: GoogleFonts.poppins(color: Colors.white, fontSize: 12))),
       ]),
-      backgroundColor: _C.green,
+      backgroundColor: AppColors.green,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       margin: const EdgeInsets.all(14),
@@ -767,9 +781,9 @@ class _ApkDownloadButtonState extends State<_ApkDownloadButton> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
           decoration: BoxDecoration(
-            color: _C.orangeLight,
+            color: AppColors.orangeLight,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: _C.orange.withOpacity(0.25)),
+            border: Border.all(color: AppColors.orange.withOpacity(0.25)),
           ),
           child: Row(children: [
             _loading
@@ -778,10 +792,10 @@ class _ApkDownloadButtonState extends State<_ApkDownloadButton> {
               height: 18,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(_C.orange),
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.orange),
               ),
             )
-                : const Icon(Icons.android_rounded, color: _C.orange, size: 20),
+                : const Icon(Icons.android_rounded, color: AppColors.orange, size: 20),
             const SizedBox(width: 11),
             Expanded(
               child: Column(
@@ -789,17 +803,17 @@ class _ApkDownloadButtonState extends State<_ApkDownloadButton> {
                 children: [
                   Text(
                     _loading ? 'Fetching…' : 'Download App',
-                    style: _p(13, FontWeight.w600, _C.orange),
+                    style: _p(13, FontWeight.w600, AppColors.orange),
                   ),
                   Text(
                     'Restrurant.apk · 56 MB',
-                    style: _p(10, FontWeight.w400, _C.orange.withOpacity(0.7)),
+                    style: _p(10, FontWeight.w400, AppColors.orange.withOpacity(0.7)),
                   ),
                 ],
               ),
             ),
             if (!_loading)
-              const Icon(Icons.download_rounded, color: _C.orange, size: 16),
+              const Icon(Icons.download_rounded, color: AppColors.orange, size: 16),
           ]),
         ),
       ),
@@ -832,7 +846,7 @@ class _MobileBar extends StatelessWidget {
           width: 38,
           height: 38,
           decoration: BoxDecoration(
-              color: _C.orange, borderRadius: BorderRadius.circular(10)),
+              color: AppColors.orange, borderRadius: BorderRadius.circular(10)),
           child: isLoading
               ? const Icon(Icons.storefront_rounded, color: Colors.white, size: 20)
               : (restaurant?.logoUrl != null
@@ -857,10 +871,10 @@ class _MobileBar extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(isLoading ? AppLocalizations.of(context).restaurant : (restaurant?.name ?? AppLocalizations.of(context).restaurant),
-                style: _p(14, FontWeight.w700, _C.textDark),
+                style: _p(14, FontWeight.w700, AppColors.textDark),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis),
-            Text(AppLocalizations.of(context).adminPanel, style: _p(10, FontWeight.w400, _C.textLight)),
+            Text(AppLocalizations.of(context).adminPanel, style: _p(10, FontWeight.w400, AppColors.textLight)),
           ],
         ),
         const Spacer(),
@@ -914,13 +928,13 @@ class _StatCards extends StatelessWidget {
             final cards = [
               _CardData(AppLocalizations.of(context).categories, cats.toString(),
                   "+8% ${AppLocalizations.of(context).fromYesterday}",   true,
-                  Icons.folder_open_rounded, _C.blueIcon,   _C.blueIconBg),
+                  Icons.folder_open_rounded, AppColors.blueIcon,   AppColors.blueIconBg),
               _CardData(AppLocalizations.of(context).menuItems,  menus.toString(),
                   "-5% ${AppLocalizations.of(context).fromYesterday}",   false,
-                  Icons.restaurant_menu,   _C.purpleIcon, _C.purpleIconBg),
+                  Icons.restaurant_menu,   AppColors.purpleIcon, AppColors.purpleIconBg),
               _CardData(AppLocalizations.of(context).orders,      orders.toString(),
                   "+1.2% ${AppLocalizations.of(context).fromYesterday}", true,
-                  Icons.shopping_bag_outlined, _C.greenIcon, _C.greenIconBg),
+                  Icons.shopping_bag_outlined, AppColors.greenIcon, AppColors.greenIconBg),
             ];
 
             if (isMobile) {
@@ -985,9 +999,9 @@ class _StatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _C.card,
+        color: AppColors.card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _C.cardBorder),
+        border: Border.all(color: AppColors.cardBorder),
         boxShadow: [
           BoxShadow(
               color: Colors.black.withOpacity(0.04),
@@ -1000,23 +1014,23 @@ class _StatCard extends StatelessWidget {
           child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(d.label, style: _p(12, FontWeight.w400, _C.textLight)),
+                Text(d.label, style: _p(12, FontWeight.w400, AppColors.textLight)),
                 const SizedBox(height: 6),
-                Text(d.value, style: _p(30, FontWeight.w700, _C.textDark)),
+                Text(d.value, style: _p(30, FontWeight.w700, AppColors.textDark)),
                 const SizedBox(height: 8),
                 Row(children: [
                   Icon(
                     d.up
                         ? Icons.trending_up_rounded
                         : Icons.trending_down_rounded,
-                    color: d.up ? _C.green : _C.red,
+                    color: d.up ? AppColors.green : AppColors.red,
                     size: 14,
                   ),
                   const SizedBox(width: 4),
                   Flexible(
                     child: Text(d.trend,
                         style: _p(10, FontWeight.w500,
-                            d.up ? _C.green : _C.red)),
+                            d.up ? AppColors.green : AppColors.red)),
                   ),
                 ]),
               ]),
@@ -1102,9 +1116,9 @@ class _SalesChart extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.all(22),
           decoration: BoxDecoration(
-            color: _C.card,
+            color: AppColors.card,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: _C.cardBorder),
+            border: Border.all(color: AppColors.cardBorder),
             boxShadow: [
               BoxShadow(
                   color: Colors.black.withOpacity(0.04),
@@ -1117,25 +1131,25 @@ class _SalesChart extends StatelessWidget {
             children: [
               Row(children: [
                 Text(AppLocalizations.of(context).salesDetails,
-                    style: _p(15, FontWeight.w600, _C.textDark)),
+                    style: _p(15, FontWeight.w600, AppColors.textDark)),
                 const Spacer(),
                 if (isLoading)
                   const SizedBox(
                     width: 14,
                     height: 14,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: _C.orange),
+                        strokeWidth: 2, color: AppColors.orange),
                   ),
                 if (!isLoading)
                   Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: _C.orangeLight,
+                      color: AppColors.orangeLight,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text('Last 7 days',
-                        style: _p(10, FontWeight.w500, _C.orange)),
+                        style: _p(10, FontWeight.w500, AppColors.orange)),
                   ),
               ]),
               SizedBox(height: isMobile ? 16 : 20),
@@ -1143,7 +1157,7 @@ class _SalesChart extends StatelessWidget {
                 height: isMobile ? 200 : 260,
                 child: isLoading
                     ? const Center(
-                    child: CircularProgressIndicator(color: _C.orange))
+                    child: CircularProgressIndicator(color: AppColors.orange))
                     : LineChart(LineChartData(
                   minY: 0,
                   maxY: maxY,
@@ -1163,7 +1177,7 @@ class _SalesChart extends StatelessWidget {
                         interval: interval,
                         getTitlesWidget: (v, _) => Text(
                           v.toInt().toString(),
-                          style: _p(10, FontWeight.w400, _C.textLight),
+                          style: _p(10, FontWeight.w400, AppColors.textLight),
                         ),
                       ),
                     ),
@@ -1181,7 +1195,7 @@ class _SalesChart extends StatelessWidget {
                             child: Text(
                               dayLabel(idx),
                               style:
-                              _p(10, FontWeight.w400, _C.textLight),
+                              _p(10, FontWeight.w400, AppColors.textLight),
                             ),
                           );
                         },
@@ -1210,14 +1224,14 @@ class _SalesChart extends StatelessWidget {
                       spots: spots,
                       isCurved: true,
                       curveSmoothness: 0.3,
-                      color: _C.orange,
+                      color: AppColors.orange,
                       barWidth: 2.5,
                       dotData: FlDotData(
                         show: true,
                         getDotPainter: (_, __, ___, ____) =>
                             FlDotCirclePainter(
                               radius: 4.5,
-                              color: _C.orange,
+                              color: AppColors.orange,
                               strokeWidth: 2.5,
                               strokeColor: Colors.white,
                             ),
@@ -1226,8 +1240,8 @@ class _SalesChart extends StatelessWidget {
                         show: true,
                         gradient: LinearGradient(
                           colors: [
-                            _C.orange.withOpacity(0.18),
-                            _C.orange.withOpacity(0.0),
+                            AppColors.orange.withOpacity(0.18),
+                            AppColors.orange.withOpacity(0.0),
                           ],
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
@@ -1326,19 +1340,19 @@ class _QrDialogState extends State<_QrDialog> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                        color: _C.orangeLight,
+                        color: AppColors.orangeLight,
                         borderRadius: BorderRadius.circular(12)),
                     child: const Icon(Icons.qr_code_2_rounded,
-                        color: _C.orange, size: 22),
+                        color: AppColors.orange, size: 22),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                       child: Text(widget.title,
-                          style: _p(17, FontWeight.w700, _C.textDark))),
+                          style: _p(17, FontWeight.w700, AppColors.textDark))),
                   GestureDetector(
                     onTap: widget.onClose,
                     child: const Icon(Icons.close_rounded,
-                        color: _C.textLight, size: 22),
+                        color: AppColors.textLight, size: 22),
                   ),
                 ]),
                 const SizedBox(height: 20),
@@ -1346,7 +1360,7 @@ class _QrDialogState extends State<_QrDialog> {
                 // ── Table selector ───────────────────────────────────────────────
                 if (widget.tables.length > 1) ...[
                   Text('Select Table',
-                      style: _p(12, FontWeight.w600, _C.textDark)),
+                      style: _p(12, FontWeight.w600, AppColors.textDark)),
                   const SizedBox(height: 8),
                   Container(
                     width: double.infinity,
@@ -1355,15 +1369,15 @@ class _QrDialogState extends State<_QrDialog> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: _C.cardBorder),
+                      border: Border.all(color: AppColors.cardBorder),
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         value: _selectedTableId,
                         isExpanded: true,
                         icon: const Icon(Icons.keyboard_arrow_down_rounded,
-                            color: _C.textMid),
-                        style: _p(13, FontWeight.w500, _C.textDark),
+                            color: AppColors.textMid),
+                        style: _p(13, FontWeight.w500, AppColors.textDark),
                         onChanged: (v) {
                           if (v != null) setState(() => _selectedTableId = v);
                         },
@@ -1377,8 +1391,8 @@ class _QrDialogState extends State<_QrDialog> {
                                   : Icons.table_restaurant_rounded,
                               size: 16,
                               color: t['id']!.isEmpty
-                                  ? _C.textLight
-                                  : _C.orange,
+                                  ? AppColors.textLight
+                                  : AppColors.orange,
                             ),
                             const SizedBox(width: 10),
                             Text(t['name']!),
@@ -1401,7 +1415,7 @@ class _QrDialogState extends State<_QrDialog> {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: _C.cardBorder),
+                        border: Border.all(color: AppColors.cardBorder),
                         boxShadow: [
                           BoxShadow(
                               color: Colors.black.withOpacity(0.06),
@@ -1416,7 +1430,7 @@ class _QrDialogState extends State<_QrDialog> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 14),
                           decoration: const BoxDecoration(
-                            color: _C.orange,
+                            color: AppColors.orange,
                             borderRadius:
                             BorderRadius.vertical(top: Radius.circular(15)),
                           ),
@@ -1431,7 +1445,7 @@ class _QrDialogState extends State<_QrDialog> {
                               textAlign: TextAlign.center,
                               style: _p(15, FontWeight.w700, Colors.white),
                             ),
-                            if (!_selectedTableId.isEmpty) ...[
+                            if (_selectedTableId.isNotEmpty) ...[
                               const SizedBox(height: 4),
                               Container(
                                 padding: const EdgeInsets.symmetric(
@@ -1465,7 +1479,7 @@ class _QrDialogState extends State<_QrDialog> {
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: _C.cardBorder),
+                                border: Border.all(color: AppColors.cardBorder),
                               ),
                               child: QrImageView(
                                 data: _currentLink,
@@ -1489,24 +1503,24 @@ class _QrDialogState extends State<_QrDialog> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                            color: _C.orangeLight,
+                            color: AppColors.orangeLight,
                             borderRadius: const BorderRadius.vertical(
                                 bottom: Radius.circular(15)),
                             border: Border(
                                 top: BorderSide(
-                                    color: _C.orange.withOpacity(0.15))),
+                                    color: AppColors.orange.withOpacity(0.15))),
                           ),
                           child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 const Icon(Icons.qr_code_scanner_rounded,
-                                    color: _C.orange, size: 16),
+                                    color: AppColors.orange, size: 16),
                                 const SizedBox(width: 8),
                                 Flexible(
                                   child: Text(
                                     'Scan QR & Enjoy Ordering!',
                                     textAlign: TextAlign.center,
-                                    style: _p(12, FontWeight.w600, _C.orange),
+                                    style: _p(12, FontWeight.w600, AppColors.orange),
                                   ),
                                 ),
                               ]),
@@ -1524,9 +1538,9 @@ class _QrDialogState extends State<_QrDialog> {
                   decoration: BoxDecoration(
                       color: const Color(0xFFF7F7F7),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: _C.cardBorder)),
+                      border: Border.all(color: AppColors.cardBorder)),
                   child: SelectableText(_currentLink,
-                      style: _p(10, FontWeight.w400, _C.textMid)),
+                      style: _p(10, FontWeight.w400, AppColors.textMid)),
                 ),
                 const SizedBox(height: 16),
 
@@ -1538,17 +1552,17 @@ class _QrDialogState extends State<_QrDialog> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
-                            color: _C.orangeLight,
+                            color: AppColors.orangeLight,
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: _C.cardBorder)),
+                            border: Border.all(color: AppColors.cardBorder)),
                         child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               const Icon(Icons.copy_rounded,
-                                  color: _C.orange, size: 15),
+                                  color: AppColors.orange, size: 15),
                               const SizedBox(width: 7),
                               Text(widget.copyLabel,
-                                  style: _p(13, FontWeight.w600, _C.orange)),
+                                  style: _p(13, FontWeight.w600, AppColors.orange)),
                             ]),
                       ),
                     ),
@@ -1568,8 +1582,8 @@ class _QrDialogState extends State<_QrDialog> {
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
                             color: _downloading
-                                ? _C.orange.withOpacity(0.6)
-                                : _C.orange,
+                                ? AppColors.orange.withOpacity(0.6)
+                                : AppColors.orange,
                             borderRadius: BorderRadius.circular(10)),
                         child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,

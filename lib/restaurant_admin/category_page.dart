@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../uttils/responsive.dart';
 import '../services/localization_service.dart';
+import '../services/config_service.dart';
 import '../uttils/snackbar_helper.dart';
 
 class CategoryPage extends StatefulWidget {
@@ -24,12 +25,25 @@ class CategoryPage extends StatefulWidget {
 class _CategoryPageState extends State<CategoryPage> {
   XFile? pickedImage;
   Uint8List? imageBytes;
-  final String apiKey = "a923bc17d28cd6fe1be417700456eb69";
+    final TextEditingController nameController = TextEditingController();
 
+  @override
+  void initState() {
+    super.initState();
+    _initializeConfig();
+  }
+
+  Future<void> _initializeConfig() async {
+    try {
+      await ConfigService.getConfig();
+    } catch (e) {
+      if (kDebugMode) {
+        print('Failed to load config: $e');
+      }
+    }
+  }
 
   void addCategory() {
-    TextEditingController nameController = TextEditingController();
-
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -123,14 +137,14 @@ class _CategoryPageState extends State<CategoryPage> {
                 ),
                 // Content
                 Padding(
-                  padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 24 : 20.sp),
+                  padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 18 : 15.sp),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         AppLocalizations.of(context).categoryName,
                         style: TextStyle(
-                          fontSize: kIsWeb ? 14 : 12.sp,
+                          fontSize: kIsWeb ? 5 : 8.sp,
                           fontWeight: FontWeight.w500,
                           color: colorScheme.onSurface,
                         ),
@@ -463,10 +477,7 @@ class _CategoryPageState extends State<CategoryPage> {
                   ),
                 ),
               ),
-
               SizedBox(width: isMobile ? 12 : 16),
-
-              /// ✅ Save / Update Button
               Expanded(
                 flex: 2,
                 child: ElevatedButton(
@@ -496,9 +507,7 @@ class _CategoryPageState extends State<CategoryPage> {
                       );
                       return;
                     }
-
                     setLoading(true);
-
                     try {
                       final imageUrl = await uploadImage();
                       final position =
@@ -697,6 +706,14 @@ class _CategoryPageState extends State<CategoryPage> {
     if (imageBytes == null) return null;
 
     try {
+      final apiKey = ConfigService.getApiKey('imgbb');
+      if (apiKey == null) {
+        if (kDebugMode) {
+          print("IMGBB API key not found in configuration");
+        }
+        return null;
+      }
+
       var request = http.MultipartRequest(
         'POST',
         Uri.parse("https://api.imgbb.com/1/upload?key=$apiKey"),
@@ -722,8 +739,6 @@ class _CategoryPageState extends State<CategoryPage> {
       return null;
     }
   }
-
-
 
   Widget imageUploadWidget(VoidCallback onTap, {String? imageUrl}) {
     final theme = Theme.of(context);
@@ -1471,246 +1486,318 @@ class _CategoryPageState extends State<CategoryPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 22, 24, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    AppLocalizations.of(context).categoriesTitle,
-                    style: GoogleFonts.poppins(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w200,
-                      color: const Color(0xFF0E1A2F),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Compact header bar ─────────────────────────────────────────
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('restaurants')
+                  .doc(widget.restaurantId)
+                  .collection('categories')
+                  .snapshots(),
+              builder: (context, countSnapshot) {
+                final count = countSnapshot.data?.docs.length ?? 0;
+                final isMobile = MediaQuery.of(context).size.width < 650;
+                final sidePad = isMobile ? 14.0 : 24.0;
+                return Container(
+                  padding: EdgeInsets.fromLTRB(sidePad, 10, sidePad, 10),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    border: Border(
+                      bottom: BorderSide(color: Color(0xFFF0F0F0)),
                     ),
                   ),
-                  const Spacer(),
-                  ElevatedButton(
-                    onPressed: addCategory,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF070B2D),
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 12,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              AppLocalizations.of(context).categoriesTitle,
+                              style: GoogleFonts.poppins(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF0E1A2F),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                Container(
+                                  width: 7,
+                                  height: 7,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFE8622A),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '$count Total Categories',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w400,
+                                    color: const Color(0xFF666666),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.add, size: 16),
-                        const SizedBox(width: 8),
-                        Text(
-                          AppLocalizations.of(context).addCategory,
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
+                      // ── Add Category button ────────────────────────────
+                      GestureDetector(
+                        onTap: addCategory,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF070B2D),
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF070B2D).withOpacity(0.18),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.add_rounded,
+                                  size: 16, color: Colors.white),
+                              const SizedBox(width: 7),
+                              Text(
+                                AppLocalizations.of(context).addCategory,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Expanded(
-                child: StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('restaurants')
-                      .doc(widget.restaurantId)
-                      .collection('categories')
-                      .orderBy("position")
-                      .snapshots(),
-                  builder: (context, catSnapshot) {
-                    if (!catSnapshot.hasData) {
-                      return LayoutBuilder(
-                        builder: (context, constraints) {
-                          int crossAxisCount = 1;
-                          if (constraints.maxWidth >= 1200) {
-                            crossAxisCount = 4;
-                          } else if (constraints.maxWidth >= 900) {
-                            crossAxisCount = 3;
-                          } else if (constraints.maxWidth >= 620) {
-                            crossAxisCount = 2;
-                          }
-                          return GridView.builder(
-                            itemCount: 6,
-                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: crossAxisCount,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 16,
-                              childAspectRatio: 1.72,
-                            ),
-                            itemBuilder: (context, index) =>
-                            const _CategoryCardSkeleton(),
-                          );
-                        },
-                      );
-                    }
-
-                    final categories = catSnapshot.data!.docs;
-                    if (categories.isEmpty) {
-                      return _NoCategoriesEmptyState(
-                        onAddCategory: addCategory,
-                      );
-                    }
-
-                    return StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance
-                          .collection("menu_items")
-                          .where("restaurantId",
-                          isEqualTo: widget.restaurantId)
-                          .snapshots(),
-                      builder: (context, menuSnapshot) {
-                        final Map<String, int> itemCounts = {};
-                        if (menuSnapshot.hasData) {
-                          for (final doc in menuSnapshot.data!.docs) {
-                            final data =
-                            doc.data() as Map<String, dynamic>;
-                            final categoryId =
-                            (data["categoryId"] ?? "").toString();
-                            if (categoryId.isEmpty) continue;
-                            itemCounts[categoryId] =
-                                (itemCounts[categoryId] ?? 0) + 1;
-                          }
-                        }
-
-                        return LayoutBuilder(
-                          builder: (context, constraints) {
-                            int crossAxisCount = 1;
-                            if (constraints.maxWidth >= 1200) {
-                              crossAxisCount = 4;
-                            } else if (constraints.maxWidth >= 900) {
-                              crossAxisCount = 3;
-                            } else if (constraints.maxWidth >= 620) {
-                              crossAxisCount = 2;
+                );
+              },
+            ),
+            // ── Body ───────────────────────────────────────────────────────
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                        child: StreamBuilder<QuerySnapshot>(
+                          stream: FirebaseFirestore.instance
+                              .collection('restaurants')
+                              .doc(widget.restaurantId)
+                              .collection('categories')
+                              .orderBy("position")
+                              .snapshots(),
+                          builder: (context, catSnapshot) {
+                            if (!catSnapshot.hasData) {
+                              return LayoutBuilder(
+                                builder: (context, constraints) {
+                                  int crossAxisCount = 1;
+                                  if (constraints.maxWidth >= 1200) {
+                                    crossAxisCount = 4;
+                                  } else if (constraints.maxWidth >= 900) {
+                                    crossAxisCount = 3;
+                                  } else if (constraints.maxWidth >= 620) {
+                                    crossAxisCount = 2;
+                                  }
+                                  return GridView.builder(
+                                    itemCount: 6,
+                                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: crossAxisCount,
+                                      crossAxisSpacing: 16,
+                                      mainAxisSpacing: 16,
+                                      childAspectRatio: 1.72,
+                                    ),
+                                    itemBuilder: (context, index) =>
+                                    const _CategoryCardSkeleton(),
+                                  );
+                                },
+                              );
                             }
 
-                            return GridView.builder(
-                              itemCount: categories.length,
-                              gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: crossAxisCount,
-                                crossAxisSpacing: 16,
-                                mainAxisSpacing: 16,
-                                childAspectRatio: 1.72,
-                              ),
-                              itemBuilder: (context, index) {
-                                final cat = categories[index];
-                                final data =
-                                cat.data() as Map<String, dynamic>;
-                                final name =
-                                (data["name"] ?? "").toString();
-                                final count = itemCounts[cat.id] ?? 0;
+                            final categories = catSnapshot.data!.docs;
+                            if (categories.isEmpty) {
+                              return _NoCategoriesEmptyState(
+                                onAddCategory: addCategory,
+                              );
+                            }
 
-                                return Container(
-                                  padding: const EdgeInsets.all(22),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius:
-                                    BorderRadius.circular(14),
-                                    border: Border.all(
-                                      color: const Color(0xFFE6E8EF),
-                                    ),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                    CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Container(
-                                            width: 100,
-                                            height: 100,
-                                            decoration: BoxDecoration(
-                                              color:
-                                              const Color(0xFFFFF2E6),
-                                              borderRadius:
-                                              BorderRadius.circular(
-                                                  10),
-                                            ),
-                                            child: const Icon(
-                                              Icons.folder_open_outlined,
-                                              color: Color(0xFFE0752D),
-                                              size: 34,
+                            return StreamBuilder<QuerySnapshot>(
+                              stream: FirebaseFirestore.instance
+                                  .collection("menu_items")
+                                  .where("restaurantId",
+                                  isEqualTo: widget.restaurantId)
+                                  .snapshots(),
+                              builder: (context, menuSnapshot) {
+                                final Map<String, int> itemCounts = {};
+                                if (menuSnapshot.hasData) {
+                                  for (final doc in menuSnapshot.data!.docs) {
+                                    final data =
+                                    doc.data() as Map<String, dynamic>;
+                                    final categoryId =
+                                    (data["categoryId"] ?? "").toString();
+                                    if (categoryId.isEmpty) continue;
+                                    itemCounts[categoryId] =
+                                        (itemCounts[categoryId] ?? 0) + 1;
+                                  }
+                                }
+
+                                return LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    int crossAxisCount = 1;
+                                    if (constraints.maxWidth >= 1200) {
+                                      crossAxisCount = 4;
+                                    } else if (constraints.maxWidth >= 900) {
+                                      crossAxisCount = 3;
+                                    } else if (constraints.maxWidth >= 620) {
+                                      crossAxisCount = 2;
+                                    }
+
+                                    return GridView.builder(
+                                      itemCount: categories.length,
+                                      gridDelegate:
+                                      SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: crossAxisCount,
+                                        crossAxisSpacing: 16,
+                                        mainAxisSpacing: 16,
+                                        childAspectRatio: 1.72,
+                                      ),
+                                      itemBuilder: (context, index) {
+                                        final cat = categories[index];
+                                        final data =
+                                        cat.data() as Map<String, dynamic>;
+                                        final name =
+                                        (data["name"] ?? "").toString();
+                                        final count = itemCounts[cat.id] ?? 0;
+
+                                        return Container(
+                                          padding: const EdgeInsets.all(16),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius:
+                                            BorderRadius.circular(14),
+                                            border: Border.all(
+                                              color: const Color(0xFFE6E8EF),
                                             ),
                                           ),
-                                          const Spacer(),
-                                          // ── Edit button ─────────────────
-                                          SizedBox(
-                                            width: kIsWeb ? 30 : 30.sp,
-                                            height: kIsWeb ? 30 : 30.sp,
-                                            child: InkWell(
-                                              onTap: () =>
-                                                  editCategory(cat.id, name),
-                                              borderRadius:
-                                              BorderRadius.circular(6),
-                                              child: Icon(
-                                                Icons.edit_outlined,
-                                                size: kIsWeb ? 30 : 20.sp,
-                                                color: const Color(0xFF6A7280),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Container(
+                                                    width: 60,
+                                                    height: 60,
+                                                    decoration: BoxDecoration(
+                                                      color:
+                                                      const Color(0xFFFFF2E6),
+                                                      borderRadius:
+                                                      BorderRadius.circular(
+                                                          10),
+                                                    ),
+                                                    child: const Icon(
+                                                      Icons.folder_open_outlined,
+                                                      color: Color(0xFFE0752D),
+                                                      size: 24,
+                                                    ),
+                                                  ),
+                                                  const Spacer(),
+                                                  // ── Edit button ─────────────────
+                                                  InkWell(
+                                                    onTap: () =>
+                                                        editCategory(cat.id, name),
+                                                    borderRadius:
+                                                    BorderRadius.circular(8),
+                                                    child: Container(
+                                                      width: kIsWeb ? 32 : 32.sp,
+                                                      height: kIsWeb ? 32 : 32.sp,
+                                                      decoration: BoxDecoration(
+                                                        color: const Color(0xFFF3F4F6),
+                                                        borderRadius:
+                                                        BorderRadius.circular(8),
+                                                      ),
+                                                      child: Icon(
+                                                        Icons.edit_outlined,
+                                                        size: kIsWeb ? 16 : 16.sp,
+                                                        color: const Color(0xFF6A7280),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  SizedBox(width: kIsWeb ? 6 : 6.sp),
+                                                  // ── Delete button ────────────────
+                                                  InkWell(
+                                                    onTap: () =>
+                                                        deleteCategory(cat.id, name),
+                                                    borderRadius:
+                                                    BorderRadius.circular(8),
+                                                    child: Container(
+                                                      width: kIsWeb ? 32 : 32.sp,
+                                                      height: kIsWeb ? 32 : 32.sp,
+                                                      decoration: BoxDecoration(
+                                                        color: const Color(0xFFFFEBEB),
+                                                        borderRadius:
+                                                        BorderRadius.circular(8),
+                                                      ),
+                                                      child: Icon(
+                                                        Icons.delete_outline,
+                                                        size: kIsWeb ? 16 : 16.sp,
+                                                        color: const Color(0xFFE15757),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
-                                            ),
-                                          ),
-                                          SizedBox(width: kIsWeb ? 6 : 6.sp),
-                                          // ── Delete button ────────────────
-                                          SizedBox(
-                                            width: kIsWeb ? 30 : 30.sp,
-                                            height: kIsWeb ? 30 : 30.sp,
-                                            child: InkWell(
-                                              onTap: () =>
-                                                  deleteCategory(cat.id, name),
-                                              borderRadius:
-                                              BorderRadius.circular(6),
-                                              child: Icon(
-                                                Icons.delete_outline,
-                                                size: kIsWeb ? 30 : 20.sp,
-                                                color: const Color(0xFFE15757),
+                                              const Spacer(),
+                                              Text(
+                                                name,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: const Color(0xFF111827),
+                                                ),
                                               ),
-                                            ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                "$count ${AppLocalizations.of(context).items}",
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: const Color(0xFF8A93A3),
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                        ],
-                                      ),
-                                      const Spacer(),
-                                      Text(
-                                        name,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.w700,
-                                          color: const Color(0xFF111827),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        "$count ${AppLocalizations.of(context).items}",
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500,
-                                          color: const Color(0xFF8A93A3),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                        );
+                                      },
+                                    );
+                                  },
                                 );
                               },
                             );
                           },
-                        );
-                      },
-                    );
-                  },
+                        )),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -1886,9 +1973,7 @@ class _NoCategoriesEmptyStateState extends State<_NoCategoriesEmptyState>
                     _GhostCategoryCard(label: 'Desserts', opacity: 0.18),
                   ],
                 ),
-
                 SizedBox(height: kIsWeb ? 12 : 10.sp),
-
                 Text(
                   'Ghost preview — these will appear once you add categories',
                   style: GoogleFonts.poppins(
@@ -2048,7 +2133,7 @@ class _CategoryCardSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),

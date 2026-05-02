@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../core/constants/app_colors.dart';
-import '../restaurant_admin/dashboard_page.dart';
+import '../restaurant_admin/dashboard_page.dart' hide AppColors;
 import '../restaurant_admin/manager_main_page.dart';
 import '../super_admin/restaurants_page.dart';
 import '../services/localization_service.dart';
@@ -147,7 +147,7 @@ class _LoginPageState extends State<LoginPage>
           msg,
           style: GoogleFonts.inter(fontSize: 13, color: Colors.white),
         ),
-        backgroundColor: const Color(0xFF1A1A2E),
+        backgroundColor: AppColors.darkBackground,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         margin: const EdgeInsets.all(16),
@@ -183,12 +183,12 @@ class _LoginPageState extends State<LoginPage>
           width: size,
           height: size,
           decoration: BoxDecoration(
-            color: const Color(0xFFE8622A).withOpacity(0.15),
+            color: AppColors.shadowOrange.withOpacity(0.15),
             borderRadius: BorderRadius.circular(borderRadius),
           ),
           child: Icon(
             Icons.local_fire_department_rounded,
-            color: const Color(0xFFE8622A),
+            color: AppColors.shadowOrange,
             size: size * 0.55,
           ),
         );
@@ -200,7 +200,7 @@ class _LoginPageState extends State<LoginPage>
 
   Widget _buildWebLayout() {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F4F0),
+      backgroundColor: AppColors.webBackground,
       body: Row(
         children: [
           // Left decorative panel
@@ -209,7 +209,7 @@ class _LoginPageState extends State<LoginPage>
             child: Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF1A1A2E), Color(0xFF16213E), Color(0xFF0F3460)],
+                  colors: [AppColors.darkBackground, AppColors.mediumDark, AppColors.darkBlue],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -268,7 +268,7 @@ class _LoginPageState extends State<LoginPage>
                               borderRadius: BorderRadius.circular(20),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFFE8622A).withOpacity(0.35),
+                                  color: AppColors.shadowOrange.withOpacity(0.35),
                                   blurRadius: 32,
                                   spreadRadius: 2,
                                   offset: const Offset(0, 8),
@@ -337,7 +337,7 @@ class _LoginPageState extends State<LoginPage>
                               style: GoogleFonts.playfairDisplay(
                                 fontSize: 32,
                                 fontWeight: FontWeight.w700,
-                                color: const Color(0xFF1A1A2E),
+                                color: AppColors.darkBackground,
                               ),
                             ),
                             const SizedBox(height: 6),
@@ -473,14 +473,14 @@ class _LoginPageState extends State<LoginPage>
       controller: controller,
       obscureText: obscure,
       keyboardType: keyboardType,
-      style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF1A1A2E)),
+      style: GoogleFonts.inter(fontSize: 14, color: AppColors.darkBackground),
       decoration: InputDecoration(
         labelText: label,
         labelStyle: GoogleFonts.inter(fontSize: 13, color: Colors.black),
         prefixIcon: Icon(icon, size: 18, color: Colors.black),
         suffixIcon: suffix,
         filled: true,
-        fillColor: const Color(0xFFF8F8F8),
+        fillColor: AppColors.lightGrey,
         contentPadding:
         const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
@@ -503,7 +503,7 @@ class _LoginPageState extends State<LoginPage>
 
   Widget _buildMobileLayout() {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F5),
+      backgroundColor: AppColors.mobileBackground,
       body: SafeArea(
         child: Center(
           child: FadeTransition(
@@ -527,7 +527,7 @@ class _LoginPageState extends State<LoginPage>
                             borderRadius: BorderRadius.circular(24),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFFE8622A).withOpacity(0.35),
+                                color: AppColors.shadowOrange.withOpacity(0.35),
                                 blurRadius: 36,
                                 spreadRadius: 2,
                                 offset: const Offset(0, 10),
@@ -548,7 +548,7 @@ class _LoginPageState extends State<LoginPage>
                         style: GoogleFonts.playfairDisplay(
                           fontSize: 28,
                           fontWeight: FontWeight.w700,
-                          color: const Color(0xFF1A1A2E),
+                          color: AppColors.darkBackground,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -664,7 +664,7 @@ class _LoginPageState extends State<LoginPage>
       controller: controller,
       obscureText: obscure,
       keyboardType: keyboardType,
-      style: GoogleFonts.inter(fontSize: 15, color: const Color(0xFF1A1A2E)),
+      style: GoogleFonts.inter(fontSize: 15, color: AppColors.darkBackground),
       decoration: InputDecoration(
         labelText: label,
         labelStyle: GoogleFonts.inter(fontSize: 14, color: Colors.grey[500]),

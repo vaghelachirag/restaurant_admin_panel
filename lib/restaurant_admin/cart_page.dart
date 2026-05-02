@@ -6,29 +6,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:restaurant_admin_panel/data/models/cart_item.dart';
 import 'package:restaurant_admin_panel/restaurant_admin/table_management.dart';
+import '../core/constants/app_colors.dart';
 
 import 'order_status_page.dart';
-
-// ─────────────────────────────────────────────
-// DESIGN TOKENS — mirrors customer_menu.dart _C
-// ─────────────────────────────────────────────
-class _C {
-  static const bg            = Color(0xFFF8F5F0);
-  static const accent        = Color(0xFFE8420E);
-  static const accentLight   = Color(0xFFFFF0EB);
-  static const textPrimary   = Color(0xFF1A1A2E);
-  static const textSecondary = Color(0xFF6B7280);
-  static const textMuted     = Color(0xFF9CA3AF);
-  static const vegGreen      = Color(0xFF16A34A);
-  static const divider       = Color(0xFFE5E7EB);
-  static const cardWhite     = Color(0xFFFFFFFF);
-  static const shadow        = Color(0x0D000000);
-  static const shadowMd      = Color(0x18000000);
-  // Header gradient — same as customer_menu.dart
-  static const gradientStart = Color(0xFF7C3AED);
-  static const gradientMid   = Color(0xFF9333EA);
-  static const gradientEnd   = Color(0xFFA855F7);
-}
 
 Color _hexToColor(String hex) {
   hex = hex.replaceAll("#", "");
@@ -135,7 +115,7 @@ class _CartPageState extends State<CartPage> {
       context: context,
       barrierDismissible: false,
       builder: (_) => const Center(
-        child: CircularProgressIndicator(color: _C.accent),
+        child: CircularProgressIndicator(color: AppColors.cartAccent),
       ),
     );
 
@@ -218,7 +198,7 @@ class _CartPageState extends State<CartPage> {
   void _snack(String msg, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg, style: GoogleFonts.poppins()),
-      backgroundColor: isError ? Colors.red : _C.accent,
+      backgroundColor: isError ? Colors.red : AppColors.cartAccent,
     ));
   }
 
@@ -247,8 +227,8 @@ class _CartPageState extends State<CartPage> {
 
         if (_cachedRestaurantData == null) {
           return const Scaffold(
-            backgroundColor: _C.bg,
-            body: Center(child: CircularProgressIndicator(color: _C.accent)),
+            backgroundColor: AppColors.cartBackground,
+            body: Center(child: CircularProgressIndicator(color: AppColors.cartAccent)),
           );
         }
 
@@ -262,7 +242,7 @@ class _CartPageState extends State<CartPage> {
         final double pkgCharge      = _parseDouble(data['packagingCharge']);
 
         return Scaffold(
-          backgroundColor: _C.bg,
+          backgroundColor: AppColors.cartBackground,
           // ── AppBar — same purple gradient as customer_menu header ──────────
           appBar: AppBar(
             elevation: 0,
@@ -283,7 +263,7 @@ class _CartPageState extends State<CartPage> {
             flexibleSpace: Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [_C.gradientStart, _C.gradientMid, _C.gradientEnd],
+                  colors: [AppColors.cartGradientStart, AppColors.cartGradientMid, AppColors.cartGradientEnd],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -404,22 +384,22 @@ class _CartPageState extends State<CartPage> {
               width:  kIsWeb ? 96 : 96.w,
               height: kIsWeb ? 96 : 96.w,
               decoration: const BoxDecoration(
-                  color: _C.accentLight, shape: BoxShape.circle),
+                  color: AppColors.cartAccentLight, shape: BoxShape.circle),
               child: Icon(Icons.shopping_cart_outlined,
-                  size: kIsWeb ? 44 : 44.sp, color: _C.accent),
+                  size: kIsWeb ? 44 : 44.sp, color: AppColors.cartAccent),
             ),
             SizedBox(height: kIsWeb ? 20 : 20.h),
             Text("Your cart is empty",
                 style: GoogleFonts.poppins(
                     fontSize: kIsWeb ? 18 : 18.sp,
                     fontWeight: FontWeight.w700,
-                    color: _C.textPrimary)),
+                    color: AppColors.cartTextPrimary)),
             SizedBox(height: kIsWeb ? 6 : 6.h),
             Text("Add some delicious items to get started",
                 textAlign: TextAlign.center,
                 style: GoogleFonts.poppins(
                     fontSize: kIsWeb ? 13 : 13.sp,
-                    color: _C.textSecondary)),
+                    color: AppColors.cartTextSecondary)),
             SizedBox(height: kIsWeb ? 28 : 28.h),
             SizedBox(
               height: kIsWeb ? 48 : 48.h,
@@ -432,7 +412,7 @@ class _CartPageState extends State<CartPage> {
                         fontSize: kIsWeb ? 15 : 15.sp,
                         fontWeight: FontWeight.w600)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _C.accent,
+                  backgroundColor: AppColors.cartAccent,
                   foregroundColor: Colors.white,
                   elevation: 0,
                   padding: EdgeInsets.symmetric(horizontal: kIsWeb ? 28 : 28.w),
@@ -458,7 +438,7 @@ class _CartPageState extends State<CartPage> {
             Container(
               width: kIsWeb ? 4 : 4.w, height: kIsWeb ? 18 : 18.h,
               decoration: BoxDecoration(
-                  color: _C.accent,
+                  color: AppColors.cartAccent,
                   borderRadius: BorderRadius.circular(2)),
             ),
             SizedBox(width: kIsWeb ? 10 : 10.w),
@@ -466,12 +446,12 @@ class _CartPageState extends State<CartPage> {
                 style: GoogleFonts.poppins(
                     fontSize: kIsWeb ? 15 : 15.sp,
                     fontWeight: FontWeight.w700,
-                    color: _C.textPrimary)),
+                    color: AppColors.cartTextPrimary)),
             const Spacer(),
             Text('${widget.cart.length} item${widget.cart.length > 1 ? 's' : ''}',
                 style: GoogleFonts.poppins(
                     fontSize: kIsWeb ? 12 : 12.sp,
-                    color: _C.textSecondary,
+                    color: AppColors.cartTextSecondary,
                     fontWeight: FontWeight.w500)),
           ]),
           SizedBox(height: kIsWeb ? 14 : 14.h),
@@ -481,7 +461,7 @@ class _CartPageState extends State<CartPage> {
             physics: const NeverScrollableScrollPhysics(),
             itemCount: widget.cart.length,
             separatorBuilder: (_, __) => Divider(
-                height: kIsWeb ? 16 : 16.h, color: _C.divider, thickness: 1),
+                height: kIsWeb ? 16 : 16.h, color: AppColors.divider, thickness: 1),
             itemBuilder: (context, index) {
               final item = widget.cart[index];
               return _buildCartRow(item, index);
@@ -502,15 +482,15 @@ class _CartPageState extends State<CartPage> {
           child: Container(
             width:  kIsWeb ? 64 : 60.w,
             height: kIsWeb ? 64 : 60.w,
-            color: _C.accentLight,
+            color: AppColors.cartAccentLight,
             child: item.image != null
                 ? Image.network(item.image!,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Icon(
                     Icons.restaurant_rounded,
-                    color: _C.accent, size: kIsWeb ? 26 : 26.sp))
+                    color: AppColors.cartAccent, size: kIsWeb ? 26 : 26.sp))
                 : Icon(Icons.restaurant_rounded,
-                color: _C.accent, size: kIsWeb ? 26 : 26.sp),
+                color: AppColors.cartAccent, size: kIsWeb ? 26 : 26.sp),
           ),
         ),
         SizedBox(width: kIsWeb ? 12 : 12.w),
@@ -524,7 +504,7 @@ class _CartPageState extends State<CartPage> {
                   style: GoogleFonts.poppins(
                       fontWeight: FontWeight.w600,
                       fontSize: kIsWeb ? 13 : 13.sp,
-                      color: _C.textPrimary),
+                      color: AppColors.cartTextPrimary),
                   maxLines: 2, overflow: TextOverflow.ellipsis),
               if (item.variant != null && item.variant!.isNotEmpty) ...[
                 SizedBox(height: kIsWeb ? 2 : 2.h),
@@ -533,13 +513,13 @@ class _CartPageState extends State<CartPage> {
                       horizontal: kIsWeb ? 7 : 7.w,
                       vertical:   kIsWeb ? 2 : 2.h),
                   decoration: BoxDecoration(
-                    color: _C.accentLight,
+                    color: AppColors.cartAccentLight,
                     borderRadius: BorderRadius.circular(kIsWeb ? 6 : 6.sp),
                   ),
                   child: Text(item.variant!,
                       style: GoogleFonts.poppins(
                           fontSize: kIsWeb ? 10 : 10.sp,
-                          color: _C.accent,
+                          color: AppColors.cartAccent,
                           fontWeight: FontWeight.w500)),
                 ),
               ],
@@ -548,7 +528,7 @@ class _CartPageState extends State<CartPage> {
                   style: GoogleFonts.poppins(
                       fontWeight: FontWeight.w700,
                       fontSize: kIsWeb ? 14 : 14.sp,
-                      color: _C.accent)),
+                      color: AppColors.cartAccent)),
             ],
           ),
         ),
@@ -576,10 +556,10 @@ class _CartPageState extends State<CartPage> {
             // Qty stepper
             Container(
               decoration: BoxDecoration(
-                color: _C.accentLight,
+                color: AppColors.cartAccentLight,
                 borderRadius: BorderRadius.circular(kIsWeb ? 8 : 8.sp),
                 border: Border.all(
-                    color: _C.accent.withOpacity(0.25), width: 1),
+                    color: AppColors.cartAccent.withOpacity(0.25), width: 1),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -597,7 +577,7 @@ class _CartPageState extends State<CartPage> {
                           style: GoogleFonts.poppins(
                               fontSize: kIsWeb ? 13 : 13.sp,
                               fontWeight: FontWeight.w700,
-                              color: _C.accent)),
+                              color: AppColors.cartAccent)),
                     ),
                   ),
                   _stepBtn(
@@ -625,11 +605,11 @@ class _CartPageState extends State<CartPage> {
         width:  kIsWeb ? 28 : 28.w,
         height: kIsWeb ? 28 : 28.w,
         decoration: BoxDecoration(
-          color: filled ? _C.accent : Colors.transparent,
+          color: filled ? AppColors.cartAccent : Colors.transparent,
           borderRadius: BorderRadius.circular(kIsWeb ? 6 : 6.sp),
         ),
         child: Icon(icon,
-            color: filled ? Colors.white : _C.accent,
+            color: filled ? Colors.white : AppColors.cartAccent,
             size: kIsWeb ? 15 : 15.sp),
       ),
     );
@@ -672,18 +652,18 @@ class _CartPageState extends State<CartPage> {
         widget.preselectedTableId!.isNotEmpty) {
       return Container(
         decoration: BoxDecoration(
-          color: const Color(0xFFF0FDF4),
+          color: AppColors.successGreen,
           borderRadius: BorderRadius.circular(kIsWeb ? 14 : 14.sp),
-          border: Border.all(color: const Color(0xFF86EFAC), width: 1.5),
+          border: Border.all(color: AppColors.successBorder, width: 1.5),
         ),
         padding: EdgeInsets.all(kIsWeb ? 16 : 16.w),
         child: Row(children: [
           Container(
             padding: EdgeInsets.all(kIsWeb ? 10 : 10.w),
             decoration: const BoxDecoration(
-                color: Color(0xFFDCFCE7), shape: BoxShape.circle),
+                color: AppColors.successBg, shape: BoxShape.circle),
             child: Icon(Icons.table_restaurant_rounded,
-                color: _C.vegGreen, size: kIsWeb ? 22 : 22.sp),
+                color: AppColors.cartVegGreen, size: kIsWeb ? 22 : 22.sp),
           ),
           SizedBox(width: kIsWeb ? 14 : 14.w),
           Expanded(
@@ -694,14 +674,14 @@ class _CartPageState extends State<CartPage> {
                     style: GoogleFonts.poppins(
                         fontSize: kIsWeb ? 13 : 13.sp,
                         fontWeight: FontWeight.w600,
-                        color: const Color(0xFF15803D))),
+                        color: AppColors.successText)),
                 SizedBox(height: kIsWeb ? 2 : 2.h),
                 Text(
                     widget.preselectedTableName ?? widget.preselectedTableId!,
                     style: GoogleFonts.poppins(
                         fontSize: kIsWeb ? 15 : 15.sp,
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFF14532D))),
+                        color: AppColors.successTextDark)),
               ],
             ),
           ),
@@ -709,17 +689,17 @@ class _CartPageState extends State<CartPage> {
             padding: EdgeInsets.symmetric(
                 horizontal: kIsWeb ? 10 : 10.w, vertical: kIsWeb ? 4 : 4.h),
             decoration: BoxDecoration(
-                color: const Color(0xFFDCFCE7),
+                color: AppColors.successBg,
                 borderRadius: BorderRadius.circular(20)),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               const Icon(Icons.check_circle_rounded,
-                  color: _C.vegGreen, size: 12),
+                  color: AppColors.cartVegGreen, size: 12),
               SizedBox(width: kIsWeb ? 4 : 4.w),
               Text('Auto',
                   style: GoogleFonts.poppins(
                       fontSize: kIsWeb ? 10 : 10.sp,
                       fontWeight: FontWeight.w600,
-                      color: _C.vegGreen)),
+                      color: AppColors.cartAccent)),
             ]),
           ),
         ]),
@@ -735,7 +715,7 @@ class _CartPageState extends State<CartPage> {
           SizedBox(height: kIsWeb ? 2 : 2.h),
           Text("Choose a table for dine in order",
               style: GoogleFonts.poppins(
-                  fontSize: kIsWeb ? 12 : 12.sp, color: _C.textSecondary)),
+                  fontSize: kIsWeb ? 12 : 12.sp, color: AppColors.cartTextSecondary)),
           SizedBox(height: kIsWeb ? 14 : 14.h),
           StreamBuilder<List<TableModel>>(
             stream: _tableService.watchTables(widget.restaurantId),
@@ -744,7 +724,7 @@ class _CartPageState extends State<CartPage> {
                 return Center(
                   child: Padding(
                     padding: EdgeInsets.symmetric(vertical: kIsWeb ? 20 : 20.h),
-                    child: const CircularProgressIndicator(color: _C.accent),
+                    child: const CircularProgressIndicator(color: AppColors.cartAccent),
                   ),
                 );
               }
@@ -758,20 +738,20 @@ class _CartPageState extends State<CartPage> {
                 return Container(
                   padding: EdgeInsets.all(kIsWeb ? 14 : 14.w),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFF7ED),
+                    color: AppColors.warningBg,
                     borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
-                    border: Border.all(color: _C.accent.withOpacity(0.3)),
+                    border: Border.all(color: AppColors.cartAccent.withOpacity(0.3)),
                   ),
                   child: Row(children: [
                     Icon(Icons.info_outline_rounded,
-                        color: _C.accent, size: kIsWeb ? 18 : 18.sp),
+                        color: AppColors.cartAccent, size: kIsWeb ? 18 : 18.sp),
                     SizedBox(width: kIsWeb ? 8 : 8.w),
                     Expanded(
                       child: Text(
                           "No available tables. Please choose Parcel order.",
                           style: GoogleFonts.poppins(
                               fontSize: kIsWeb ? 12 : 12.sp,
-                              color: _C.accent)),
+                              color: AppColors.cartAccent)),
                     ),
                   ]),
                 );
@@ -792,16 +772,16 @@ class _CartPageState extends State<CartPage> {
                           horizontal: kIsWeb ? 16 : 16.w,
                           vertical:   kIsWeb ? 12 : 12.h),
                       decoration: BoxDecoration(
-                        color: isSel ? _C.accentLight : Colors.white,
+                        color: isSel ? AppColors.cartAccentLight : Colors.white,
                         borderRadius:
                         BorderRadius.circular(kIsWeb ? 12 : 12.sp),
                         border: Border.all(
-                          color: isSel ? _C.accent : _C.divider,
+                          color: isSel ? AppColors.cartAccent : AppColors.cartDivider,
                           width: isSel ? 1.8 : 1,
                         ),
                         boxShadow: isSel
                             ? [BoxShadow(
-                            color: _C.accent.withOpacity(0.15),
+                            color: AppColors.cartAccent.withOpacity(0.15),
                             blurRadius: 8,
                             offset: const Offset(0, 3))]
                             : null,
@@ -810,25 +790,25 @@ class _CartPageState extends State<CartPage> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.table_restaurant_rounded,
-                              color: isSel ? _C.accent : _C.textSecondary,
+                              color: isSel ? AppColors.cartAccent : AppColors.cartTextSecondary,
                               size: kIsWeb ? 24 : 24.sp),
                           SizedBox(height: kIsWeb ? 4 : 4.h),
                           Text(table.name,
                               style: GoogleFonts.poppins(
                                   fontSize: kIsWeb ? 12 : 12.sp,
                                   fontWeight: FontWeight.w600,
-                                  color: isSel ? _C.accent : _C.textPrimary),
+                                  color: isSel ? AppColors.cartAccent : AppColors.cartTextPrimary),
                               textAlign: TextAlign.center),
                           SizedBox(height: kIsWeb ? 2 : 2.h),
                           Row(mainAxisSize: MainAxisSize.min, children: [
                             Icon(Icons.people_outline_rounded,
-                                color: isSel ? _C.accent : _C.textMuted,
+                                color: isSel ? AppColors.cartAccent : AppColors.cartTextMuted,
                                 size: kIsWeb ? 11 : 11.sp),
                             SizedBox(width: kIsWeb ? 2 : 2.w),
                             Text('${table.capacity}',
                                 style: GoogleFonts.poppins(
                                     fontSize: kIsWeb ? 10 : 10.sp,
-                                    color: isSel ? _C.accent : _C.textMuted)),
+                                    color: isSel ? AppColors.cartAccent : AppColors.cartTextMuted)),
                           ]),
                         ],
                       ),
@@ -853,7 +833,7 @@ class _CartPageState extends State<CartPage> {
           SizedBox(height: kIsWeb ? 2 : 2.h),
           Text("Required for parcel orders",
               style: GoogleFonts.poppins(
-                  fontSize: kIsWeb ? 12 : 12.sp, color: _C.textSecondary)),
+                  fontSize: kIsWeb ? 12 : 12.sp, color: AppColors.cartTextSecondary)),
           SizedBox(height: kIsWeb ? 14 : 14.h),
           _buildTextField(
             controller: nameController,
@@ -900,8 +880,8 @@ class _CartPageState extends State<CartPage> {
           _SummaryRow(
             label: "Subtotal",
             value: "₹${getTotal()}",
-            labelColor: _C.textSecondary,
-            valueColor: _C.textPrimary,
+            labelColor: AppColors.cartTextSecondary,
+            valueColor: AppColors.cartTextPrimary,
           ),
 
           if (enableGst && gstPct > 0) ...[
@@ -909,8 +889,8 @@ class _CartPageState extends State<CartPage> {
             _SummaryRow(
               label: "GST (${gstPct % 1 == 0 ? gstPct.toInt() : gstPct}%)",
               value: "₹${getGSTAmount(gstPct).toStringAsFixed(2)}",
-              labelColor: _C.textSecondary,
-              valueColor: _C.textPrimary,
+              labelColor: AppColors.cartTextSecondary,
+              valueColor: AppColors.cartTextPrimary,
             ),
           ],
 
@@ -919,8 +899,8 @@ class _CartPageState extends State<CartPage> {
             _SummaryRow(
               label: "SGST (${sgstPct % 1 == 0 ? sgstPct.toInt() : sgstPct}%)",
               value: "₹${getSGSTAmount(sgstPct).toStringAsFixed(2)}",
-              labelColor: _C.textSecondary,
-              valueColor: _C.textPrimary,
+              labelColor: AppColors.cartTextSecondary,
+              valueColor: AppColors.cartTextPrimary,
             ),
           ],
 
@@ -929,13 +909,13 @@ class _CartPageState extends State<CartPage> {
             _SummaryRow(
               label: "Packaging Charge",
               value: "₹${pkgCharge.toStringAsFixed(2)}",
-              labelColor: _C.textSecondary,
-              valueColor: _C.textPrimary,
+              labelColor: AppColors.cartTextSecondary,
+              valueColor: AppColors.cartTextPrimary,
             ),
           ],
 
           SizedBox(height: kIsWeb ? 12 : 12.h),
-          Divider(color: _C.divider, thickness: 1),
+          Divider(color: AppColors.cartDivider, thickness: 1),
           SizedBox(height: kIsWeb ? 12 : 12.h),
 
           _SummaryRow(
@@ -944,8 +924,8 @@ class _CartPageState extends State<CartPage> {
               enableGst: enableGst, gstPct: gstPct, sgstPct: sgstPct,
               enablePackaging: enablePackaging, packagingCharge: pkgCharge,
             ).toStringAsFixed(2)}",
-            labelColor: _C.textPrimary,
-            valueColor: _C.accent,
+            labelColor: AppColors.cartTextPrimary,
+            valueColor: AppColors.cartAccent,
             fontSize: kIsWeb ? 16.0 : 16.0,
             valueFontWeight: FontWeight.w800,
             labelFontWeight: FontWeight.w600,
@@ -969,10 +949,10 @@ class _CartPageState extends State<CartPage> {
     );
     return Container(
       decoration: BoxDecoration(
-        color: _C.cardWhite,
-        border: const Border(top: BorderSide(color: _C.divider, width: 1)),
+        color: AppColors.cartCardWhite,
+        border: const Border(top: BorderSide(color: AppColors.cartDivider, width: 1)),
         boxShadow: [BoxShadow(
-            color: _C.shadowMd, blurRadius: 16, offset: const Offset(0, -4))],
+            color: AppColors.cartShadowMd, blurRadius: 16, offset: const Offset(0, -4))],
       ),
       padding: EdgeInsets.fromLTRB(
           kIsWeb ? 20 : 20.w, kIsWeb ? 12 : 12.h,
@@ -989,14 +969,14 @@ class _CartPageState extends State<CartPage> {
                 Text("Total",
                     style: GoogleFonts.poppins(
                         fontSize: kIsWeb ? 12 : 12.sp,
-                        color: _C.textSecondary,
+                        color: AppColors.cartTextSecondary,
                         fontWeight: FontWeight.w500)),
                 SizedBox(height: kIsWeb ? 2 : 2.h),
                 Text("₹${total.toStringAsFixed(2)}",
                     style: GoogleFonts.poppins(
                         fontSize: kIsWeb ? 20 : 20.sp,
                         fontWeight: FontWeight.w800,
-                        color: _C.accent)),
+                        color: AppColors.cartAccent)),
               ],
             ),
             SizedBox(width: kIsWeb ? 16 : 16.w),
@@ -1012,13 +992,13 @@ class _CartPageState extends State<CartPage> {
                           fontSize: kIsWeb ? 15 : 15.sp,
                           fontWeight: FontWeight.w700)),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _C.accent,
+                    backgroundColor: AppColors.cartAccent,
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                         borderRadius:
                         BorderRadius.circular(kIsWeb ? 14 : 14.sp)),
-                    shadowColor: _C.accent.withOpacity(0.4),
+                    shadowColor: AppColors.cartAccent.withOpacity(0.4),
                   ),
                   onPressed: () => placeOrder(
                     enableGst: enableGst, gstPct: gstPct, sgstPct: sgstPct,
@@ -1036,10 +1016,10 @@ class _CartPageState extends State<CartPage> {
   // ── Shared helpers ─────────────────────────────────────────────────────────
   Widget _card({required Widget child}) => Container(
     decoration: BoxDecoration(
-      color: _C.cardWhite,
+      color: AppColors.cartCardWhite,
       borderRadius: BorderRadius.circular(kIsWeb ? 16 : 16.sp),
       boxShadow: [BoxShadow(
-          color: _C.shadow, blurRadius: 14, offset: const Offset(0, 4))],
+          color: AppColors.cartShadow, blurRadius: 14, offset: const Offset(0, 4))],
     ),
     padding: EdgeInsets.all(kIsWeb ? 16 : 16.w),
     child: child,
@@ -1050,7 +1030,7 @@ class _CartPageState extends State<CartPage> {
     style: GoogleFonts.poppins(
         fontSize: kIsWeb ? 15 : 15.sp,
         fontWeight: FontWeight.w700,
-        color: _C.textPrimary),
+        color: AppColors.cartTextPrimary),
   );
 
   Widget _sectionPadding({required Widget child, Key? key}) => Padding(
@@ -1074,27 +1054,27 @@ class _CartPageState extends State<CartPage> {
       keyboardType: keyboardType,
       maxLines: maxLines,
       style: GoogleFonts.poppins(
-          color: _C.textPrimary, fontSize: kIsWeb ? 14 : 14.sp),
+          color: AppColors.cartTextPrimary, fontSize: kIsWeb ? 14 : 14.sp),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
         labelStyle: GoogleFonts.poppins(
-            color: _C.textSecondary, fontSize: kIsWeb ? 13 : 13.sp),
+            color: AppColors.cartTextSecondary, fontSize: kIsWeb ? 13 : 13.sp),
         hintStyle: GoogleFonts.poppins(
-            color: _C.textMuted, fontSize: kIsWeb ? 13 : 13.sp),
-        prefixIcon: Icon(icon, color: _C.textSecondary, size: kIsWeb ? 20 : 20.sp),
+            color: AppColors.cartTextMuted, fontSize: kIsWeb ? 13 : 13.sp),
+        prefixIcon: Icon(icon, color: AppColors.cartTextSecondary, size: kIsWeb ? 20 : 20.sp),
         contentPadding: EdgeInsets.symmetric(
             horizontal: kIsWeb ? 14 : 14.w, vertical: kIsWeb ? 14 : 14.h),
         filled: true,
-        fillColor: _C.bg,
+        fillColor: AppColors.cartBackground,
         border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp)),
         enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
-            borderSide: const BorderSide(color: _C.divider)),
+            borderSide: const BorderSide(color: AppColors.cartDivider)),
         focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
-            borderSide: const BorderSide(color: _C.accent, width: 1.8)),
+            borderSide: const BorderSide(color: AppColors.cartAccent, width: 1.8)),
       ),
     );
   }
@@ -1126,27 +1106,27 @@ class _OrderTypeButton extends StatelessWidget {
             horizontal: kIsWeb ? 22 : 22.w,
             vertical:   kIsWeb ? 10 : 10.h),
         decoration: BoxDecoration(
-          color: selected ? _C.accentLight : Colors.white,
+          color: selected ? AppColors.cartAccentLight : Colors.white,
           borderRadius: BorderRadius.circular(kIsWeb ? 10 : 10.sp),
           border: Border.all(
-              color: selected ? _C.accent : _C.divider,
+              color: selected ? AppColors.cartAccent : AppColors.cartDivider,
               width: selected ? 1.8 : 1),
           boxShadow: selected
               ? [BoxShadow(
-              color: _C.accent.withOpacity(0.15),
+              color: AppColors.cartAccent.withOpacity(0.15),
               blurRadius: 8, offset: const Offset(0, 2))]
               : null,
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           Icon(icon,
               size:  kIsWeb ? 16 : 16.sp,
-              color: selected ? _C.accent : _C.textSecondary),
+              color: selected ? AppColors.cartAccent : AppColors.cartTextSecondary,),
           SizedBox(width: kIsWeb ? 6 : 6.w),
           Text(label,
               style: GoogleFonts.poppins(
                   fontSize: kIsWeb ? 13 : 13.sp,
                   fontWeight: FontWeight.w600,
-                  color: selected ? _C.accent : _C.textSecondary)),
+                  color: selected ? AppColors.cartAccent : AppColors.cartTextSecondary)),
         ]),
       ),
     );

@@ -94,6 +94,7 @@ flutter:
     - assets/icons/
     - assets/images/rasora_web.png
     - assets/images/rasora_android.png
+    - config/app_config.json
 flutter_icons:
   android: true
   ios: true
