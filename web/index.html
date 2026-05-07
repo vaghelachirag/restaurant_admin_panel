@@ -1,51 +1,38 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <!--
-      If you are serving your web app in a path other than the root, change the
-      href value below to reflect the base path you are serving from.
-
-      The path provided below has to start and end with a slash "/" in order for
-      it to work correctly.
-
-      For more details:
-      * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-      This is a placeholder for base href that will be replaced by the value of
-      the `--base-href` argument provided to `flutter build`.
-    -->
     <base href="$FLUTTER_BASE_HREF">
 
     <meta charset="UTF-8">
     <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-    <meta name="description" content="Restaurant Admin Panel - Manage your restaurant with ease">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Order delicious food from Rasora">
 
-    <!-- iOS meta tags & icons -->
+    <!-- ── PWA Meta Tags ──────────────────────────────────────────────────── -->
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <meta name="apple-mobile-web-app-title" content="Restaurant Admin Panel">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Rasora">
+    <meta name="theme-color" content="#C9A84C">
+    <meta name="msapplication-TileColor" content="#000000">
+
+    <!-- ── Icons ─────────────────────────────────────────────────────────── -->
     <link rel="apple-touch-icon" href="icons/Icon-192.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="icons/Icon-192.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="icons/Icon-512.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/Icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icons/Icon-512.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon.png">
+    <link rel="shortcut icon" href="favicon.png">
 
-    <!-- Favicon for all contexts -->
-    <link rel="icon" type="image/png" sizes="32x32" href="favicon.png"/>
-    <link rel="icon" type="image/png" sizes="16x16" href="favicon.png"/>
-    <link rel="icon" type="image/png" href="favicon.png"/>
-    <link rel="shortcut icon" href="favicon.png"/>
-
-    <!-- PWA icons -->
-    <link rel="icon" sizes="192x192" href="icons/Icon-192.png">
-    <link rel="icon" sizes="512x512" href="icons/Icon-512.png">
-
-    <title>Restaurant Admin Panel</title>
+    <title>Rasora</title>
     <link rel="manifest" href="manifest.json">
 
-    <!-- ═══════════════════════════════════════════════════════════════════
-         Tesseract.js v2  —  stable version, free browser OCR, no API key
-    ═══════════════════════════════════════════════════════════════════ -->
+    <!-- ── Tesseract OCR ─────────────────────────────────────────────────── -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/2.1.5/tesseract.min.js"
             crossorigin="anonymous"
             referrerpolicy="no-referrer"></script>
-
     <script>
         window.runTesseractOCR = async function(base64DataUrl) {
           try {
@@ -70,10 +57,70 @@
         };
         console.log('[Tesseract] window.runTesseractOCR ready:', typeof window.runTesseractOCR);
     </script>
+
+    <!-- ── Firebase Messaging SDK ────────────────────────────────────────── -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+
+    <!-- ── PWA Install Prompt capture ────────────────────────────────────── -->
+    <script>
+        window._pwaInstallPrompt = null;
+        window._pwaInstalled     = false;
+
+        window.addEventListener('beforeinstallprompt', function(e) {
+            e.preventDefault();
+            window._pwaInstallPrompt = e;
+            console.log('[PWA] beforeinstallprompt captured');
+            if (window._onInstallPromptReady) window._onInstallPromptReady();
+        });
+
+        window.addEventListener('appinstalled', function() {
+            window._pwaInstalled     = true;
+            window._pwaInstallPrompt = null;
+            console.log('[PWA] App installed');
+            if (window._onAppInstalled) window._onAppInstalled();
+        });
+
+        window.triggerPwaInstall = async function() {
+            if (!window._pwaInstallPrompt) return 'unavailable';
+            window._pwaInstallPrompt.prompt();
+            const choice             = await window._pwaInstallPrompt.userChoice;
+            window._pwaInstallPrompt = null;
+            return choice.outcome;
+        };
+
+        window.isPwaInstallAvailable = function() {
+            return window._pwaInstallPrompt !== null;
+        };
+
+        window.isPwaInstalled = function() {
+            return window.matchMedia('(display-mode: standalone)').matches ||
+                   window.navigator.standalone === true ||
+                   window._pwaInstalled;
+        };
     </script>
 
 </head>
 <body>
+
+<!-- ── Service Worker Registration ───────────────────────────────────── -->
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+            navigator.serviceWorker
+                .register('/firebase-messaging-sw.js')
+                .then(function (reg) {
+                    console.log('[FCM] Service worker registered:', reg.scope);
+                })
+                .catch(function (err) {
+                    console.error('[FCM] Service worker registration failed:', err);
+                });
+        });
+    } else {
+        console.warn('[FCM] Service workers not supported — background notifications unavailable');
+    }
+</script>
+
 <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

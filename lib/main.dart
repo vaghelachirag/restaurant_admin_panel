@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -14,19 +15,33 @@ import 'package:restaurant_admin_panel/services/localization_service.dart';
 import 'auth/login_page.dart';
 import 'firebase_options.dart';
 import 'restaurant_admin/customer_menu.dart';
+import 'restaurant_admin/order_status_page.dart'; // ← NEW
 import 'super_admin/restaurants_page.dart';
 import 'widgets/splash_screen.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  FCM BACKGROUND HANDLER — must be top-level function
+//  On web, background is handled by firebase-messaging-sw.js.
+//  This is only active on Android/iOS native builds.
+// ─────────────────────────────────────────────────────────────────────────────
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  debugPrint('[FCM] Background message: ${message.notification?.title}');
+}
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  URL PARSERS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Existing — reads /#/menu/restaurantId (QR scan flow)
 String? _getMenuRestaurantIdFromInitialUrl() {
   if (!kIsWeb) return null;
-
-  final hash = Uri.base.fragment;
-  final uri = Uri.tryParse(hash);
+  final hash     = Uri.base.fragment;
+  final uri      = Uri.tryParse(hash);
   if (uri == null) return null;
-
   final segments = uri.pathSegments;
   if (segments.length == 2 && segments.first == 'menu') {
     return segments[1];
@@ -34,13 +49,31 @@ String? _getMenuRestaurantIdFromInitialUrl() {
   return null;
 }
 
+/// NEW — reads /#/order/restaurantId/orderId
+/// Used when customer taps a push notification while Chrome tab is CLOSED.
+/// SW opens this URL → Flutter reads it → shows OrderPlacedScreen directly.
+Map<String, String>? _getOrderFromInitialUrl() {
+  if (!kIsWeb) return null;
+  final hash     = Uri.base.fragment;
+  final uri      = Uri.tryParse(hash);
+  if (uri == null) return null;
+  final segments = uri.pathSegments;
+  if (segments.length == 3 && segments[0] == 'order') {
+    return {
+      'restaurantId': segments[1],
+      'orderId':      segments[2],
+    };
+  }
+  return null;
+}
+
 Future<void> _createAndroidNotificationChannel() async {
   const AndroidNotificationChannel channel = AndroidNotificationChannel(
-    'new_order_channel',                                  // id  ← matches index.js
-    'New Orders',                                         // name
+    'new_order_channel',
+    'New Orders',
     description: 'Plays sound when a new order arrives',
     importance: Importance.max,
-    sound: RawResourceAndroidNotificationSound('new_order'), // no extension
+    sound: RawResourceAndroidNotificationSound('new_order'),
     playSound: true,
     enableVibration: true,
   );
@@ -51,22 +84,17 @@ Future<void> _createAndroidNotificationChannel() async {
       ?.createNotificationChannel(channel);
 }
 
-/// Initialises OneSignal once with all listeners.
-/// Called from main() — only on mobile (Android / iOS).
 Future<void> setupNotificationChannel() async {
   await _createAndroidNotificationChannel();
 
-  // ── 2. Init OneSignal ────────────────────────────────────────────────────
   OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
   OneSignal.initialize(AppConfig.oneSignalAppId);
   await OneSignal.Notifications.requestPermission(true);
 
-  // ── 3. Display notifications while the app is in the foreground ──────────
   OneSignal.Notifications.addForegroundWillDisplayListener((event) {
     event.notification.display();
   });
 
-  // ── 4. Handle notification tap ───────────────────────────────────────────
   OneSignal.Notifications.addClickListener((OSNotificationClickEvent event) {
     final data = event.notification.additionalData;
     if (data == null) return;
@@ -80,47 +108,48 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-/*  // Add this:
-  await FirebaseAppCheck.instance.activate(
-    androidProvider: AndroidProvider.debug,
-  );*/
+  // Register FCM background handler — native only
+  if (!kIsWeb) {
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  }
 
-  // OneSignal is fully initialised inside setupNotificationChannel().
-  // Web does not support push notifications via OneSignal SDK.
   if (!kIsWeb) {
     await setupNotificationChannel();
   }
 
-
   final menuRestaurantId = _getMenuRestaurantIdFromInitialUrl();
+  final orderFromUrl     = _getOrderFromInitialUrl(); // ← NEW
 
-  bool loggedIn = false;
+  bool    loggedIn     = false;
   String? role;
   String? restaurantId;
 
-
-  if (menuRestaurantId == null) {
-    loggedIn = await SessionManager.isLoggedIn();
-    role = await SessionManager.getRole();
+  // Only read session if not arriving from menu QR or notification tap
+  if (menuRestaurantId == null && orderFromUrl == null) {
+    loggedIn     = await SessionManager.isLoggedIn();
+    role         = await SessionManager.getRole();
     restaurantId = await SessionManager.getRestaurantId();
   }
 
-
   runApp(
-      ProviderScope(
-          child:MyApp(
-            loggedIn: loggedIn,
-            role: role,
-            restaurantId: restaurantId,
-            menuRestaurantId: menuRestaurantId,
-          )));
+    ProviderScope(
+      child: MyApp(
+        loggedIn:         loggedIn,
+        role:             role,
+        restaurantId:     restaurantId,
+        menuRestaurantId: menuRestaurantId,
+        orderFromUrl:     orderFromUrl, // ← NEW
+      ),
+    ),
+  );
 }
 
 class MyApp extends StatefulWidget {
-  final bool loggedIn;
-  final String? role;
-  final String? restaurantId;
-  final String? menuRestaurantId;
+  final bool                 loggedIn;
+  final String?              role;
+  final String?              restaurantId;
+  final String?              menuRestaurantId;
+  final Map<String, String>? orderFromUrl; // ← NEW
 
   const MyApp({
     super.key,
@@ -128,6 +157,7 @@ class MyApp extends StatefulWidget {
     this.role,
     this.restaurantId,
     this.menuRestaurantId,
+    this.orderFromUrl, // ← NEW
   });
 
   @override
@@ -152,9 +182,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _onLanguageChanged() {
-    if (mounted) {
-      setState(() {});
-    }
+    if (mounted) setState(() {});
   }
 
   Widget get _targetPage {
@@ -167,19 +195,19 @@ class _MyAppState extends State<MyApp> {
     if (widget.role == AppConfig.manager) {
       if (widget.restaurantId == null) return const LoginPage();
       return WaiterShell(
-        restaurantId: widget.restaurantId!, waiterId: '1SS',
+        restaurantId: widget.restaurantId!,
+        waiterId:     '1SS',
       );
     }
 
     if (widget.restaurantId == null) return const LoginPage();
-    return DashboardPage(
-        restaurantId: widget.restaurantId!);
+    return DashboardPage(restaurantId: widget.restaurantId!);
   }
 
   Widget _buildApp({required Widget home}) {
     return ScreenUtilInit(
-      designSize: const Size(1440, 900),
-      minTextAdapt: true,
+      designSize:      const Size(1440, 900),
+      minTextAdapt:    true,
       splitScreenMode: true,
       child: InheritedLocalizations(
         service: _localizationService,
@@ -195,8 +223,8 @@ class _MyAppState extends State<MyApp> {
             GlobalCupertinoLocalizations.delegate,
           ],
           supportedLocales: LocalizationService.supportedLocales,
-          locale: _localizationService.currentLocale,
-          home: home,
+          locale:           _localizationService.currentLocale,
+          home:             home,
         ),
       ),
     );
@@ -204,6 +232,22 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+
+    // ── NEW: Notification tap — show order status page directly ───────────
+    // Customer tapped push notification while Chrome was CLOSED.
+    // SW opened /#/order/restaurantId/orderId
+    // Flutter reads it here and shows OrderPlacedScreen immediately.
+    if (widget.orderFromUrl != null) {
+      return _buildApp(
+        home: OrderPlacedScreen(
+          orderId:      widget.orderFromUrl!['orderId']!,
+          restaurantId: widget.orderFromUrl!['restaurantId']!,
+        ),
+      );
+    }
+    // ─────────────────────────────────────────────────────────────────────
+
+    // Existing: QR scan menu URL
     if (widget.menuRestaurantId != null) {
       return _buildApp(
         home: CustomerMenuPage(
@@ -212,9 +256,10 @@ class _MyAppState extends State<MyApp> {
       );
     }
 
+    // Existing: admin/manager routing
     return ScreenUtilInit(
-      designSize: const Size(1440, 900),
-      minTextAdapt: true,
+      designSize:      const Size(1440, 900),
+      minTextAdapt:    true,
       splitScreenMode: true,
       child: InheritedLocalizations(
         service: _localizationService,
@@ -230,10 +275,10 @@ class _MyAppState extends State<MyApp> {
             GlobalCupertinoLocalizations.delegate,
           ],
           supportedLocales: LocalizationService.supportedLocales,
-          locale: _localizationService.currentLocale,
+          locale:           _localizationService.currentLocale,
           onGenerateRoute: (settings) {
             final routeName = settings.name ?? '/';
-            final uri = Uri.parse(routeName);
+            final uri       = Uri.parse(routeName);
 
             if (uri.pathSegments.length == 2 &&
                 uri.pathSegments.first == 'menu') {
@@ -245,7 +290,7 @@ class _MyAppState extends State<MyApp> {
 
             if (routeName == '/login') {
               return MaterialPageRoute(
-                builder: (_) => const LoginPage(),
+                builder:  (_) => const LoginPage(),
                 settings: settings,
               );
             }

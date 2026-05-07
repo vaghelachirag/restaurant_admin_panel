@@ -1,3 +1,5 @@
+import 'dart:async' show unawaited;
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -6,6 +8,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:restaurant_admin_panel/data/models/cart_item.dart';
 import 'package:restaurant_admin_panel/restaurant_admin/table_management.dart';
+import 'package:restaurant_admin_panel/services/fcm_web_service.dart'; // ← NEW
 import '../core/constants/app_colors.dart';
 
 import 'order_status_page.dart';
@@ -171,6 +174,20 @@ class _CartPageState extends State<CartPage> {
           "qty"     : e.qty,
         }).toList(),
       });
+
+      // ── NEW: Request browser notification permission + save FCM token ──────
+      // Fires after order is written to Firestore so the document already
+      // exists when FcmWebService calls .update({'browserToken': token}).
+      // unawaited so the permission dialog doesn't delay navigation.
+      if (kIsWeb) {
+        unawaited(
+          FcmWebService.init(
+            orderId:      orderId,
+            restaurantId: widget.restaurantId,
+          ),
+        );
+      }
+      // ───────────────────────────────────────────────────────────────────────
 
       widget.cart.clear();
 
