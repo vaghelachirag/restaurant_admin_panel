@@ -21,11 +21,6 @@ import 'widgets/splash_screen.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  FCM BACKGROUND HANDLER — must be top-level function
-//  On web, background is handled by firebase-messaging-sw.js.
-//  This is only active on Android/iOS native builds.
-// ─────────────────────────────────────────────────────────────────────────────
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -49,9 +44,6 @@ String? _getMenuRestaurantIdFromInitialUrl() {
   return null;
 }
 
-/// NEW — reads /#/order/restaurantId/orderId
-/// Used when customer taps a push notification while Chrome tab is CLOSED.
-/// SW opens this URL → Flutter reads it → shows OrderPlacedScreen directly.
 Map<String, String>? _getOrderFromInitialUrl() {
   if (!kIsWeb) return null;
   final hash     = Uri.base.fragment;

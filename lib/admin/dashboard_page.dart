@@ -53,7 +53,6 @@ class _DashboardPageState extends State<DashboardPage> {
         children: [
           // Sidebar (always open)
           _buildSidebar(),
-          
           // Main Content
           Expanded(
             child: _selectedIndex == 1 

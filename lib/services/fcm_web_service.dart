@@ -1,13 +1,13 @@
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
-import 'dart:convert';
 import 'dart:async';
 
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
+import 'fcm_web_service_stub.dart'
+if (dart.library.html) 'fcm_web_service_web.dart';  // ← this file was missing
 
 class FcmWebService {
   FcmWebService._();
@@ -19,85 +19,138 @@ class FcmWebService {
   static String? _pendingOrderId;
   static String? _pendingRestaurantId;
 
-  // ── VAPID key ─────────────────────────────────────────────────────────────
-  // Firebase Console → Project Settings → Cloud Messaging
-  // → Web configuration → Web Push certificates → Key pair (~87 chars, starts B)
   static const String _vapidKey = 'BMhRVrD4tQU9HvyThs6z5kmS3xIHZi7PDb35tIzdWddtSPXxe7GA6IMz9eqo3_yucYjHtww2gkRAfL2FlQ2BKPc';
 
-  // Navigation callback — set in OrderPlacedScreen.initState()
-  // Called when customer taps notification while tab is open.
   static void Function(String orderId, String restaurantId)? onNavigateToOrder;
 
   // ─────────────────────────────────────────────────────────────────────────
-  //  INIT — call after order placed in cart_page.dart
+  //  INIT
   // ─────────────────────────────────────────────────────────────────────────
   static Future<void> init({
     required String orderId,
     required String restaurantId,
   }) async {
-    if (!kIsWeb) return;
     if (_initialized) return;
 
-    _log('init() — orderId=$orderId mobile=${_isMobile()} perm=${_getPermission()}');
+    if (kIsWeb) {
+      await _initWeb(orderId: orderId, restaurantId: restaurantId);
+    } else {
+      await _initNative(orderId: orderId, restaurantId: restaurantId);
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  WEB INIT
+  // ─────────────────────────────────────────────────────────────────────────
+  static Future<void> _initWeb({
+    required String orderId,
+    required String restaurantId,
+  }) async {
+    _log('initWeb() — orderId=$orderId mobile=${isMobileBrowser()} perm=${getNotificationPermission()}');
 
     _listenSwMessages();
 
-    if (_isMobile()) {
-      if (_getPermission() == 'granted') {
+    if (isMobileBrowser()) {
+      if (getNotificationPermission() == 'granted') {
         _initialized = true;
         await _getTokenAndSave(orderId: orderId, restaurantId: restaurantId);
         _listenForeground();
       } else {
         _pendingOrderId      = orderId;
         _pendingRestaurantId = restaurantId;
-        _log('Mobile — waiting for banner tap');
+        _log('Mobile browser — waiting for banner tap');
       }
       return;
     }
 
+    // Desktop web
     _initialized = true;
     try {
       final token = await _requestPermissionAndGetToken();
       if (token == null) { _log('Desktop — permission denied'); return; }
       await _saveTokenToOrder(orderId: orderId, restaurantId: restaurantId, token: token);
       _listenForeground();
-      _log('Desktop ready ✅');
+      _log('Desktop web ready ✅');
     } catch (e, st) {
-      _log('init error: $e\n$st');
+      _log('initWeb error: $e\n$st');
     }
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  //  SW MESSAGE LISTENER — handles NAVIGATE_TO_ORDER from notification click
+  //  NATIVE INIT (Android / iOS)
+  // ─────────────────────────────────────────────────────────────────────────
+  static Future<void> _initNative({
+    required String orderId,
+    required String restaurantId,
+  }) async {
+    _log('initNative() — orderId=$orderId');
+
+    try {
+      final settings = await FirebaseMessaging.instance.requestPermission(
+        alert: true, badge: true, sound: true,
+      );
+
+      if (settings.authorizationStatus != AuthorizationStatus.authorized &&
+          settings.authorizationStatus != AuthorizationStatus.provisional) {
+        _log('Native permission denied');
+        return;
+      }
+
+      // No vapidKey on native platforms
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token == null) { _log('Native token null'); return; }
+
+      _log('Native token: ${token.substring(0, 20)}...');
+
+      await _saveTokenToOrder(
+        orderId: orderId, restaurantId: restaurantId, token: token,
+      );
+
+      _tokenSaved  = true;
+      _initialized = true;
+
+      _listenForeground();
+
+      // App brought from background by tapping notification
+      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        final oid = message.data['orderId']      ?? '';
+        final rid = message.data['restaurantId'] ?? '';
+        _log('onMessageOpenedApp: $oid');
+        if (oid.isNotEmpty && rid.isNotEmpty) onNavigateToOrder?.call(oid, rid);
+      });
+
+      // App launched from terminated state by tapping notification
+      final initial = await FirebaseMessaging.instance.getInitialMessage();
+      if (initial != null) {
+        final oid = initial.data['orderId']      ?? '';
+        final rid = initial.data['restaurantId'] ?? '';
+        _log('getInitialMessage: $oid');
+        if (oid.isNotEmpty && rid.isNotEmpty) onNavigateToOrder?.call(oid, rid);
+      }
+
+      _log('Native FCM ready ✅');
+    } catch (e, st) {
+      _log('initNative error: $e\n$st');
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  SW MESSAGE LISTENER (web only)
   // ─────────────────────────────────────────────────────────────────────────
   static void _listenSwMessages() {
+    if (!kIsWeb) return;
     if (_swMsgListenerSet) return;
     _swMsgListenerSet = true;
 
-    html.window.addEventListener('message', (event) {
-      try {
-        final msgEvent = event as html.MessageEvent;
-        dynamic data   = msgEvent.data;
-        if (data is String) {
-          try { data = jsonDecode(data); } catch (_) { return; }
-        }
-        if (data == null || data['type'] != 'NAVIGATE_TO_ORDER') return;
-
-        final orderId      = data['orderId']?.toString()      ?? '';
-        final restaurantId = data['restaurantId']?.toString() ?? '';
-        if (orderId.isEmpty || restaurantId.isEmpty) return;
-
-        _log('📲 NAVIGATE_TO_ORDER: $orderId');
-        onNavigateToOrder?.call(orderId, restaurantId);
-      } catch (e) {
-        _log('_listenSwMessages error: $e');
-      }
+    listenToSwMessages((orderId, restaurantId) {
+      _log('📲 NAVIGATE_TO_ORDER: $orderId');
+      onNavigateToOrder?.call(orderId, restaurantId);
     });
     _log('SW message listener active ✅');
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  //  REQUEST FROM GESTURE — banner button onTap (mobile only)
+  //  REQUEST FROM GESTURE (mobile browser banner button tap)
   // ─────────────────────────────────────────────────────────────────────────
   static Future<bool> requestFromGesture({
     required String orderId,
@@ -108,15 +161,18 @@ class FcmWebService {
 
     _log('requestFromGesture()');
     try {
-      final result = await html.Notification.requestPermission();
-      _log('requestPermission: $result');
-      if (result != 'granted') return false;
+      final granted = await requestWebPermission();
+      _log('requestPermission result: $granted');
+      if (!granted) return false;
 
       _initialized = true;
-      final saved  = await _getTokenAndSave(orderId: orderId, restaurantId: restaurantId);
+      final saved = await _getTokenAndSave(
+        orderId: orderId, restaurantId: restaurantId,
+      );
       if (saved) {
         _listenForeground();
-        _pendingOrderId = _pendingRestaurantId = null;
+        _pendingOrderId      = null;
+        _pendingRestaurantId = null;
       }
       return saved;
     } catch (e) {
@@ -126,7 +182,7 @@ class FcmWebService {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  //  BANNER WIDGET
+  //  BANNER WIDGET (mobile browser only)
   // ─────────────────────────────────────────────────────────────────────────
   static Widget buildPermissionBanner({
     required BuildContext context,
@@ -135,9 +191,9 @@ class FcmWebService {
     VoidCallback? onGranted,
   }) {
     if (!kIsWeb) return const SizedBox.shrink();
-    if (!_isMobile()) return const SizedBox.shrink();
+    if (!isMobileBrowser()) return const SizedBox.shrink();
     if (_tokenSaved) return const SizedBox.shrink();
-    final perm = _getPermission();
+    final perm = getNotificationPermission();
     if (perm == 'granted' || perm == 'denied') return const SizedBox.shrink();
 
     return _NotificationPermissionBanner(
@@ -146,7 +202,7 @@ class FcmWebService {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  //  INTERNAL
+  //  INTERNAL HELPERS
   // ─────────────────────────────────────────────────────────────────────────
   static Future<String?> _requestPermissionAndGetToken() async {
     final settings = await FirebaseMessaging.instance.requestPermission(
@@ -160,7 +216,9 @@ class FcmWebService {
 
   static Future<String?> _getFcmToken() async {
     try {
-      final token = await FirebaseMessaging.instance.getToken(vapidKey: _vapidKey);
+      final token = await FirebaseMessaging.instance.getToken(
+        vapidKey: kIsWeb ? _vapidKey : null,
+      );
       _log('Token: ${token != null ? "${token.substring(0, 20)}..." : "NULL"}');
       return token;
     } catch (e) {
@@ -175,7 +233,9 @@ class FcmWebService {
   }) async {
     final token = await _getFcmToken();
     if (token == null) { _log('Token null'); return false; }
-    await _saveTokenToOrder(orderId: orderId, restaurantId: restaurantId, token: token);
+    await _saveTokenToOrder(
+      orderId: orderId, restaurantId: restaurantId, token: token,
+    );
     _tokenSaved = true;
     return true;
   }
@@ -191,7 +251,7 @@ class FcmWebService {
         .collection('orders')
         .doc(orderId)
         .update({'browserToken': token});
-    _log('Token saved ✅');
+    _log('Token saved to Firestore ✅');
   }
 
   static void _listenForeground() {
@@ -207,110 +267,43 @@ class FcmWebService {
 
       _log('📩 FOREGROUND: $title — $body');
 
-      _showForegroundNotification(
-        title: title, body: body,
-        orderId: orderId, restaurantId: restaurantId, status: status,
-      );
+      if (kIsWeb) {
+        if (isMobileBrowser()) {
+          postMessageToSw(
+            title: title, body: body,
+            orderId: orderId, restaurantId: restaurantId, status: status,
+          );
+        } else {
+          showNativeNotification(title, body);
+        }
+      } else {
+        // Native: FCM shows notification automatically when app is in background.
+        // When app is in foreground, just update the UI via callback.
+        if (orderId.isNotEmpty && restaurantId.isNotEmpty) {
+          onNavigateToOrder?.call(orderId, restaurantId);
+        }
+      }
     });
+
     _log('Foreground listener set ✅');
   }
 
-  static void _showForegroundNotification({
-    required String title,
-    required String body,
-    String orderId      = '',
-    String restaurantId = '',
-    String status       = '',
-  }) {
-    if (_isMobile()) {
-      _postMessageToSW(title: title, body: body,
-          orderId: orderId, restaurantId: restaurantId, status: status);
-    } else {
-      _showViaConstructor(title: title, body: body);
-    }
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  //  POST MESSAGE TO SW
-  //  Sends SHOW_NOTIFICATION to the SW which calls showNotification().
-  //  The SW's onBackgroundMessage checks clients.matchAll() — since this
-  //  tab is open it will skip showing a second notification automatically.
-  // ─────────────────────────────────────────────────────────────────────────
-  static void _postMessageToSW({
-    required String title,
-    required String body,
-    String orderId      = '',
-    String restaurantId = '',
-    String status       = '',
-  }) {
-    try {
-      final sw = html.window.navigator.serviceWorker;
-      if (sw == null) { _showViaConstructor(title: title, body: body); return; }
-
-      final String json = jsonEncode({
-        'type':         'SHOW_NOTIFICATION',
-        'title':        title,
-        'body':         body,
-        'icon':         '/icons/Icon-192.png',
-        'orderId':      orderId,
-        'restaurantId': restaurantId,
-        'status':       status,
-      });
-
-      sw.ready.then((registration) {
-        final worker = registration.active ?? sw.controller;
-        if (worker == null) {
-          _showViaConstructor(title: title, body: body);
-          return;
-        }
-        worker.postMessage(json);
-        _log('✅ SHOW_NOTIFICATION sent via SW');
-      }).catchError((e) {
-        _log('sw.ready error: $e');
-        _showViaConstructor(title: title, body: body);
-      });
-    } catch (e) {
-      _log('_postMessageToSW error: $e');
-      _showViaConstructor(title: title, body: body);
-    }
-  }
-
-  static void _showViaConstructor({required String title, required String body}) {
-    try {
-      if (!html.Notification.supported) return;
-      if (_getPermission() != 'granted') return;
-      html.Notification(title, body: body, icon: '/icons/Icon-192.png');
-      _log('✅ Desktop notification shown');
-    } catch (e) {
-      _log('_showViaConstructor error: $e');
-    }
-  }
-
-  static String? _getPermission() {
-    try { return html.Notification.permission; } catch (_) { return 'default'; }
-  }
-
-  static bool _isMobile() {
-    try {
-      final ua = html.window.navigator.userAgent.toLowerCase();
-      return ua.contains('android') || ua.contains('iphone') ||
-          ua.contains('ipad')    || ua.contains('mobile')  ||
-          ua.contains('samsung');
-    } catch (_) { return false; }
-  }
-
-  static void _log(String msg) => debugPrint('[FCM-Web] $msg');
+  static void _log(String msg) => debugPrint('[FCM] $msg');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  NOTIFICATION PERMISSION BANNER
+//  NOTIFICATION PERMISSION BANNER WIDGET
 // ─────────────────────────────────────────────────────────────────────────────
 class _NotificationPermissionBanner extends StatefulWidget {
   final String orderId, restaurantId;
   final VoidCallback? onGranted;
+
   const _NotificationPermissionBanner({
-    required this.orderId, required this.restaurantId, this.onGranted,
+    required this.orderId,
+    required this.restaurantId,
+    this.onGranted,
   });
+
   @override
   State<_NotificationPermissionBanner> createState() =>
       _NotificationPermissionBannerState();
@@ -318,83 +311,136 @@ class _NotificationPermissionBanner extends StatefulWidget {
 
 class _NotificationPermissionBannerState
     extends State<_NotificationPermissionBanner> {
-  bool _loading = false, _dismissed = false;
+  bool _loading   = false;
+  bool _dismissed = false;
 
   @override
   Widget build(BuildContext context) {
     if (_dismissed) return const SizedBox.shrink();
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A1A),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFC9A84C), width: 1.2),
-        boxShadow: [BoxShadow(
-          color: const Color(0xFFC9A84C).withOpacity(0.12),
-          blurRadius: 8, offset: const Offset(0, 2),
-        )],
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFC9A84C).withOpacity(0.12),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: Row(children: [
-        Container(
-          width: 40, height: 40,
-          decoration: BoxDecoration(
-            color: const Color(0xFFC9A84C).withOpacity(0.15),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: const Icon(Icons.notifications_active_rounded,
-              color: Color(0xFFC9A84C), size: 22),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Get order updates',
-                style: GoogleFonts.poppins(fontSize: 13,
-                    fontWeight: FontWeight.w700, color: const Color(0xFFC9A84C))),
-            const SizedBox(height: 2),
-            Text('Tap Enable to get notified when your order is ready.',
-                style: GoogleFonts.poppins(fontSize: 11, color: Colors.white70)),
-          ]),
-        ),
-        const SizedBox(width: 8),
-        _loading
-            ? const SizedBox(width: 20, height: 20,
-            child: CircularProgressIndicator(
-                strokeWidth: 2, color: Color(0xFFC9A84C)))
-            : GestureDetector(
-          onTap: () async {
-            setState(() => _loading = true);
-            final granted = await FcmWebService.requestFromGesture(
-              orderId: widget.orderId, restaurantId: widget.restaurantId,
-            );
-            if (!mounted) return;
-            setState(() { _loading = false; _dismissed = true; });
-            if (granted && mounted) {
-              widget.onGranted?.call();
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text('🔔 Notifications enabled!',
-                    style: GoogleFonts.poppins(fontSize: 13)),
-                backgroundColor: const Color(0xFF065F46),
-                behavior: SnackBarBehavior.floating,
-                duration: const Duration(seconds: 2),
-              ));
-            }
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      child: Row(
+        children: [
+          // Bell icon
+          Container(
+            width: 40, height: 40,
             decoration: BoxDecoration(
-                color: const Color(0xFFC9A84C),
-                borderRadius: BorderRadius.circular(8)),
-            child: Text('Enable',
-                style: GoogleFonts.poppins(fontSize: 12,
-                    fontWeight: FontWeight.w700, color: Colors.black)),
+              color: const Color(0xFFC9A84C).withOpacity(0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.notifications_active_rounded,
+              color: Color(0xFFC9A84C),
+              size: 22,
+            ),
           ),
-        ),
-        const SizedBox(width: 6),
-        GestureDetector(
-          onTap: () => setState(() => _dismissed = true),
-          child: const Icon(Icons.close_rounded, size: 18, color: Colors.white38),
-        ),
-      ]),
+          const SizedBox(width: 12),
+
+          // Text
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Get order updates',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFFC9A84C),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Tap Enable to get notified when your order is ready.',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: Colors.white70,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+
+          // Enable button / loader
+          _loading
+              ? const SizedBox(
+            width: 20, height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Color(0xFFC9A84C),
+            ),
+          )
+              : GestureDetector(
+            onTap: () async {
+              setState(() => _loading = true);
+              final granted = await FcmWebService.requestFromGesture(
+                orderId: widget.orderId,
+                restaurantId: widget.restaurantId,
+              );
+              if (!mounted) return;
+              setState(() {
+                _loading   = false;
+                _dismissed = true;
+              });
+              if (granted && mounted) {
+                widget.onGranted?.call();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      '🔔 Notifications enabled!',
+                      style: GoogleFonts.poppins(fontSize: 13),
+                    ),
+                    backgroundColor: const Color(0xFF065F46),
+                    behavior: SnackBarBehavior.floating,
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFC9A84C),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'Enable',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+
+          // Dismiss X
+          GestureDetector(
+            onTap: () => setState(() => _dismissed = true),
+            child: const Icon(
+              Icons.close_rounded,
+              size: 18,
+              color: Colors.white38,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

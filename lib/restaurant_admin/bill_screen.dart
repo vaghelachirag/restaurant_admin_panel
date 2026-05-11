@@ -96,10 +96,14 @@ class _BillContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final restaurantName = (restaurant['name']     ?? 'Restaurant').toString();
+    final restaurantName = (restaurant['restaurantName'] ?? restaurant['name'] ?? 'Restaurant').toString();
     final restaurantAddr = (restaurant['address']  ?? '').toString();
-    final restaurantPhone= (restaurant['phone']    ?? '').toString();
-    final restaurantGstin= (restaurant['gstin']    ?? '').toString();
+    final restaurantPhone= (restaurant['contactNumber'] ?? restaurant['phone'] ?? '').toString();
+    final restaurantGstin= (restaurant['gstNumber'] ?? restaurant['gstin'] ?? '').toString();
+
+    // ── Online QR Payment ──────────────────────────────────────────────────
+    final enableOnlineQr = restaurant['enableOnlineQrPayment'] == true;
+    final qrCodeUrl      = (restaurant['qrCodeUrl'] ?? '').toString();
 
     final items         = (order['items']      as List?) ?? [];
     final tokenNumber   = (order['tokenNumber'] ?? '').toString();
@@ -466,6 +470,33 @@ class _BillContent extends StatelessWidget {
 
                   const SizedBox(height: 24),
 
+                  // ── Pay via QR button (only when online QR is enabled) ────
+                  if (enableOnlineQr && qrCodeUrl.isNotEmpty) ...[
+                    SizedBox(
+                      height: 52,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _showQrPaymentSheet(
+                          context,
+                          restaurantName: restaurantName,
+                          qrCodeUrl: qrCodeUrl,
+                          totalAmount: totalAmount,
+                        ),
+                        icon: const Icon(Icons.qr_code_rounded, size: 20),
+                        label: Text('Pay via QR Code',
+                            style: GoogleFonts.poppins(
+                                fontSize: 15, fontWeight: FontWeight.w700)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0EA5E9),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+
                   // ── Continue Shopping button ───────────────────────────────
                   SizedBox(
                     height: 52,
@@ -507,6 +538,25 @@ class _BillContent extends StatelessWidget {
     );
   }
 
+  // ── QR Payment Bottom Sheet ───────────────────────────────────────────────
+  void _showQrPaymentSheet(
+      BuildContext context, {
+        required String restaurantName,
+        required String qrCodeUrl,
+        required double totalAmount,
+      }) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _QrPaymentSheet(
+        restaurantName: restaurantName,
+        qrCodeUrl: qrCodeUrl,
+        totalAmount: totalAmount,
+      ),
+    );
+  }
+
   Widget _divider() => Container(height: 1, color: const Color(0xFFF0F0F0));
 
   TextStyle _headerStyle() => GoogleFonts.poppins(
@@ -540,7 +590,200 @@ class _AmountRow extends StatelessWidget {
   }
 }
 
-// ─── Meta Chip ────────────────────────────────────────────────────────────────
+// ─── QR Payment Bottom Sheet ──────────────────────────────────────────────────
+class _QrPaymentSheet extends StatelessWidget {
+  final String restaurantName;
+  final String qrCodeUrl;
+  final double totalAmount;
+
+  const _QrPaymentSheet({
+    required this.restaurantName,
+    required this.qrCodeUrl,
+    required this.totalAmount,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 32,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ── Drag handle ─────────────────────────────────────────────────
+          const SizedBox(height: 12),
+          Container(
+            width: 40, height: 4,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE5E7EB),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // ── Header ──────────────────────────────────────────────────────
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0EA5E9).withOpacity(0.08),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                  color: const Color(0xFF0EA5E9).withOpacity(0.2)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44, height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0EA5E9).withOpacity(0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.qr_code_rounded,
+                      color: Color(0xFF0EA5E9), size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Scan to Pay',
+                          style: GoogleFonts.poppins(
+                              fontSize: 15, fontWeight: FontWeight.w700,
+                              color: const Color(0xFF0C4A6E))),
+                      Text(restaurantName,
+                          style: GoogleFonts.poppins(
+                              fontSize: 12, fontWeight: FontWeight.w500,
+                              color: const Color(0xFF0EA5E9))),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // ── QR Code image ────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                    color: const Color(0xFF0EA5E9).withOpacity(0.25), width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0EA5E9).withOpacity(0.08),
+                    blurRadius: 24,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.all(16),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  qrCodeUrl,
+                  width: double.infinity,
+                  fit: BoxFit.contain,
+                  loadingBuilder: (ctx, child, progress) {
+                    if (progress == null) return child;
+                    return SizedBox(
+                      height: 200,
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          value: progress.expectedTotalBytes != null
+                              ? progress.cumulativeBytesLoaded /
+                              progress.expectedTotalBytes!
+                              : null,
+                          color: const Color(0xFF0EA5E9),
+                          strokeWidth: 2.5,
+                        ),
+                      ),
+                    );
+                  },
+                  errorBuilder: (ctx, _, __) => SizedBox(
+                    height: 180,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.broken_image_outlined,
+                            size: 40, color: Color(0xFF9CA3AF)),
+                        const SizedBox(height: 8),
+                        Text('QR code unavailable',
+                            style: GoogleFonts.poppins(
+                                fontSize: 12, color: const Color(0xFF9CA3AF))),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // ── Amount pill ──────────────────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF065F46),
+              borderRadius: BorderRadius.circular(50),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.currency_rupee_rounded,
+                    color: Colors.white, size: 18),
+                const SizedBox(width: 2),
+                Text(totalAmount.toStringAsFixed(2),
+                    style: GoogleFonts.poppins(
+                        fontSize: 22, fontWeight: FontWeight.w800,
+                        color: Colors.white)),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 8),
+          Text('Scan the QR code and pay this amount',
+              style: GoogleFonts.poppins(
+                  fontSize: 12, color: const Color(0xFF6B7280))),
+
+          const SizedBox(height: 24),
+
+          // ── Done button ──────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0EA5E9),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                ),
+                child: Text('Done',
+                    style: GoogleFonts.poppins(
+                        fontSize: 15, fontWeight: FontWeight.w700)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 class _MetaChip extends StatelessWidget {
   final IconData icon;
   final String   label;

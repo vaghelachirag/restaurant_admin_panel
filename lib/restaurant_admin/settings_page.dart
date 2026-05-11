@@ -62,6 +62,12 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _isUploadingLogo = false;
   final String _imgBBApiKey = "a923bc17d28cd6fe1be417700456eb69";
 
+  // Online QR Payment
+  bool _enableOnlineQrPayment = false;
+  String? _existingQrCodeUrl;
+  Uint8List? _newQrCodeBytes;
+  bool _isUploadingQrCode = false;
+
   // Localization Service
   final LocalizationService _localizationService = LocalizationService();
 
@@ -136,6 +142,10 @@ class _SettingsPageState extends State<SettingsPage> {
               .toList();
 
           _existingLogoUrl = data['logoUrl'] as String?;
+
+          // Online QR Payment
+          _enableOnlineQrPayment = data['enableOnlineQrPayment'] ?? false;
+          _existingQrCodeUrl = data['qrCodeUrl'] as String?;
         });
       }
     } catch (e) {
@@ -176,6 +186,40 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  // ─── QR Code Image Helpers ────────────────────────────────────────────────
+  Future<void> _pickQrCodeImage() async {
+    final picker = ImagePicker();
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024,
+      maxHeight: 1024,
+    );
+    if (image != null) {
+      final bytes = await image.readAsBytes();
+      setState(() => _newQrCodeBytes = bytes);
+    }
+  }
+
+  Future<String?> _uploadQrCodeToImgBB() async {
+    if (_newQrCodeBytes == null) return null;
+    try {
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse("https://api.imgbb.com/1/upload?key=$_imgBBApiKey"),
+      );
+      request.files.add(
+        http.MultipartFile.fromBytes('image', _newQrCodeBytes!, filename: "qr_code.jpg"),
+      );
+      var response = await request.send();
+      var responseData = await response.stream.bytesToString();
+      var jsonData = json.decode(responseData);
+      return jsonData['data']['url'] as String?;
+    } catch (e) {
+      if (kDebugMode) print("QR CODE UPLOAD ERROR: $e");
+      return null;
+    }
+  }
+
   Future<void> _saveRestaurantInfo() async {
     try {
       // Upload new logo if picked
@@ -190,6 +234,21 @@ class _SettingsPageState extends State<SettingsPage> {
           });
         }
         setState(() => _isUploadingLogo = false);
+      }
+
+      // Upload new QR code if picked
+      String? qrCodeUrl = _existingQrCodeUrl;
+      if (_newQrCodeBytes != null) {
+        setState(() => _isUploadingQrCode = true);
+        final uploadedUrl = await _uploadQrCodeToImgBB();
+        if (uploadedUrl != null) {
+          qrCodeUrl = uploadedUrl;
+          setState(() {
+            _existingQrCodeUrl = uploadedUrl;
+            _newQrCodeBytes = null;
+          });
+        }
+        setState(() => _isUploadingQrCode = false);
       }
 
       await FirebaseFirestore.instance
@@ -214,6 +273,8 @@ class _SettingsPageState extends State<SettingsPage> {
         _noteControllers.map((c) => c.text.trim()).toList(),
         if (logoUrl != null) 'logoUrl': logoUrl,
         if (logoUrl != null) 'logo': logoUrl,
+        'enableOnlineQrPayment': _enableOnlineQrPayment,
+        if (qrCodeUrl != null) 'qrCodeUrl': qrCodeUrl,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
@@ -255,6 +316,8 @@ class _SettingsPageState extends State<SettingsPage> {
                         _buildOperatingHoursSection(),
                         SizedBox(height: _isWeb ? 20 : 18.h),
                         _buildBillingSettingsSection(),
+                        SizedBox(height: _isWeb ? 20 : 18.h),
+                        _buildOnlineQrPaymentSection(),
                         SizedBox(height: _isWeb ? 20 : 18.h),
                         _buildLanguageSettingsSection(),
                         SizedBox(height: _isWeb ? 20 : 18.h),
@@ -805,6 +868,280 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  // ─── Online QR Payment ────────────────────────────────────────────────────
+  Widget _buildOnlineQrPaymentSection() {
+    final bool hasQr = _newQrCodeBytes != null ||
+        (_existingQrCodeUrl != null && _existingQrCodeUrl!.isNotEmpty);
+
+    return _buildSectionCard(
+      icon: Icons.qr_code_2_outlined,
+      iconColor: const Color(0xFF0EA5E9),
+      title: 'Online QR Payment',
+      children: [
+        _buildToggleRow(
+          title: 'Enable Online QR Payment',
+          description: 'Enable this option to accept online payments using QR code',
+          value: _enableOnlineQrPayment,
+          onChanged: (v) => setState(() => _enableOnlineQrPayment = v),
+        ),
+        if (_enableOnlineQrPayment) ...[
+          SizedBox(height: _isWeb ? 20 : 16.h),
+          _isWeb
+              ? Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _buildQrPreview(hasQr),
+              const SizedBox(width: 24),
+              Expanded(child: _buildQrActions(hasQr)),
+            ],
+          )
+              : Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(child: _buildQrPreview(hasQr)),
+              SizedBox(height: 16.h),
+              _buildQrActions(hasQr),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildQrPreview(bool hasQr) {
+    return Stack(
+      children: [
+        Container(
+          width: _isWeb ? 140 : 120.w,
+          height: _isWeb ? 140 : 120.w,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF9FAFB),
+            borderRadius: BorderRadius.circular(_isWeb ? 16 : 14.r),
+            border: Border.all(
+              color: hasQr
+                  ? const Color(0xFF0EA5E9).withOpacity(0.5)
+                  : const Color(0xFFD1D5DB),
+              width: hasQr ? 2 : 1,
+            ),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(_isWeb ? 14 : 12.r),
+            child: _newQrCodeBytes != null
+                ? Image.memory(
+              _newQrCodeBytes!,
+              fit: BoxFit.contain,
+              width: double.infinity,
+              height: double.infinity,
+            )
+                : (_existingQrCodeUrl != null && _existingQrCodeUrl!.isNotEmpty
+                ? Image.network(
+              _existingQrCodeUrl!,
+              fit: BoxFit.contain,
+              width: double.infinity,
+              height: double.infinity,
+              loadingBuilder: (ctx, child, progress) {
+                if (progress == null) return child;
+                return const Center(
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                );
+              },
+              errorBuilder: (ctx, _, __) => _qrPlaceholder(),
+            )
+                : _qrPlaceholder()),
+          ),
+        ),
+        if (hasQr)
+          Positioned(
+            bottom: 4,
+            right: 4,
+            child: Container(
+              width: 24,
+              height: 24,
+              decoration: const BoxDecoration(
+                color: Color(0xFF0EA5E9),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.check, color: Colors.white, size: 14),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _qrPlaceholder() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.qr_code_2_outlined,
+            size: _isWeb ? 36 : 30.sp,
+            color: const Color(0xFF9CA3AF)),
+        SizedBox(height: _isWeb ? 6 : 4.h),
+        Text(
+          'No QR Code',
+          style: TextStyle(
+            fontSize: _isWeb ? 11 : 10.sp,
+            color: const Color(0xFF9CA3AF),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQrActions(bool hasQr) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          hasQr ? 'Update QR Code' : 'Upload QR Code',
+          style: TextStyle(
+            fontSize: _isWeb ? 14 : 13.sp,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF111827),
+          ),
+        ),
+        SizedBox(height: _isWeb ? 4 : 4.h),
+        Text(
+          'Upload your UPI / bank QR code image. Customers will scan this to pay online.',
+          style: TextStyle(
+            fontSize: _isWeb ? 12 : 11.sp,
+            color: const Color(0xFF6B7280),
+            height: 1.5,
+          ),
+        ),
+        SizedBox(height: _isWeb ? 14 : 12.h),
+        Row(
+          children: [
+            // Pick / Change button
+            GestureDetector(
+              onTap: _isUploadingQrCode ? null : _pickQrCodeImage,
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: _isWeb ? 16 : 14.w,
+                  vertical: _isWeb ? 10 : 9.h,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: const Color(0xFF0EA5E9).withOpacity(0.4),
+                    width: 1.5,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.upload_outlined,
+                        color: Color(0xFF0EA5E9), size: 16),
+                    const SizedBox(width: 6),
+                    Text(
+                      hasQr ? 'Change QR Code' : 'Upload QR Code',
+                      style: TextStyle(
+                        fontSize: _isWeb ? 13 : 12.sp,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF0EA5E9),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Remove button — only shown when a QR exists
+            if (hasQr) ...[
+              SizedBox(width: _isWeb ? 10 : 8.w),
+              GestureDetector(
+                onTap: () => setState(() {
+                  _newQrCodeBytes = null;
+                  _existingQrCodeUrl = null;
+                }),
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: _isWeb ? 14 : 12.w,
+                    vertical: _isWeb ? 10 : 9.h,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF2F2),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFFECACA)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.delete_outline,
+                          color: Color(0xFFEF4444), size: 16),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Remove',
+                        style: TextStyle(
+                          fontSize: _isWeb ? 13 : 12.sp,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFFEF4444),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        // "Pending upload" badge when user picked but not yet saved
+        if (_newQrCodeBytes != null) ...[
+          SizedBox(height: _isWeb ? 10 : 8.h),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                  color: const Color(0xFF0EA5E9).withOpacity(0.3)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.info_outline,
+                    size: 13, color: Color(0xFF0EA5E9)),
+                const SizedBox(width: 5),
+                Text(
+                  'New QR selected — tap Save to upload',
+                  style: TextStyle(
+                    fontSize: _isWeb ? 11 : 10.sp,
+                    color: const Color(0xFF0EA5E9),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        // Uploading indicator
+        if (_isUploadingQrCode) ...[
+          SizedBox(height: _isWeb ? 10 : 8.h),
+          Row(
+            children: [
+              const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0EA5E9)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Uploading QR code...',
+                style: TextStyle(
+                  fontSize: _isWeb ? 12 : 11.sp,
+                  color: const Color(0xFF0EA5E9),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
   // ─── Additional Notes ─────────────────────────────────────────────────────
   Widget _buildAdditionalNotesSection() {
     return _buildSectionCard(
@@ -854,7 +1191,7 @@ class _SettingsPageState extends State<SettingsPage> {
   // ─── Language Settings ─────────────────────────────────────────────────────
   Widget _buildLanguageSettingsSection() {
     final currentLanguage = _localizationService.currentLanguageCode;
-    
+
     return _buildSectionCard(
       icon: Icons.language_outlined,
       iconColor: const Color(0xFF06B6D4),
@@ -881,20 +1218,20 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
             SizedBox(height: _isWeb ? 16 : 14.h),
-            
+
             // Language options
             ...LocalizationService.supportedLocales.map((locale) {
               final languageCode = locale.languageCode;
               final isSelected = languageCode == currentLanguage;
               final languageName = LocalizationService.languageNames[languageCode] ?? languageCode;
-              
+
               return GestureDetector(
                 onTap: () async {
                   debugPrint('Language tapped: $languageCode');
                   await _localizationService.changeLanguage(languageCode);
                   debugPrint('Language changed to: ${_localizationService.currentLanguageCode}');
                   setState(() {}); // Refresh the UI
-                  
+
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -945,7 +1282,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                       ),
                       SizedBox(width: _isWeb ? 12 : 10.w),
-                      
+
                       // Language name
                       Expanded(
                         child: Column(
@@ -971,7 +1308,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           ],
                         ),
                       ),
-                      
+
                       // Selection indicator
                       if (isSelected)
                         Container(
@@ -1002,7 +1339,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               );
             }),
-            
+
             SizedBox(height: _isWeb ? 8 : 6.h),
             Container(
               padding: EdgeInsets.all(_isWeb ? 12 : 10.w),

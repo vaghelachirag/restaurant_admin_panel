@@ -17,7 +17,7 @@ const cors = require("cors")({ origin: true });
 admin.initializeApp();
 
 const ONE_SIGNAL_APP_ID  = "1dbbdcbd-590f-475c-88d0-7c6d953d63ca";
-const ONE_SIGNAL_API_KEY = "os_v2_app_dw55zpkzb5dvzcgqprwzkpldzjzlodgpfcvezw5v7s2ko6zko4z6yvfwbx5y52j5oyr2lr6jwckmtzp3nkvd465y65difrwrk22b7ba";
+const ONE_SIGNAL_API_KEY = "os_v2_app_dw55zpkzb5dvzcgqprwzkpldzjn3ego26fsetj5asbned5hrwmmloet3c46geyw5n4hcs4beif3xo3duppsfgcz4nnv26bktpxxwyzi";
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  ASSIGN RESTAURANT CLAIMS

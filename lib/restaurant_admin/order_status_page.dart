@@ -7,7 +7,6 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../widgets/professional_loader.dart';
 import '../services/fcm_web_service.dart';
-import '../services/pwa_install_service.dart';
 import 'bill_screen.dart';
 import 'customer_menu.dart';
 import 'track_order.dart'; // ← Update Order navigation
@@ -346,7 +345,7 @@ class _OrderPlacedScreenState extends State<OrderPlacedScreen>
                           const SizedBox(height: 16),
 
                           if (kIsWeb) ...[
-                            PwaInstallService.buildInstallBanner(context),
+                           // PwaInstallService.buildInstallBanner(context),
                             const SizedBox(height: 8),
                           ],
 
